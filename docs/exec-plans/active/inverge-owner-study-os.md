@@ -1,5 +1,111 @@
 # Inverge Owner Study OS
 
+## APPRAISER-LEGAL-EVIDENCE-BRIDGE-01 — 2026-09-09 single-writer transition
+
+Latest review correction: 3d9082e7 passed all nine required native checks and
+C3R-P/T/L, but Codex review 5149413670 found one P1 in global-proxy pre-auth
+ordering. Keep PR #909 Draft/unmerged. Reproduced with the actual proxy/Supabase
+composition, then added a bridge-only denial before unchanged global auth.
+The same writer completed 39 affected tests, typecheck/lint/build, rebuilt-bundle
+privacy and eight actual compiled-proxy deployment denials. New-head native CI
+and independent review are next; previous-head checks/review are not new-head
+results. No remote configuration, source or learner-record changes.
+
+Proxy correction ce896ebc now has actual authenticated Preview denial for both
+page/API GET/POST (four 404/empty/no-store responses) and its P1 thread is resolved.
+PR Contract's missing Goal heading was corrected without changing the validator
+or workflow; this evidence closeout emits a fresh event with the corrected body.
+Await all exact-head checks and independent review before conditional integration.
+
+Current recovery (2026-09-09): Owner explicitly authorized the bounded CI/security
+correction in the existing PR #909 and worktree. Next/eslint-config-next 16.3.3,
+sharp 0.35.4 and js-yaml 4.3.2 clean installation, unchanged audit/SBOM gate,
+typecheck/lint/build and focused regressions passed. Chromium prerequisites and
+synthetic expiry clocks replace neither native CI nor real-source currentness.
+Final full suite 1,810/1,810 and Learner Loop tests 710/710 passed. Corrected
+Next 16.3.3 resumed only after local security/build/regression gates; genuine
+Owner-session lookup/reopen and all five loopback listeners passed, with 105
+sources and personal session/planning/installation data unchanged. The 27-path
+candidate awaits ordinary push and final native checks, actual authenticated
+corrected-head Preview denial, independent exact-head
+0/0/0 and thread resolution remain merge gates. Existing CLI authentication now
+proves actual c188b9f9 Preview API denial without a new token or protection change;
+the new candidate must be observed separately. See the latest bridge QA section.
+
+Historical safe stop (2026-09-09): Draft PR #909 / Issue #908 was pushed at
+c188b9f94407fa73ed1313ccd21a588784f2046c, tree
+bc3d7a3735e020aecc40c8f678e46df22dba5fd3. No merge or review completion.
+Four required checks passed; Security, Learner Loop, Fast and both Full jobs
+failed. Security detects newly reported critical/high advisories in unchanged
+Next/sharp/js-yaml dependencies. The genuine Owner-PC lookup below succeeded
+before that finding; the app this task started is now stopped (3883 absent),
+while DB/services, profile/TLS, all 105 sources and six personal records remain
+preserved. The later bounded recovery authority is recorded above; restart still
+requires successful corrected clean-install/security/build/regression validation.
+
+The directly introduced browser failure is missing CI Chromium: minimal install
+steps for Fast/Linux/Windows and a prerequisite regression are preserved locally;
+both affected browser tests pass. They are not committed/pushed or native-CI proof.
+Learner Loop independently fails because the unchanged official-source registry
+recheck date 2026-09-08 expired; needsUpdateNodes is correctly 2, not the test's 1.
+Do not extend a real source date or mark it reviewed to satisfy that test.
+Resume after the precise baseline dependency/test-fixture decision; no new feature,
+second writer, forced integration, security exception or redundant formal review.
+
+Automatic Preview for this exact head is READY. Direct GET reaches Vercel login
+(302), POST is 401: neither proves application denial. Local production-compiled
+Preview/Production denial before body/auth/config/reader and bundle privacy passed.
+Do not use CLI curl's automatic protection-token creation or change protection.
+Independent exact-head review is not requested yet; unresolved threads are zero,
+which is not a 0/0/0 review. Production skip settings remain unchanged.
+
+Economics PR #907 is merged at f50e64bb1ed90e7e75f8c00196f46e901f059ea6,
+tree 6006f129cfe1365ec12ca8dd07f4059e7ade1bbb. All five resulting-main workflows
+were rechecked successful before transition. Its detailed uncommitted closeout,
+six personal records, 3883 server/browser/cache and Owner-only r46 next-day
+observation remain preserved in the original economics worktree.
+
+The Owner directly assigned the bridge to this same integrator. The preparation
+writer explicitly ended writes with exactly three untested drafts preserved;
+their hashes matched before takeover. The dedicated bridge worktree/branch is
+appraiser-legal-evidence-bridge-01 / codex/appraiser-legal-evidence-bridge-01 at
+that main base. The existing local handoff record now names thread
+01a06790-d555-7b40-9a04-3ef95010fb49 as sole implementation writer.
+
+Only held list/version/search/text/exact-reference reopen is in scope. The 12
+bridge files and four explicitly serialized shared documentation/entry/test files
+are implemented. New tests 8/8; default suite 1,806 before lint-only clarification;
+final typecheck, clean changed-file lint, focused 41/41 and build passed. Actual
+held-file HTTP execution (synthetic auth) checked 15 searches, 15 exact reopens
+and 15 tamper denials with zero writes/body output and unchanged catalog.
+162 JSON files and 191 build traces passed privacy/shape checks.
+
+The subsequent explicit Owner amendment permits bridge-OFF automatic Preview
+build/deployment through existing Git integration, conditional exact-head squash
+integration, and genuine existing Owner-PC bridge acceptance. It does not permit
+Preview source access, Vercel settings changes or Production activation. Source
+82da64df was clean on resumption and main remains the validated #907 base.
+Actual route/server deployment-denial regression is added before push. New remote
+CI, review and genuine Owner-PC results remain pending until actually observed;
+the earlier synthetic evidence is not relabeled. Keep this thread as sole writer
+and preserve the economics runtime branch, account, ports, TLS and records.
+
+Resumed candidate adds only the explicit filtered local launcher and its regression
+to the original 16-file manifest (18 files total). Typecheck/lint and 44 focused
+tests passed. Genuine existing Owner browser/session listed 15 versions, displayed
+Civil-law article 1, searched keywords and reopened an identical native reference.
+Tamper/anonymous denial and body clearing passed. All 105 source/catalog files,
+six session rows, planning and installation remained unchanged; no r46 action.
+The actual local stack and 3883 listener are loopback-only. Remote CI/review/merge
+remain pending until observed; see QA for qualified new versus historical evidence.
+
+After preserving the bridge candidate, return to the original economics
+checkpoint. Its bounded curriculum Goal is already completed by #907; no new
+economics feature is automatically added. The next-day r46 observation remains
+Owner-only after 2026-09-09 15:39 KST, not an agent or artificial-clock attempt.
+No second writer starts; supplier/private data and the existing app/records
+remain unchanged. See the 2026-09-09 bridge decision and QA scope.
+
 ## Active post-#905 curriculum-to-usable-economics Goal — 2026-09-09 KST
 
 Owner accepted the bounded handoff in PR #905 comment 5587044730. Main is

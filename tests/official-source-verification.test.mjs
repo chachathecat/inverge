@@ -396,7 +396,8 @@ test("official-source metadata does not store raw question, answer, source, scor
   }
 });
 
-test("official-source verifier enforces verified and draft metadata rules", async () => {
+test("official-source verifier enforces verified and draft metadata rules", async (t) => {
+  t.mock.timers.enable({ apis: ["Date"], now: new Date("2030-05-19T23:59:59.999Z") });
   const verifier = await import("../lib/review-os/official-source-verification.ts");
   const validVerifiedResult = verifier.validateVerifiedCurriculumNode(makeValidVerifiedNode());
   assert.equal(validVerifiedResult.valid, true, validVerifiedResult.errors.join("\n"));
@@ -420,10 +421,10 @@ test("official-source verifier enforces verified and draft metadata rules", asyn
   assert.equal(draftNeedsVerificationResult.valid, false);
   assert.match(draftNeedsVerificationResult.errors.join("\n"), /draft node must have needsOfficialVerification: true/);
 
-  const sources = readJson(registryPath).sources;
+  const sources = [{ id: "synthetic-summary-source", needsManualRecheckBy: "2030-05-20" }];
   const summary = verifier.summarizeOfficialVerificationStatus(
     [
-      { id: "verified", sourceStatus: "verified", officialSourceId: "qnet_appraiser_qualification_detail" },
+      { id: "verified", sourceStatus: "verified", officialSourceId: "synthetic-summary-source" },
       { id: "draft", sourceStatus: "draft" },
       { id: "update", sourceStatus: "needs_update" },
     ],
@@ -432,6 +433,44 @@ test("official-source verifier enforces verified and draft metadata rules", asyn
   assert.equal(summary.verifiedNodes, 1);
   assert.equal(summary.draftNodes, 1);
   assert.equal(summary.needsUpdateNodes, 1);
+});
+
+test("synthetic source expiry preserves before, inclusive-day boundary and after behavior", async (t) => {
+  t.mock.timers.enable({ apis: ["Date"], now: new Date("2030-05-19T23:59:59.999Z") });
+  const { summarizeOfficialVerificationStatus } = await import("../lib/review-os/official-source-verification.ts");
+  const source = { id: "synthetic-expiry-source", needsManualRecheckBy: "2030-05-20" };
+  const node = { id: "synthetic-node", sourceStatus: "verified", officialSourceId: source.id };
+  for (const [instant, expired] of [
+    ["2030-05-19T23:59:59.999Z", false],
+    ["2030-05-20T00:00:00.000Z", false],
+    ["2030-05-20T23:59:59.999Z", false],
+    ["2030-05-21T00:00:00.000Z", true],
+  ]) {
+    t.mock.timers.setTime(Date.parse(instant));
+    const result = summarizeOfficialVerificationStatus([node], [source]);
+    assert.equal(result.status, expired ? "needs_update" : "current", instant);
+    assert.equal(result.needsUpdateNodes, expired ? 1 : 0, instant);
+    assert.deepEqual(result.staleVerifiedNodeIds, expired ? [node.id] : [], instant);
+  }
+});
+
+test("unchanged real registry cannot report an expired verified source as current", async (t) => {
+  const bytesBefore = readFileSync(registryPath);
+  const sources = JSON.parse(bytesBefore).sources;
+  const source = sources.find((entry) => entry.id === "qnet_appraiser_qualification_detail");
+  assert.ok(source?.needsManualRecheckBy);
+  // Only this test process advances past the actual recorded due date. It neither
+  // changes the OS clock nor extends the real source's review/rights validity.
+  const afterExpiry = Date.parse(`${source.needsManualRecheckBy}T00:00:00.000Z`) + 86_400_000;
+  t.mock.timers.enable({ apis: ["Date"], now: afterExpiry });
+  const { summarizeOfficialVerificationStatus } = await import("../lib/review-os/official-source-verification.ts");
+  const result = summarizeOfficialVerificationStatus([
+    { id: "test-expired-real-source", sourceStatus: "verified", officialSourceId: source.id },
+  ], sources);
+  assert.equal(result.status, "needs_update");
+  assert.equal(result.needsUpdateNodes, 1);
+  assert.deepEqual(result.staleVerifiedNodeIds, ["test-expired-real-source"]);
+  assert.deepEqual(readFileSync(registryPath), bytesBefore);
 });
 
 test("official-source verification script fails malformed verified metadata and passes valid metadata", () => {

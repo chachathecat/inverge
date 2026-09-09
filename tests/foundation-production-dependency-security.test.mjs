@@ -63,19 +63,19 @@ test("pins the patched production dependency graph", async () => {
   const packageJson = await readJson("package.json");
   const lock = await readJson("package-lock.json");
 
-  assert.equal(packageJson.dependencies.next, "16.2.12");
+  assert.equal(packageJson.dependencies.next, "16.3.3");
   assert.deepEqual(packageJson.overrides, {
     next: {
       postcss: "8.5.26",
-      sharp: "0.35.3",
+      sharp: "0.35.4",
     },
   });
 
   const packages = lock.packages;
-  assert.equal(packages["node_modules/next"].version, "16.2.12");
+  assert.equal(packages["node_modules/next"].version, "16.3.3");
   assertVersionAtLeast(packages["node_modules/postcss"].version, "8.5.23", "postcss");
   assertVersionAtLeast(packages["node_modules/nanoid"].version, "3.3.18", "nanoid");
-  assertVersionAtLeast(packages["node_modules/sharp"].version, "0.35.0", "sharp");
+  assertVersionAtLeast(packages["node_modules/sharp"].version, "0.35.4", "sharp");
   assertVersionAtLeast(packages["node_modules/ws"].version, "8.21.0", "ws");
 
   assert.notEqual(packages["node_modules/next"].dev, true);
@@ -196,6 +196,8 @@ test("requires full compatibility and rollback proof for both bounded overrides"
     applicable_untrusted_image_sharp_advisories: 0,
     development_findings_deferred_to_phase_d: true,
   });
+  // Immutable Phase C historical installation evidence, not this recovery's result.
+  // Current installed versions are independently pinned and exercised above/below.
   assert.deepEqual(contract.production_install_proof, {
     command: "npm.cmd ci --omit=dev --ignore-scripts",
     resolved_versions: {
@@ -214,7 +216,8 @@ test("requires full compatibility and rollback proof for both bounded overrides"
 });
 
 test("loads the patched Sharp/libvips runtime and decodes bounded image metadata", async () => {
-  assertVersionAtLeast(sharp.versions.sharp, "0.35.0", "sharp runtime");
+  assertVersionAtLeast(sharp.versions.sharp, "0.35.4", "sharp runtime");
+  assertVersionAtLeast(sharp.versions.heif, "1.23.2", "libheif runtime");
   const svg = Buffer.from(
     '<svg xmlns="http://www.w3.org/2000/svg" width="2" height="3"><rect width="2" height="3"/></svg>',
   );

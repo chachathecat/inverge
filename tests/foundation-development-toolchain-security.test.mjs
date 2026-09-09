@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import yaml from "js-yaml";
 
 const CONTRACT = "config/foundation-development-toolchain-security-v1.json";
 
@@ -22,12 +23,12 @@ test("pins the compatible development-toolchain security releases", async () => 
   assert.equal(packageJson.devDependencies["@playwright/test"], "^1.62.1");
   assert.equal(packageJson.devDependencies.supabase, "^2.114.0");
   assert.equal(packageJson.devDependencies.eslint, "^9.39.5");
-  assert.equal(packageJson.devDependencies["eslint-config-next"], "16.2.12");
+  assert.equal(packageJson.devDependencies["eslint-config-next"], "16.3.3");
   assert.equal(packages["node_modules/@playwright/test"].version, "1.62.1");
   assert.equal(packages["node_modules/playwright"].version, "1.62.1");
   assert.equal(packages["node_modules/supabase"].version, "2.114.0");
   assert.equal(packages["node_modules/eslint"].version, "9.39.5");
-  assert.equal(packages["node_modules/eslint-config-next"].version, "16.2.12");
+  assert.equal(packages["node_modules/eslint-config-next"].version, "16.3.3");
   assert.equal(packages["node_modules/typescript"].version, "5.9.3");
 });
 
@@ -40,7 +41,7 @@ test("removes tar and resolves compatible transitive lint advisories", async () 
     packages["node_modules/@typescript-eslint/typescript-estree/node_modules/brace-expansion"].version,
     "5.0.9",
   );
-  assert.equal(packages["node_modules/js-yaml"].version, "4.3.1");
+  assert.equal(packages["node_modules/js-yaml"].version, "4.3.2");
   assert.equal(packages["node_modules/typescript-eslint"].version, "8.67.0");
   assert.deepEqual(contract.supabase_tar_requirement, {
     campaign_minimum: ">=7.5.19",
@@ -60,6 +61,12 @@ test("rejects relocated tar installations anywhere in the lock graph", () => {
     findPackageInstallations(packages, "tar").map(([path]) => path),
     ["node_modules/tool/node_modules/tar"],
   );
+});
+
+test("patched js-yaml counts empty merge mappings against its work budget", () => {
+  const synthetic = "x: &x [{}, {}, {}, {}]\na:\n  <<: *x\n";
+  assert.throws(() => yaml.load(synthetic, { maxTotalMergeKeys: 3 }), /maxTotalMergeKeys/);
+  assert.deepEqual(yaml.load(synthetic, { maxTotalMergeKeys: 4 }).a, {});
 });
 
 test("records every resolved Phase D advisory exactly once", async () => {

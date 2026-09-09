@@ -28,6 +28,16 @@ export function ownerLocalAppEnvironment(base,keys,privateRoot=PRIVATE_ROOT){
     INVERGE_OWNER_FIRST_STAGE_EMAILS:OWNER_LOCAL_EMAIL,ALPHA_ADMIN_EMAILS:OWNER_LOCAL_EMAIL,
     INVERGE_OWNER_FIRST_STAGE_KERNEL_ENABLED:"true"};
 }
+/** Explicit Owner-PC command only; ordinary economics startup never inherits this flag. */
+export function ownerLocalLegalEnvironment(base,keys,settings,privateRoot=PRIVATE_ROOT){
+  const names=["INVERGE_OWNER_LEGAL_READER_ROOT","INVERGE_OWNER_LEGAL_SNAPSHOT_ROOT","INVERGE_OWNER_LEGAL_CATALOG_PATH"];
+  if(!settings||!names.every(name=>typeof settings[name]==="string"&&path.isAbsolute(settings[name]))||
+    !/^[a-f0-9]{64}$/.test(settings.INVERGE_OWNER_LEGAL_CATALOG_SHA256??""))fail("local_legal_configuration_required");
+  const relative=path.relative(settings.INVERGE_OWNER_LEGAL_SNAPSHOT_ROOT,settings.INVERGE_OWNER_LEGAL_CATALOG_PATH);
+  if(!relative||relative.startsWith("..")||path.isAbsolute(relative))fail("local_legal_catalog_outside_root");
+  const selected=Object.fromEntries([...names,"INVERGE_OWNER_LEGAL_CATALOG_SHA256"].map(name=>[name,settings[name]]));
+  return {...ownerLocalAppEnvironment(base,keys,privateRoot),...selected,INVERGE_OWNER_LEGAL_EVIDENCE_ENABLED:"true"};
+}
 async function guardedEnvironment(){
   if(process.platform!=="win32"||process.env.VERCEL!==undefined||process.env.VERCEL_ENV!==undefined||process.env.CI==="true")fail("local_pc_required");
   const rows=await runLocalLoopback("inspect");if(rows.some(row=>!row.running||(row.health&&row.health!=="healthy")))fail("local_stack_not_healthy");
@@ -58,11 +68,11 @@ export async function prepareOwnerLocalApp(){
   return {personalLocalSchema:"prepared",installationPath:target,boundArtifacts:9,
     supportedQuestions:"determined_by_server_pair_evidence_checks",humanApprovedQuestions:0,recordsReset:false};
 }
-export async function startOwnerLocalApp(){
+export async function startOwnerLocalApp({legalEvidence=false}={}){
   const keys=await guardedEnvironment();
   for(const file of [".env",".env.local",".env.development",".env.development.local"]){if(await access(file).then(()=>true,()=>false))fail("existing_env_file_must_be_preserved");}
   await access(path.join(LOCAL_ROOT,"trial-installation.json"));
-  const env=ownerLocalAppEnvironment(process.env,keys);
+  const env=legalEvidence?ownerLocalLegalEnvironment(process.env,keys,process.env):ownerLocalAppEnvironment(process.env,keys);
   // No secret argument, env file, remote fetch, smoke account or global TLS change.
   const child=spawn(process.execPath,["node_modules/next/dist/bin/next","dev","--hostname","127.0.0.1","--port","3883"],{env,stdio:"inherit",windowsHide:true});
   for(const signal of ["SIGINT","SIGTERM"])process.on(signal,()=>child.kill(signal));
@@ -95,6 +105,6 @@ export async function prepareOwnerLocalCurriculum(){
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href){
   const command=process.argv[2];
-  (command==="prepare"?prepareOwnerLocalApp().then(result=>console.log(JSON.stringify(result))):command==="prepare-planning"?prepareOwnerLocalPlanning().then(result=>console.log(JSON.stringify(result))):command==="prepare-curriculum"?prepareOwnerLocalCurriculum().then(result=>console.log(JSON.stringify(result))):command==="start"?startOwnerLocalApp():Promise.reject(new Error("invalid_local_command")))
+  (command==="prepare"?prepareOwnerLocalApp().then(result=>console.log(JSON.stringify(result))):command==="prepare-planning"?prepareOwnerLocalPlanning().then(result=>console.log(JSON.stringify(result))):command==="prepare-curriculum"?prepareOwnerLocalCurriculum().then(result=>console.log(JSON.stringify(result))):command==="start"?startOwnerLocalApp():command==="start-legal-evidence"?startOwnerLocalApp({legalEvidence:true}):Promise.reject(new Error("invalid_local_command")))
     .catch(error=>{const message=String(error.message);console.error(/^[a-z_]+$/.test(message)?message:"local_trial_setup_failed");process.exitCode=1;});
 }

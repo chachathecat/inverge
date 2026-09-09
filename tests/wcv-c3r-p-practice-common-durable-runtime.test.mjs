@@ -74,19 +74,23 @@ const productionAccessBlobs = Object.freeze({
   "components/review-os/c3r-p-practice-loop.tsx": "0a7897389de1a57968c10d95dedb0b7204774cd1",
 });
 
-const APP1_BROWSERSLIST_PATCHED_PACKAGE_LOCK_GIT_BLOB =
-  "3c3224cfdf7e87df0dd6d5b19ad86bff1f1d1894";
+const OWNER_BRIDGE_SECURITY_PATCHED_PACKAGE_LOCK_GIT_BLOB =
+  "aea917dbb485a0cfef97af9406e6941bb26091e2";
 
-function assertPackageIdentityAfterApp1BrowserslistPatch() {
+function assertPackageIdentityAfterOwnerBridgeSecurityPatch() {
   const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
   const packageLock = JSON.parse(fs.readFileSync(path.join(root, "package-lock.json"), "utf8"));
   assert.equal(execFileSync("git", ["hash-object", "package.json"], { cwd: root, encoding: "utf8" }).trim(),
-    contract.packageIdentity.packageJsonGitBlob);
+    "2354d061aa947e3d542f2c61b4b5c0ab10f924e5");
+  // Keep historical C3R-P identity/authority intact, separately from the
+  // current security-only package update authorized by Owner on 2026-09-09.
+  assert.equal(contract.packageIdentity.packageJsonGitBlob,
+    "33a8d29b52ac225c6e957c71fce1f28f2eaba16d");
   assert.equal(contract.packageIdentity.packageLockJsonGitBlob,
     "70f85fb69c39aa73cf572082c4d38eb426c0b398");
   assert.equal(execFileSync("git", ["hash-object", "package-lock.json"], {
     cwd: root, encoding: "utf8",
-  }).trim(), APP1_BROWSERSLIST_PATCHED_PACKAGE_LOCK_GIT_BLOB);
+  }).trim(), OWNER_BRIDGE_SECURITY_PATCHED_PACKAGE_LOCK_GIT_BLOB);
   assert.equal(packageJson.dependencies?.browserslist, undefined);
   assert.equal(packageJson.devDependencies?.browserslist, undefined);
   const browserslistInstances = Object.entries(packageLock.packages)
@@ -909,7 +913,7 @@ test("disposable fixture leaves production access code and frozen identities unc
     /const transferredResponse = await context\.request\.get\([\s\S]*evidenceStep=d7/u,
     "the pre-recurrence assertion must use the frozen post-D+7 evidence time",
   );
-  assertPackageIdentityAfterApp1BrowserslistPatch();
+  assertPackageIdentityAfterOwnerBridgeSecurityPatch();
   assert.equal(sha256(Buffer.from(canonicalJson(exactMigrationInventory(root)), "utf8")),
     contract.migrationAuthorityBinding.effectiveInventorySha256);
 });
@@ -1161,7 +1165,7 @@ test("frozen path manifest is unique, package source identity and exact security
   assert.equal(manifest.length, 37);
   assert.equal(new Set(manifest).size, manifest.length);
   for (const file of manifest) assert.equal(fs.existsSync(path.join(root, file)), true, file);
-  assertPackageIdentityAfterApp1BrowserslistPatch();
+  assertPackageIdentityAfterOwnerBridgeSecurityPatch();
   const changed = manifestBoundaryChangedPaths(
     root,
     "HEAD",

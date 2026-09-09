@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ReviewOsAppShell } from "@/components/review-os/app-shell";
 import { FirstStageMcqLoop } from "@/components/review-os/first-stage-mcq-loop";
 import { getServerSessionUser } from "@/lib/auth/session";
+import { requireOwnerLegalEvidencePage } from "@/lib/legal/owner-snapshot-bridge-server";
 import {
   FIRST_STAGE_FEATURE_FLAG,
   FIRST_STAGE_OWNER_ALLOWLIST,
@@ -30,8 +31,10 @@ export default async function FirstStageOwnerPage() {
     !emails(process.env.ALPHA_ADMIN_EMAILS).includes(email) ||
     !emails(process.env[FIRST_STAGE_OWNER_ALLOWLIST]).includes(email)
   ) notFound();
+  const legalEvidenceOwner = await requireOwnerLegalEvidencePage();
   return (
     <ReviewOsAppShell email={email}>
+      {legalEvidenceOwner && <a className="text-sm underline" href="/app/first-stage/legal-evidence">별도 참고자료: 보유 법령 근거 보기</a>}
       <FirstStageMcqLoop />
     </ReviewOsAppShell>
   );
