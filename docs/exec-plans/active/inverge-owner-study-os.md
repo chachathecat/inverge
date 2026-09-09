@@ -2,7 +2,51 @@
 
 ## Active post-#909 Goal — received 2026-09-09T06:07:54Z
 
-### Current transition: #916 integrated -> #917 bounded private-session reads
+### Current transition: #918 integrated -> #919 bounded write-result recovery
+
+PR #918 merged reviewed head `adfbee2c354d55a0b700aea278a798e3764e1990`
+as `fe18e7073f1253ca78ddf9e971cd70e9c705e866`; reviewed/resulting tree
+`60c6ee3570962c11903c4ddcacabebda14dbc639`. Required native checks 9/9,
+actual isolated SQL/SDK/HTTP/React 8/8, Linux/Windows builds and C3R-L passed.
+Automatic exact-head review completed clean (0/0/0), zero threads. All five
+resulting-main workflows passed. Production deployment was CANCELED; actual
+authenticated Preview trial/Bank/bridge responses were app denials/no-store.
+Live closeout: https://github.com/chachathecat/inverge/pull/918#issuecomment-5600235451.
+Only #917 closed; #883 and this Goal remain incomplete. Reviewed approvals 0.
+
+Same sole writer reuses the NON-SERVER `study-bank-first` worktree on
+`codex/study-session-write-recovery`, based on that main. The running #914 PC
+folder/branch remains untouched. Its last real trial session GET was 200/no-store
+with unchanged submitted response; fresh read-only comparison found all 105
+original source hashes unchanged. Docker control safety preflight is unavailable;
+no new complete personal DB/planning/installation snapshot or code restart is
+claimed. Existing records/account/TLS/ports/volumes/profile remain preserved.
+
+Issue #919 closes the remaining stalled POST result gap, not another read repair.
+Actual React/HTTP regression reproduced no reachable same-request action when
+JSON never completed after durable save. The client now bounds only its wait,
+retains the exact intent and explicitly says server work may continue. No automatic
+replay/rollback/optimistic answer or server scheduling/authority changes. Shared
+synthetic fixture covers headers after save, incomplete JSON after save and the
+first buffered request executing after its identical retry commits; complete
+responses and command bytes must match. Existing write-failure, GET recovery,
+subject switch, completed D+1 and no duplicate row/assignment remain assertions.
+One fixture synchronization assertion initially sampled the preceding create URL;
+it now samples the new request after arrival, not before the prior UI transition.
+The actual root-cause red test remains recorded; this is not a source workaround.
+
+Final first-stage affected 204/204, authoritative QF-I1/QF-S3 85/85 and separate
+subject-navigation/all-five-blocker browser 2/2 pass. Typecheck, changed lint,
+build, 162 tracked JSON, four-path manifest/diff and private-root NFT/static-key
+scans pass. Six existing build tracing warnings and one low audit finding remain;
+critical/high/moderate are 0, no policy exception. Native exact-head CI/review
+and integration are still pending; prior-head results are not substituted.
+Local PostgreSQL is not rerun against the unchanged unavailable control API;
+mandatory native Linux Full CI will supply fresh disposable SQL/browser evidence.
+No new dependency, schema, content, environment or personal/remote mutation.
+See `docs/qa/study-session-write-recovery-validation.md`.
+
+### Historical #916 -> #917 candidate record (superseded by #918 closeout above)
 
 PR #916 merged reviewed head `f2e2b8d181505399d77429c9ad69bad9e8d50781`
 as `7d9bc34274a097812fed6532b29390cbaeb816ee`; reviewed/resulting tree

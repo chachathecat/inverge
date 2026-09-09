@@ -22,9 +22,17 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
   define: { "process.env.NODE_ENV": '"production"' }, logLevel: "silent" });
   let origin = "", browser;
   let loseCreateResponse = ownerLocalTrial || bankPractice;
-  let stallNextRead, postCount = 0;
+  let stallNextRead, stallNextWrite, postCount = 0;
   function stallRead(bodyPending = false) {
     return new Promise(resolve => { stallNextRead = { started: resolve, bodyPending }; });
+  }
+  function stallWrite(mode) {
+    let signalStarted, signalFinished, release;
+    const started = new Promise(resolve => { signalStarted = resolve; });
+    const finished = new Promise(resolve => { signalFinished = resolve; });
+    const held = new Promise(resolve => { release = resolve; });
+    stallNextWrite = { mode, started: signalStarted, finished: signalFinished, held };
+    return { started, finished, release };
   }
   const failures = [], external = [], consoleErrors = [];
   const server = createServer(async (incoming, outgoing) => {
@@ -51,9 +59,31 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
         stalled.started(); // Synthetic transport stalls; never touches a real account.
         return; // Client abort, not a fabricated server result, must end waiting.
       }
-      const request = new Request(url, { method, headers: incoming.headers,
+      let request = new Request(url, { method, headers: incoming.headers,
         ...(method === "POST" ? { body: Readable.toWeb(incoming), duplex: "half" } : {}) });
+      const stalledWrite = method === "POST" ? stallNextWrite : null;
+      if (stalledWrite) {
+        stallNextWrite = null;
+        // Buffer only this synthetic transport's already received request. The
+        // real handler still parses/validates it, even if the client disconnects.
+        const body = await request.text();
+        request = new Request(url, { method, headers: incoming.headers, body });
+        if (stalledWrite.mode === "before-handler") {
+          stalledWrite.started(); await stalledWrite.held;
+        }
+      }
+      const command = stalledWrite ? await request.clone().text() : null;
       const response = await route[method](request);
+      if (stalledWrite) {
+        assert.equal(response.status, 200);
+        stalledWrite.finished({ command, result: await response.json() });
+        if (stalledWrite.mode === "body") {
+          outgoing.writeHead(200, { "content-type": "application/json", "cache-control": "private, no-store" });
+          outgoing.write('{"ok":');
+        }
+        if (stalledWrite.mode !== "before-handler") stalledWrite.started();
+        return; // Durable server work survives; the browser has no result.
+      }
       if (method === "POST" && loseCreateResponse) {
         loseCreateResponse = false;
         // The actual route has durably created the session; the browser cannot
@@ -94,6 +124,31 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
       await page.getByText("서버 기록을 확인하고 있습니다.", { exact: true }).waitFor({ state: "hidden" });
       assert.equal(page.url(), exactUrl);
       assert.equal(postCount, writesBefore);
+    }
+    async function recoverStalledWrite(click, mode) {
+      const held = stallWrite(mode), writesBefore = postCount;
+      try {
+        await click(); await held.started;
+        const exactUrl = page.url();
+        await page.clock.fastForward(15_001);
+        const retry = page.getByRole("button", { name: "같은 요청 다시 확인" });
+        await retry.waitFor({ timeout: 2_000 });
+        assert.equal(page.url(), exactUrl);
+        assert.equal(postCount, writesBefore + 1); // No automatic replay.
+        assert.equal(await page.getByRole("radio").count(), 0);
+        assert.equal(await page.getByRole("region", { name: "저장된 응답 해설" }).count(), 0);
+        assert.equal(await page.getByRole("region", { name: "서버에 저장된 내 응답" }).count(), 0);
+        const replay = page.waitForResponse(item => item.request().method() === "POST");
+        await retry.click(); const response = await replay;
+        assert.equal(response.status(), 200);
+        // In before-handler mode the retry commits first, then the original
+        // late request is executed through the same real parser/service/store.
+        held.release();
+        const original = await held.finished;
+        assert.equal(response.request().postData(), original.command);
+        assert.deepEqual(await response.json(), original.result);
+        assert.equal(postCount, writesBefore + 2);
+      } finally { held.release(); }
     }
     await recoverStalledRead(() => page.goto(`${origin}${pagePath}`));
     if (blockCatalog) {
@@ -138,7 +193,7 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
       assert.equal(await page.getByLabel("시험 문항 선택").count(),0);
       await page.getByRole("button",{name:"같은 요청 다시 확인"}).click();
     }
-    await page.getByRole("button", { name: "문제 열고 먼저 풀기" }).click();
+    await recoverStalledWrite(() => page.getByRole("button", { name: "문제 열고 먼저 풀기" }).click(), "headers");
     assert.equal(await page.getByRole("region", { name: "저장된 응답 해설" }).count(), 0);
     assert.equal(await page.getByRole("region", { name: "서버에 저장된 내 응답" }).count(), 0);
     if (expectedAttributions) {
@@ -154,7 +209,7 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
     await page.getByRole("button", { name: "같은 요청 다시 확인" }).waitFor();
     assert.equal(await page.getByRole("region", { name: "저장된 응답 해설" }).count(), 0);
     assert.equal(await page.getByRole("region", { name: "서버에 저장된 내 응답" }).count(), 0);
-    await page.getByRole("button", { name: "같은 요청 다시 확인" }).click();
+    await recoverStalledWrite(() => page.getByRole("button", { name: "같은 요청 다시 확인" }).click(), "body");
     await page.getByRole("region", { name: "저장된 응답 해설" }).waitFor();
     const recap=page.getByRole("region",{name:"서버에 저장된 내 응답"});
     assert.match(await recap.innerText(),/제출 선택: 1번/);
@@ -182,7 +237,7 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
     assert.equal(await recap.count(),0);
     await page.getByRole("radio").nth(retryChoice - 1).check();
     clock.advance(60_000);
-    await page.getByRole("button", { name: "응답 저장 후 해설 확인" }).click();
+    await recoverStalledWrite(() => page.getByRole("button", { name: "응답 저장 후 해설 확인" }).click(), "before-handler");
     await page.getByText("이 복습 처리 완료 — 학습 성공·숙달 판정과는 별개입니다.").waitFor();
     await page.reload();
     await page.getByText("이 복습 처리 완료 — 학습 성공·숙달 판정과는 별개입니다.").waitFor();
