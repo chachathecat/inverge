@@ -34,11 +34,11 @@ jobs:
           throw new Error("Missing S232D.4 authenticated acceptance marker"); }'
 
       - name: Check out exact PR head
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -220,7 +220,7 @@ jobs:
           cp -- "${evidence_path}" validated-runtime-evidence/s232d4-runtime.json
 
       - name: Upload validated S232D.4 runtime evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: s232d4-review-ia-evidence-${{ github.run_id }}
           path: validated-runtime-evidence/s232d4-runtime.json

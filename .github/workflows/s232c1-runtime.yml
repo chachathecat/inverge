@@ -29,11 +29,11 @@ jobs:
       E2E_TARGET_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
       - name: Check out exact PR head
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -219,7 +219,7 @@ jobs:
 
       - name: Upload validated S232C.1 runtime evidence
         if: always() && steps.evidence_guard.outcome == 'success'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: s232c1-calculator-step-evidence-${{ github.run_id }}
           path: s232c1-evidence/s232c1-runtime.json
