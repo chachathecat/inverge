@@ -62,10 +62,10 @@ export function createPrivateSessionRepository(client: SupabaseClient): PrivateF
       });
       if (result.error && result.error.code !== "23505") unavailable();
       const saved = await load(value.ownerId, value.sessionId);
-      // The local trial INSERT guard may reject a different request for an
+      // The local trial or reviewed-bank INSERT guard may reject a different request for an
       // already reserved original. Same-ID retries still return their own row;
       // never substitute another session or disguise a conflict as an outage.
-      if (!saved && result.error?.code === "23505" && value.schemaVersion === "first_stage.owner_local_trial_session.v1") {
+      if (!saved && result.error?.code === "23505") {
         throw new FirstStageKernelError("stale_state");
       }
       if (!saved) unavailable();

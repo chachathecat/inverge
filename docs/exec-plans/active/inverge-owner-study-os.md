@@ -2,7 +2,60 @@
 
 ## Active post-#909 Goal — received 2026-09-09T06:07:54Z
 
-### Current transition: #912 integrated -> #913 saved-response reconnect
+### Current transition: #914 integrated -> #915 reviewed Bank-first sessions
+
+PR #914 merged reviewed head `a7d3d6e0d7741fcdd0d35b430d3a3483757fce1f`
+as `2f01a74323d793e080315755de72118797c44fab`, tree
+`d576524ac16480b083e46465f705114a7ae5e462`. Required native checks 9/9,
+automatic exact-head Codex review clean, threads 0 and five main workflows passed.
+GitHub closeout: https://github.com/chachathecat/inverge/pull/914#issuecomment-5598384244.
+Actual authenticated Preview app denial and exact-main Production CANCELED were
+observed. Existing Owner-PC reconnect matched the actual saved submitted choice
+and time after reload; study/planning/installation and 105 sources unchanged.
+The running app uses `study-saved-response-recap`; its branch/profile/records stay
+untouched. #913 is complete. #883 and the A/B/C Goal remain incomplete.
+
+Current sole-writer branch/worktree: `codex/study-bank-first` / `study-bank-first`,
+based on that validated main. Issue #915 connects the existing QF-I1 selector to
+Foundation-reviewed economics originals and the existing durable session loop.
+Client supplies only a request identity, not question/rights/source/authority.
+Assignment is LEARNING_ONLY Bank stock with no generation/transfer/measurement.
+An additive column and atomic RPC reuse `first_stage_private_sessions`; the SQL
+is source/disposable-synthetic-only and MUST NOT be applied to the personal DB.
+`INVERGE_OWNER_REVIEWED_BANK_ENABLED` remains OFF; every Vercel environment and
+Production reject before auth, catalog, store or body. Real approvals/installations
+remain empty. Existing unreviewed-PC mode is not eligible for this selector.
+
+Prepared candidate; no #915 PR/push/formal review at this record. Initial missing
+HTTP connection reproduced 400. The implementation's two pre-reservation race
+windows reproduced 409 despite a durable identical winner, then passed after
+same-request rehydration. Final affected suite: 204/204, including the 12 new Bank
+tests, actual React/HTTP with synthetic memory, QF-I1/QF-S3 and existing first-stage
+compatibility. Typecheck, changed-file lint, JSON and diff checks passed after the
+race correction. PostgreSQL/browser fixture is implemented but UNVERIFIED.
+No final build/native CI/exact-head review or integration claim is made.
+
+Environment interruption on 2026-09-09: new clean `npm ci` failed ENOSPC. Only its
+own verified partial node_modules was removed. The worktree reuses the inactive
+#912 locked install through a junction; package/lock hashes match, but this is not
+a successful fresh install. C: free space is about 0.48 GB; do not start another
+space-heavy install/build or delete other worktrees, volumes or personal data.
+The isolated PostgreSQL run never reached container creation: cached image inspect
+and independent Docker status read stalled. Only the two identified read-only
+child processes were ended; Docker/WSL and personal containers were not restarted.
+Five existing listeners still bind 127.0.0.1 only. Engine ping also timed out at
+five seconds. No Docker/WSL/personal restart is authorized by this diagnosis.
+Under the existing CI-preparation delegation, required Linux Full CI now runs the
+same isolated first-stage SQL/browser suite using the existing pinned image and
+network-none tmpfs containers. No check/producer/permission is weakened. Draft
+native CI can establish clean-install/build/SQL evidence independently of the
+unavailable local daemon; do not mark those gates passed until observed. Current
+authenticated Vercel GET confirms the same Preview-only build command and zero
+Deploy Hooks. New Bank remains unconditionally unavailable on deployments.
+Do not count memory browser tests as SQL proof or touch the personal DB to bypass
+the outage. Local disk/engine recovery and fresh personal readback remain separate.
+
+### Historical #912 -> #913 candidate record (superseded by #914 closeout above)
 
 PR #912 merged reviewed head `f212d8b32584354e9bd2d329e7949102ff86732c` as
 `c706312a0e0f7f4772e322a9fc2c58cfef9aaa4a`; resulting tree

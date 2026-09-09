@@ -111,6 +111,7 @@ const defaultTestFiles = [
   "tests/first-stage-common-mcq-kernel.test.mjs",
   "tests/first-stage-private-session.test.mjs",
   "tests/first-stage-private-route.test.mjs",
+  "tests/first-stage-reviewed-bank.test.mjs",
   "tests/first-stage-owner-local-trial.test.mjs",
   "tests/first-stage-owner-local-trial-core.test.mjs",
   "tests/first-stage-owner-local-trial-http.test.mjs",

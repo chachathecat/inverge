@@ -13,6 +13,14 @@ import { validateCivilApplicability, validateRelatedLawApplicability, validateRe
 import type { FinalReleaseProjection } from "./foundation-release";
 import { ECONOMICS_CANDIDATE_SCHEMA } from "./economics-candidate";
 import { bindEconomicsCandidateRelease } from "./economics-candidate-release";
+import type { QfI1CandidateV1 } from "../../../question-foundry/runtime/qf-i1-bank-first";
+
+// Output capability of this actual loader only. Cloned objects, legacy six-check
+// catalogs and the separately admitted unreviewed r3 catalog cannot claim it.
+const economicsBankSupply = new WeakMap<PrivateFirstStageCatalog, () => readonly QfI1CandidateV1[]>();
+export function reviewedEconomicsBankCandidates(catalog: PrivateFirstStageCatalog) {
+  return economicsBankSupply.get(catalog)?.() ?? null;
+}
 
 export const PRIVATE_CONTENT_MAX_BYTES = 2 * 1024 * 1024;
 export const PRIVATE_CONTENT_REVIEW_CHECKS = Object.freeze([
@@ -262,7 +270,7 @@ export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIE
     };
     // Validate every presentation before advertising any stock. No body is returned here.
     for (const row of questions) adapter.presentQuestion(row.reference);
-    return Object.freeze({ digest: digest({ packetSha256, approved, adapterVersion: adapter.adapterVersion,
+    const catalog: PrivateFirstStageCatalog = Object.freeze({ digest: digest({ packetSha256, approved, adapterVersion: adapter.adapterVersion,
       ...(applicabilityDigest === null ? {} : { applicabilityDigest }) }),
       registry: createSubjectAdapterRegistry([adapter]),
       initialReferences: Object.freeze(questions.filter(row => row.kind === "original").map(row => row.reference)),
@@ -282,5 +290,24 @@ export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIE
             : "human-reviewed-private-learning-reference", learningReferenceDisclaimer: true as const,
           ...(attributions ? { attributions: attributions.get(reference.questionId)!.feedback } : {}) });
       } });
+    if (subjectId === "economics_principles" && candidateProjections && applicabilityDigest !== null) {
+      economicsBankSupply.set(catalog, () => Object.freeze(catalog.initialReferences.map(reference => {
+        requireRow(reference); // Recheck exact version and all source/release expiry before each use.
+        return Object.freeze({ candidateId: reference.questionId,
+          candidateDigest: `sha256:${digest({ questionId: reference.questionId, questionVersion: reference.questionVersion,
+            subjectId, examYear: reference.examYear, examRound: reference.examRound })}`,
+          familyId: reference.questionId, surfaceId: `${reference.questionId}@${reference.questionVersion}`,
+          bankClass: "LEARNING_PRACTICE" as const, origin: "BANK_STOCK" as const,
+          contentAuthority: "LEARNING_ONLY" as const, rightsStatus: "VERIFIED" as const,
+          // CURRENT means the validated use decision has not expired. It is not
+          // a claim that a historical exam snapshot is current law.
+          sourceStatus: "CURRENT" as const, releaseChainComplete: true,
+          unseenEligibilitySnapshotSealed: false, nonSameSurfaceAsSource: false,
+          familyIsolated: false, calibrationState: "UNASSESSED" as const,
+          timedProtocolBound: false, chronology: null, chronologyAuthority: null,
+          availableAt: approved.reviewedAt, priority: 0 });
+      })));
+    }
+    return catalog;
   } catch { return null; } // No raw body, parse error, source path or candidate authority escapes.
 }

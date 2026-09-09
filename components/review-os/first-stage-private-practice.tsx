@@ -8,6 +8,7 @@ import { OWNER_LOCAL_R3_TRIAL_NOTICE } from "@/lib/review-os/first-stage/runtime
 
 type Availability = { state: "available" | "blocked";
   blocker: PrivateContentBlocker | null;
+  bankPractice?: boolean;
   questions: { questionId: string; subjectId: string; questionNumber: number }[] };
 type Payload = { ok: boolean; error?: string; view?: PrivateFirstStageSessionView;
   availability?: Availability };
@@ -95,6 +96,10 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
           intent.current = { action: "create", requestId: params.get("createId"), questionId: params.get("questionId") };
           setRetryable(true); setError("이전 시작 요청을 같은 식별자로 다시 확인하세요.");
         }
+        if (!id && payload.availability?.bankPractice && params.has("bankRequestId")) {
+          intent.current = { action: "assign_next", requestId: params.get("bankRequestId") };
+          setRetryable(true); setError("이전 배정 요청을 같은 식별자로 다시 확인하세요.");
+        }
       }
     }).catch(() => { if (active) setError("기록을 불러올 수 없습니다. 승인 콘텐츠와 접근 권한을 확인하세요."); })
       .finally(() => { if (active) setBusy(false); });
@@ -109,7 +114,8 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
     // Hide any prior assistance while the new durable result is unknown.
     setView(null);
     try {
-      const response = await fetch(API, { method: "POST", cache: "no-store", credentials: "same-origin",
+      const bankCommand = (command as { action?: string } | null)?.action === "assign_next";
+      const response = await fetch(bankCommand ? `${API}?view=bank` : API, { method: "POST", cache: "no-store", credentials: "same-origin",
         headers: { "Content-Type": "application/json" }, body: JSON.stringify(command) });
       const payload = await response.json() as Payload;
       // The server may have saved successfully after navigation. Keep that write,
@@ -117,6 +123,11 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
       if (!mounted.current) return;
       if (!response.ok || !payload.ok || !payload.view) {
         if (isContentBlocker(payload.error)) { showBlocker(payload.error); return; }
+        if (payload.error === "bank_stock_unavailable") {
+          intent.current = null;
+          setError("아직 배정하지 않은 검토 원문 재고가 없습니다. 기존 기록은 보존하며 AI 문제를 자동 생성하지 않습니다.");
+          return;
+        }
         if (response.status === 409 || response.status === 400 || response.status === 404) {
           intent.current = null;
           setError("현재 기록을 다시 불러오세요. 승인 콘텐츠가 없으면 학습을 시작할 수 없습니다.");
@@ -139,6 +150,15 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
     url.search = new URLSearchParams({ createId: id, questionId }).toString();
     window.history.replaceState(null, "", url);
     void send({ action: "create", requestId: id, questionId });
+  }
+
+  function assignNext() {
+    if (busy || inFlight.current) return;
+    const id = requestId();
+    const url = new URL(window.location.href);
+    url.search = new URLSearchParams({ bankRequestId: id }).toString();
+    window.history.replaceState(null, "", url);
+    void send({ action: "assign_next", requestId: id });
   }
 
   function choose(choice: ChoiceId, eventAt: number) {
@@ -183,8 +203,16 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
             {selectedQuestion && <button type="button" className={BUTTON} onClick={()=>create(selectedQuestion.questionId)}>
               사람 미검토 시험용 {selectedQuestion.questionNumber}번 시작</button>}
             <p className="text-xs text-slate-500">각 문항의 변형은 저장 후 D+1 복습에서만 열립니다. 목록에 없는 문항은 근거 검토 대기입니다.</p>
-          </div> : availability.questions.map((item) => <button key={item.questionId} type="button" className={BUTTON}
-            onClick={() => create(item.questionId)}>검토된 {item.questionNumber}번 시작</button>))}
+          </div> : <div className="space-y-4">
+            {availability.bankPractice && <div>
+              <button type="button" className={BUTTON} onClick={assignNext}>검토 재고에서 다음 연습 배정</button>
+              <p className="mt-2 text-xs">서버가 아직 배정하지 않은 원문을 고릅니다. 연습 전용이며 숙달·전이·측정 자격은 생기지 않습니다.</p>
+            </div>}
+            <details open={!availability.bankPractice}><summary>문항 직접 선택</summary>
+              {availability.questions.map((item) => <button key={item.questionId} type="button" className={`${BUTTON} mt-3`}
+                onClick={() => create(item.questionId)}>검토된 {item.questionNumber}번 시작</button>)}
+            </details>
+          </div>)}
         {!busy && view?.nextQuestionId && <button type="button" className={BUTTON}
           onClick={() => command("begin", { questionId: view.nextQuestionId })}>문제 열고 먼저 풀기</button>}
         {ownerLocalTrial && view?.question && Boolean(view.availableConceptAids?.length) && <details className="rounded-xl border p-4">
