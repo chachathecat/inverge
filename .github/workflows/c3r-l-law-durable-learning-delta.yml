@@ -25,7 +25,7 @@ jobs:
 
     steps:
       - name: Check out exact PR head
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
@@ -39,7 +39,7 @@ jobs:
           [[ "${PR_HEAD_SHA}" =~ ^[0-9a-f]{40}$ ]]
           test -z "$(git status --porcelain=v1 --untracked-files=no)"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -85,7 +85,7 @@ jobs:
 
       - name: Upload metadata-only exact-head Law evidence
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: c3r-l-law-runtime-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ env.C3R_L_RUNTIME_EVIDENCE_PATH }}
