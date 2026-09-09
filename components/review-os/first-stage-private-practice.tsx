@@ -79,11 +79,15 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
 
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
+    // Bound read/body waiting so the existing reload action remains reachable.
+    // This never cancels or retries a mutation and creates no offline truth.
+    const timeout = window.setTimeout(() => controller.abort(), 15_000);
     mounted.current = true;
     const params = new URL(window.location.href).searchParams;
     const id = params.get("sessionId");
     fetch(id ? `${API}?${new URLSearchParams({ sessionId: id })}` : API,
-      { cache: "no-store", credentials: "same-origin" }).then(async (response) => {
+      { cache: "no-store", credentials: "same-origin", signal: controller.signal }).then(async (response) => {
       const payload = await response.json() as Payload;
       if ((!response.ok || !payload.ok) && isContentBlocker(payload.error)) {
         if (active) showBlocker(payload.error);
@@ -101,9 +105,9 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
           setRetryable(true); setError("이전 배정 요청을 같은 식별자로 다시 확인하세요.");
         }
       }
-    }).catch(() => { if (active) setError("기록을 불러올 수 없습니다. 승인 콘텐츠와 접근 권한을 확인하세요."); })
-      .finally(() => { if (active) setBusy(false); });
-    return () => { active = false; mounted.current = false; };
+    }).catch(() => { if (active) setError("서버 기록을 확인하지 못했습니다. 연결을 확인한 뒤 다시 불러오세요."); })
+      .finally(() => { window.clearTimeout(timeout); if (active) setBusy(false); });
+    return () => { active = false; mounted.current = false; window.clearTimeout(timeout); controller.abort(); };
   }, [API]);
 
   async function send(command: unknown) {
