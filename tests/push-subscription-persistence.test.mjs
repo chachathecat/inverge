@@ -73,12 +73,30 @@ test("settings parser validates timezone, weekday convention, and reminder time"
 test("test notification route handles current user subscriptions, VAPID absence, and expired endpoints safely", () => {
   const source = read("app/api/notifications/test/route.ts");
   const server = read("lib/notifications/web-push-server.ts");
+  const result = read("lib/notifications/web-push-result.ts");
 
   assert.match(source, /getWebPushRuntimeStatus/);
   assert.match(source, /vapid_not_configured/);
+  assert.match(source, /failureCategoryCounts/);
+  assert.match(source, /sent_persistence_failed/);
+  assert.match(source, /expired_persistence_failed/);
+  assert.match(source, /subscription_select_failed/);
   assert.match(source, /\.eq\("user_id", context\.userId\)/);
   assert.match(source, /last_test_sent_at/);
+  assert.match(source, /updated_at:\s*now/);
   assert.match(source, /enabled:\s*false/);
-  assert.match(server, /statusCode === 404 \|\| statusCode === 410/);
+  assert.match(source, /buildNotificationPayloadCandidate/);
+  assert.doesNotMatch(source, /test-\$\{row\.id\}/);
+  assert.match(server, /webPush\.setVapidDetails/);
+  assert.match(server, /vapid_configuration_error/);
+  assert.match(server, /subscription_format_error/);
+  assert.match(server, /payload_validation_error/);
+  assert.match(`${server}\n${result}`, /push_provider_rejected/);
+  assert.match(`${server}\n${result}`, /push_transport_failure/);
+  assert.match(result, /statusCode === 404 \|\| statusCode === 410/);
+  assert.doesNotMatch(source, /notificationApiErrorResponse/);
+  assert.doesNotMatch(`${source}\n${server}`, /console\.(log|warn|error|info)/);
   assert.doesNotMatch(source, /problemText|answerText|officialAnswer|scorePrediction|passFail/i);
+  const responseBlocks = [...source.matchAll(/(?:context|NextResponse)\.json\(\s*\{([\s\S]*?)\}/g)].map((match) => match[1]).join("\n");
+  assert.doesNotMatch(responseBlocks, /endpoint|p256dh|\bauth\b|userId|email|private|provider.*body|stack/i);
 });
