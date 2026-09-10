@@ -117,10 +117,14 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
     setBusy(true); setError(null); setRetryable(false);
     // Hide any prior assistance while the new durable result is unknown.
     setView(null);
+    const controller = new AbortController();
+    // This stops only client waiting, not durable server work. Keep the exact
+    // intent: a later explicit replay must resolve the existing server winner.
+    const timeout = window.setTimeout(() => controller.abort(), 15_000);
     try {
       const bankCommand = (command as { action?: string } | null)?.action === "assign_next";
       const response = await fetch(bankCommand ? `${API}?view=bank` : API, { method: "POST", cache: "no-store", credentials: "same-origin",
-        headers: { "Content-Type": "application/json" }, body: JSON.stringify(command) });
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify(command), signal: controller.signal });
       const payload = await response.json() as Payload;
       // The server may have saved successfully after navigation. Keep that write,
       // but never let an unmounted subject rewrite the next page's URL or UI.
@@ -142,9 +146,11 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
       accept(payload); intent.current = null;
     } catch {
       if (!mounted.current) return;
-      setError("저장 결과를 확인하지 못했습니다. 같은 요청을 다시 확인할 수 있습니다.");
+      setError(controller.signal.aborted
+        ? "응답 대기가 길어져 결과를 확인하지 못했습니다. 서버 저장은 계속될 수 있습니다. 같은 요청을 다시 확인하세요."
+        : "저장 결과를 확인하지 못했습니다. 같은 요청을 다시 확인할 수 있습니다.");
       setRetryable(true);
-    } finally { inFlight.current = false; if (mounted.current) setBusy(false); }
+    } finally { window.clearTimeout(timeout); inFlight.current = false; if (mounted.current) setBusy(false); }
   }
 
   function create(questionId: string) {
