@@ -15,6 +15,7 @@ const sharedRoutePaths = [
   "app/app/review/page.tsx",
   "components/review-os/capture-form.tsx",
   "components/review-os/learning-agenda-client.tsx",
+  "components/review-os/local-beta-note-reflection.tsx",
   "components/review-os/review-queue-client.tsx",
 ];
 const sharedRoutes = new Map(sharedRoutePaths.map((relativePath) => [relativePath, read(relativePath)]));
@@ -48,6 +49,7 @@ test("second-stage Capture and saved handoff use Korean visible and accessible l
   assert.match(captureForm, /REVIEW_OS_LEARNER_LANGUAGE\.biggestGap/);
   assert.match(captureForm, /REVIEW_OS_LEARNER_LANGUAGE\.d1/);
   assert.match(captureForm, /label=\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}/);
+  assert.match(captureForm, /mode === "second" \? `3\. 저장하고 \$\{REVIEW_OS_LEARNER_LANGUAGE\.todayPlan\}에 반영` : "Step 3\. 저장하고 오늘 계획에 반영"/);
   const savedPanelStart = sessionPage.indexOf("const savedCapturePanel = savedCaptureDetail ? (");
   const secondPanelStart = sessionPage.indexOf('mode === "second" ? (', savedPanelStart);
   const firstPanelStart = sessionPage.indexOf(") : (", secondPanelStart);
@@ -73,6 +75,19 @@ test("second-stage BiggestGap cards override the legacy heading without changing
   assert.match(itemDetail, /biggestGapLabel=\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}/);
   assert.match(itemLoading, /\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}과 다음 복습 기록/);
   assert.match(actionCard, /V3ActionLine label=\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}/);
+});
+
+test("second-stage signal and browser-local fallbacks keep the canonical Korean first glance", () => {
+  const items = sharedRoutes.get("app/app/items/page.tsx");
+  const localBeta = sharedRoutes.get("components/review-os/local-beta-note-reflection.tsx");
+
+  assert.match(items, /sourceType === "problem-snap"\) return mode === "second" \? "문제 스냅" : "Problem Snap"/);
+  assert.match(items, /sourceType === "review_queue"\) return mode === "second" \? REVIEW_OS_LEARNER_LANGUAGE\.reviewQueue : "복습 예정"/);
+  for (const key of ["biggestGap", "todayPlan", "reviewQueue", "studyLedger"]) {
+    assert.match(localBeta, new RegExp(`REVIEW_OS_LEARNER_LANGUAGE\\.${key}`), `missing second-stage ${key} fallback label`);
+  }
+  assert.match(localBeta, /mode === "second" \? `오늘 한 것에서 남긴 \$\{REVIEW_OS_LEARNER_LANGUAGE\.reviewQueue\}` : "오늘 한 것에서 남긴 복습"/);
+  assert.match(localBeta, /mode === "second" \? `\$\{REVIEW_OS_LEARNER_LANGUAGE\.todayPlan\}에 반영` : "오늘 계획에 반영"/);
 });
 
 test("Today keeps one action with what, why, minutes and continuation before secondary work", () => {

@@ -98,9 +98,9 @@ function formatCreatedDate(value?: string | null) {
 }
 
 function sourceTypeLabel(sourceType: string, mode: AppraisalMode) {
-  if (sourceType === "problem-snap") return "Problem Snap";
+  if (sourceType === "problem-snap") return mode === "second" ? "문제 스냅" : "Problem Snap";
   if (sourceType === "answer_review") return "답안 훈련 기록";
-  if (sourceType === "review_queue") return "복습 예정";
+  if (sourceType === "review_queue") return mode === "second" ? REVIEW_OS_LEARNER_LANGUAGE.reviewQueue : "복습 예정";
   if (sourceType === "wrong_answer") return "학습 노트";
   return mode === "second" ? REVIEW_OS_LEARNER_LANGUAGE.studyLedger : "학습 기록";
 }
