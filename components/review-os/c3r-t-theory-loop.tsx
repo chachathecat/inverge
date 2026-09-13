@@ -10,6 +10,13 @@ import {
   type C3RTPlanBlockInput,
   type C3RTView,
 } from "@/lib/review-os/c3r-t-contract";
+import {
+  learnerDueAtLabel,
+  learnerLedgerEntryLabel,
+  learnerPlanKindLabel,
+  learnerPlanStateLabel,
+  learnerRecordStateLabel,
+} from "@/lib/review-os/learner-language";
 
 type ApiResult = {
   ok: boolean;
@@ -33,7 +40,6 @@ export function C3RTTheoryLoop({ initialRecordId }: { initialRecordId: string | 
   const [prediction, setPrediction] = useState<"likely_success" | "likely_partial" | "likely_blocked">("likely_partial");
   const [confidence, setConfidence] = useState<"low" | "medium" | "high">("medium");
   const [scopeResolution, setScopeResolution] = useState<"EXACT" | "UNRESOLVED_ANAPHORA" | "UNSCOPED">("EXACT");
-  const [scopeId, setScopeId] = useState<string>(C3R_T_TARGET_SCOPE_ID);
   const [requiredPolarity, setRequiredPolarity] = useState<"ASSERTED" | "NEGATED">("ASSERTED");
   const [forbiddenPolarity, setForbiddenPolarity] = useState<"OMIT" | "ASSERTED" | "NEGATED">("NEGATED");
   const [availableMinutes, setAvailableMinutes] = useState(90);
@@ -48,7 +54,7 @@ export function C3RTTheoryLoop({ initialRecordId }: { initialRecordId: string | 
         body: JSON.stringify(body),
       } : { cache: "no-store" });
       const data = await response.json() as ApiResult;
-      if (!data.ok) setStatus(data.error ?? "요청을 완료하지 못했습니다.");
+      if (!data.ok) setStatus("요청을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.");
       if (data.view) setView(data.view);
       return data;
     } catch {
@@ -66,7 +72,7 @@ export function C3RTTheoryLoop({ initialRecordId }: { initialRecordId: string | 
       .then(async (response) => response.json() as Promise<ApiResult>)
       .then((data) => {
         if (cancelled) return;
-        if (!data.ok) setStatus(data.error ?? "요청을 완료하지 못했습니다.");
+        if (!data.ok) setStatus("학습 상태를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
         if (data.view) setView(data.view);
       })
       .catch(() => {
@@ -123,7 +129,7 @@ export function C3RTTheoryLoop({ initialRecordId }: { initialRecordId: string | 
       clauses: [{
         clauseIndex: 1,
         scopeResolution,
-        scopeId: scopeResolution === "EXACT" ? scopeId : null,
+        scopeId: scopeResolution === "EXACT" ? C3R_T_TARGET_SCOPE_ID : null,
         predicates,
       }],
       confirmationMode: "MANUAL_STRUCTURED",
@@ -216,7 +222,7 @@ export function C3RTTheoryLoop({ initialRecordId }: { initialRecordId: string | 
     URL.revokeObjectURL(anchor.href);
   }
   async function deleteData() {
-    if (!window.confirm("내 C3R-T 이론 학습 데이터만 삭제할까요? 실무 데이터는 유지됩니다.")) return;
+    if (!window.confirm("내 이론 학습 데이터만 삭제할까요? 실무 데이터는 유지됩니다.")) return;
     const data = await request({ action: "delete" });
     if (data.result?.status === "deleted") {
       setView((current) => current ? { ...current, restored: null, currentPlan: null } : current);
@@ -229,7 +235,7 @@ export function C3RTTheoryLoop({ initialRecordId }: { initialRecordId: string | 
   return (
     <main className="mx-auto grid max-w-3xl gap-6 p-6" data-testid="c3r-t-runtime">
       <header className="grid gap-2">
-        <p className="text-sm font-semibold text-slate-600">Owner-only · 기본 OFF · 이론 durable-learning</p>
+        <p className="text-sm font-semibold text-slate-600">답안길 · 감평 2차 이론</p>
         <h1 className="text-2xl font-bold">감정평가이론 목표범위 재구성</h1>
         <p className="text-sm text-slate-700">설명을 보기 전에 직접 답하고, 한 가지 핵심 간극을 고친 뒤 예정된 전이까지 이어갑니다.</p>
       </header>
@@ -249,41 +255,41 @@ export function C3RTTheoryLoop({ initialRecordId }: { initialRecordId: string | 
             </select>
           </label>
           <textarea value={attemptBody} onChange={(event) => setAttemptBody(event.target.value)} placeholder="먼저 자신의 문장으로 답하세요." className="min-h-32 rounded-lg border p-3" />
-          <button disabled={pending || !attemptBody.trim()} onClick={() => void start()} className="rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white disabled:opacity-50">D0 답안 고정</button>
-        </> : <p data-testid="c3r-t-state">상태: <strong>{record.state}</strong> · 버전 {record.record_version}</p>}
+          <button disabled={pending || !attemptBody.trim()} onClick={() => void start()} className="rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white disabled:opacity-50">첫 답안 저장</button>
+        </> : <div data-testid="c3r-t-state" className="grid gap-2"><p>현재 단계: <strong>{learnerRecordStateLabel(record.state)}</strong></p><details className="text-xs text-slate-600"><summary className="cursor-pointer">검증용 기술 정보</summary><p className="mt-2">기록 버전: {record.record_version}</p></details></div>}
       </section>
 
       {record?.state === "D0_OPEN" ? <section className="grid gap-3 rounded-2xl border p-5">
-        <h2 className="font-bold">가장 큰 간극 1개</h2><p>{view.source.gapLabel}</p>
+        <h2 className="font-bold">가장 큰 감점 원인</h2><p>{view.source.gapLabel}</p>
         <textarea value={failureNote} onChange={(event) => setFailureNote(event.target.value)} placeholder="내 실패 메모" className="min-h-24 rounded-lg border p-3" />
-        <button disabled={pending || !failureNote.trim()} onClick={() => void commitFeedback()} className="rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white disabled:opacity-50">간극 고정하고 최소 힌트 보기</button>
+        <button disabled={pending || !failureNote.trim()} onClick={() => void commitFeedback()} className="rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white disabled:opacity-50">감점 원인 저장하고 최소 힌트 보기</button>
       </section> : null}
 
       {record && !["D0_OPEN", "FEEDBACK_COMMITTED"].includes(record.state) ? null : record?.state === "FEEDBACK_COMMITTED" ? <section className="rounded-2xl border p-5"><p><strong>최소 힌트:</strong> {view.source.scaffold}</p></section> : null}
 
       {record && ["FEEDBACK_COMMITTED", "REPAIRED", "D1_COMPLETE", "D7_COMPLETE", "CLOSED", "REOPENED"].includes(record.state) ? <section className="grid gap-3 rounded-2xl border p-5" data-testid="c3r-t-structured-claim">
         <h2 className="font-bold">구조화한 목표범위·극성</h2>
-        <label>범위 해석 <select value={scopeResolution} onChange={(e) => setScopeResolution(e.target.value as typeof scopeResolution)} className="ml-2 rounded border p-2"><option>EXACT</option><option>UNRESOLVED_ANAPHORA</option><option>UNSCOPED</option></select></label>
-        {scopeResolution === "EXACT" ? <label>범위 ID <input value={scopeId} onChange={(e) => setScopeId(e.target.value)} className="ml-2 w-full rounded border p-2" /></label> : null}
-        <label>필수 술어 <select value={requiredPolarity} onChange={(e) => setRequiredPolarity(e.target.value as typeof requiredPolarity)} className="ml-2 rounded border p-2"><option>ASSERTED</option><option>NEGATED</option></select></label>
-        <label>금지 술어 <select value={forbiddenPolarity} onChange={(e) => setForbiddenPolarity(e.target.value as typeof forbiddenPolarity)} className="ml-2 rounded border p-2"><option value="OMIT">제외</option><option>ASSERTED</option><option>NEGATED</option></select></label>
+        <label>범위 해석 <select value={scopeResolution} onChange={(e) => setScopeResolution(e.target.value as typeof scopeResolution)} className="ml-2 rounded border p-2"><option value="EXACT">정확히 특정됨</option><option value="UNRESOLVED_ANAPHORA">가리키는 대상이 불분명함</option><option value="UNSCOPED">범위를 특정하지 못함</option></select></label>
+        {scopeResolution === "EXACT" ? <p className="text-sm text-slate-700">적용 대상: 수익방식에서 기대수익을 가치로 바꾸는 범위</p> : null}
+        <label>필수 내용 <select value={requiredPolarity} onChange={(e) => setRequiredPolarity(e.target.value as typeof requiredPolarity)} className="ml-2 rounded border p-2"><option value="ASSERTED">포함함</option><option value="NEGATED">포함하지 않음</option></select></label>
+        <label>피해야 할 내용 <select value={forbiddenPolarity} onChange={(e) => setForbiddenPolarity(e.target.value as typeof forbiddenPolarity)} className="ml-2 rounded border p-2"><option value="OMIT">제외</option><option value="ASSERTED">포함함</option><option value="NEGATED">포함하지 않음</option></select></label>
         {record.state === "FEEDBACK_COMMITTED" ? <button disabled={pending} onClick={() => void submitRepair()} className="rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white">구조화 재작성 제출</button> : null}
-        {record.state === "REPAIRED" ? <div className="grid gap-2">{!d1Eligible ? <p id="c3r-t-d1-eligibility" role="status" data-testid="c3r-t-d1-eligibility" className="rounded-xl bg-slate-50 p-3 text-sm">D+1 복습은 서버 Review Queue 예정 시각{d1QueueItem?.dueAt ? ` ${d1QueueItem.dueAt}` : ""} 이후에 열립니다.</p> : null}<div className="grid grid-cols-2 gap-2"><button disabled={pending || !d1Eligible} aria-describedby={!d1Eligible ? "c3r-t-d1-eligibility" : undefined} onClick={() => void review("record_assisted_review")} className="rounded-xl border px-4 py-3 disabled:opacity-50">도움받아 복습</button><button disabled={pending || !d1Eligible} aria-describedby={!d1Eligible ? "c3r-t-d1-eligibility" : undefined} onClick={() => void review("complete_d1")} className="rounded-xl bg-slate-900 px-4 py-3 text-white disabled:opacity-50">D+1 독립 재구성</button></div></div> : null}
-        {record.state === "D1_COMPLETE" ? <div className="grid gap-2">{!d7Eligible ? <p id="c3r-t-d7-eligibility" role="status" data-testid="c3r-t-d7-eligibility" className="rounded-xl bg-slate-50 p-3 text-sm">D+7 전이 과업은 서버 Review Queue 예정 시각{d7QueueItem?.dueAt ? ` ${d7QueueItem.dueAt}` : ""} 이후에 열립니다.</p> : null}{transferTask?.state === "SEALED" ? <button disabled={pending || !d7Eligible} aria-describedby={!d7Eligible ? "c3r-t-d7-eligibility" : undefined} onClick={() => void presentTransfer()} className="rounded-xl bg-slate-900 px-4 py-3 text-white disabled:opacity-50">D+7 전이 과업 열기</button> : null}{transferTask?.prompt ? <p data-testid="c3r-t-transfer-prompt">{transferTask.prompt}</p> : <p data-testid="c3r-t-transfer-sealed">전이 과업은 아직 봉인되어 있습니다.</p>}{transferTask?.state === "PRESENTED" ? <button disabled={pending || !d7Eligible} aria-describedby={!d7Eligible ? "c3r-t-d7-eligibility" : undefined} onClick={() => void review("complete_d7_transfer")} className="rounded-xl bg-slate-900 px-4 py-3 text-white disabled:opacity-50">D+7 전이 제출</button> : null}</div> : null}
-        {record.state === "D7_COMPLETE" ? <div className="grid gap-2">{!recurrenceEligible ? <p id="c3r-t-recurrence-eligibility" role="status" data-testid="c3r-t-recurrence-eligibility" className="rounded-xl bg-slate-50 p-3 text-sm">시간 제한 재현은 서버 Review Queue 예정 시각{recurrenceQueueItem?.dueAt ? ` ${recurrenceQueueItem.dueAt}` : ""} 이후에 열립니다.</p> : null}<button disabled={pending || !recurrenceEligible} aria-describedby={!recurrenceEligible ? "c3r-t-recurrence-eligibility" : undefined} onClick={() => void review("complete_recurrence")} className="rounded-xl bg-slate-900 px-4 py-3 text-white disabled:opacity-50">시간 제한 재현 완료</button></div> : null}
+        {record.state === "REPAIRED" ? <div className="grid gap-2">{!d1Eligible ? <p id="c3r-t-d1-eligibility" role="status" data-testid="c3r-t-d1-eligibility" className="rounded-xl bg-slate-50 p-3 text-sm">다음 날 혼자 해보기는 복습 예정 시각{d1QueueItem?.dueAt ? ` ${learnerDueAtLabel(d1QueueItem.dueAt)}` : ""} 이후에 열립니다.</p> : null}<div className="grid grid-cols-1 gap-2 sm:grid-cols-2"><button disabled={pending || !d1Eligible} aria-describedby={!d1Eligible ? "c3r-t-d1-eligibility" : undefined} onClick={() => void review("record_assisted_review")} className="rounded-xl border px-4 py-3 disabled:opacity-50">도움을 사용해 연습하기</button><button disabled={pending || !d1Eligible} aria-describedby={!d1Eligible ? "c3r-t-d1-eligibility" : undefined} onClick={() => void review("complete_d1")} className="rounded-xl bg-slate-900 px-4 py-3 text-white disabled:opacity-50">다음 날 혼자 해보기 완료</button></div></div> : null}
+        {record.state === "D1_COMPLETE" ? <div className="grid gap-2">{!d7Eligible ? <p id="c3r-t-d7-eligibility" role="status" data-testid="c3r-t-d7-eligibility" className="rounded-xl bg-slate-50 p-3 text-sm">일주일 뒤 다른 문제는 복습 예정 시각{d7QueueItem?.dueAt ? ` ${learnerDueAtLabel(d7QueueItem.dueAt)}` : ""} 이후에 열립니다.</p> : null}{transferTask?.state === "SEALED" ? <button disabled={pending || !d7Eligible} aria-describedby={!d7Eligible ? "c3r-t-d7-eligibility" : undefined} onClick={() => void presentTransfer()} className="rounded-xl bg-slate-900 px-4 py-3 text-white disabled:opacity-50">일주일 뒤 다른 문제 열기</button> : null}{transferTask?.prompt ? <p data-testid="c3r-t-transfer-prompt">{transferTask.prompt}</p> : <p data-testid="c3r-t-transfer-sealed">다른 문제는 아직 열리지 않았습니다.</p>}{transferTask?.state === "PRESENTED" ? <button disabled={pending || !d7Eligible} aria-describedby={!d7Eligible ? "c3r-t-d7-eligibility" : undefined} onClick={() => void review("complete_d7_transfer")} className="rounded-xl bg-slate-900 px-4 py-3 text-white disabled:opacity-50">일주일 뒤 다른 문제 제출</button> : null}</div> : null}
+        {record.state === "D7_COMPLETE" ? <div className="grid gap-2">{!recurrenceEligible ? <p id="c3r-t-recurrence-eligibility" role="status" data-testid="c3r-t-recurrence-eligibility" className="rounded-xl bg-slate-50 p-3 text-sm">제한시간 실전 확인은 복습 예정 시각{recurrenceQueueItem?.dueAt ? ` ${learnerDueAtLabel(recurrenceQueueItem.dueAt)}` : ""} 이후에 열립니다.</p> : null}<button disabled={pending || !recurrenceEligible} aria-describedby={!recurrenceEligible ? "c3r-t-recurrence-eligibility" : undefined} onClick={() => void review("complete_recurrence")} className="rounded-xl bg-slate-900 px-4 py-3 text-white disabled:opacity-50">제한시간 실전 확인 완료</button></div> : null}
         {record.state === "CLOSED" ? <button disabled={pending} onClick={() => void review("record_later_failure")} className="rounded-xl border border-amber-500 px-4 py-3 text-amber-800">후속 실패로 다시 열기</button> : null}
-        {record.state === "REOPENED" ? <div className="grid gap-2">{!reopenedEligible ? <p id="c3r-t-reopened-eligibility" role="status" data-testid="c3r-t-reopened-eligibility" className="rounded-xl bg-slate-50 p-3 text-sm">재개 복습은 서버 Review Queue 예정 시각{reopenedQueueItem?.dueAt ? ` ${reopenedQueueItem.dueAt}` : ""} 이후에 열립니다.</p> : null}<button disabled={pending || !reopenedEligible} aria-describedby={!reopenedEligible ? "c3r-t-reopened-eligibility" : undefined} onClick={() => void review("complete_reopened_review")} className="rounded-xl bg-slate-900 px-4 py-3 text-white disabled:opacity-50">재개 복습 독립 완료</button></div> : null}
+        {record.state === "REOPENED" ? <div className="grid gap-2">{!reopenedEligible ? <p id="c3r-t-reopened-eligibility" role="status" data-testid="c3r-t-reopened-eligibility" className="rounded-xl bg-slate-50 p-3 text-sm">다시 혼자 확인하기는 복습 예정 시각{reopenedQueueItem?.dueAt ? ` ${learnerDueAtLabel(reopenedQueueItem.dueAt)}` : ""} 이후에 열립니다.</p> : null}<button disabled={pending || !reopenedEligible} aria-describedby={!reopenedEligible ? "c3r-t-reopened-eligibility" : undefined} onClick={() => void review("complete_reopened_review")} className="rounded-xl bg-slate-900 px-4 py-3 text-white disabled:opacity-50">다시 혼자 확인하기 완료</button></div> : null}
       </section> : null}
 
       {record ? <section className="grid gap-3 rounded-2xl border p-5">
-        <h2 className="font-bold">Review Queue · Today / Full-Day</h2>
-        <p>대기 {view.dashboard.queue.length}개 · CoreOutcome 최대 3개</p>
+        <h2 className="font-bold">복습 대기 · 오늘 할 일</h2>
+        <p>대기 {view.dashboard.queue.length}개 · 중요 학습 항목 최대 3개</p>
         <label>가용 시간 <input type="number" min={30} max={720} value={availableMinutes} onChange={(e) => setAvailableMinutes(Number(e.target.value))} className="ml-2 w-24 rounded border p-2" />분</label>
-        {!view.currentPlan ? <div className="grid gap-2">{!hasEligibleQueueItem ? <p id="c3r-t-plan-eligibility" role="status" data-testid="c3r-t-plan-eligibility" className="rounded-xl bg-slate-50 p-3 text-sm">예정 시각이 된 이론 Review Queue 항목이 있을 때 계획을 만들 수 있습니다.</p> : null}<div className="grid grid-cols-2 gap-2"><button disabled={pending || !hasEligibleQueueItem} aria-describedby={!hasEligibleQueueItem ? "c3r-t-plan-eligibility" : undefined} onClick={() => void createPlan("TODAY")} className="rounded-xl border px-4 py-3 disabled:opacity-50">Today 계획</button><button disabled={pending || !hasEligibleQueueItem} aria-describedby={!hasEligibleQueueItem ? "c3r-t-plan-eligibility" : undefined} onClick={() => void createPlan("FULL_DAY")} className="rounded-xl border px-4 py-3 disabled:opacity-50">Full-Day 계획</button></div></div> : <div className="grid gap-2" data-testid="c3r-t-current-plan"><p>{view.currentPlan.planKind} · {view.currentPlan.state}</p><div className="grid grid-cols-3 gap-2"><button onClick={() => void decidePlan("ACCEPT")} className="rounded border p-2">수락</button><button onClick={() => void decidePlan("EDIT")} className="rounded border p-2">편집</button><button onClick={() => void decidePlan("REJECT")} className="rounded border p-2">거절</button></div></div>}
+        {!view.currentPlan ? <div className="grid gap-2">{!hasEligibleQueueItem ? <p id="c3r-t-plan-eligibility" role="status" data-testid="c3r-t-plan-eligibility" className="rounded-xl bg-slate-50 p-3 text-sm">예정 시각이 된 이론 복습이 있을 때 계획을 만들 수 있습니다.</p> : null}<div className="grid grid-cols-1 gap-2 sm:grid-cols-2"><button disabled={pending || !hasEligibleQueueItem} aria-describedby={!hasEligibleQueueItem ? "c3r-t-plan-eligibility" : undefined} onClick={() => void createPlan("TODAY")} className="rounded-xl border px-4 py-3 disabled:opacity-50">오늘 할 일</button><button disabled={pending || !hasEligibleQueueItem} aria-describedby={!hasEligibleQueueItem ? "c3r-t-plan-eligibility" : undefined} onClick={() => void createPlan("FULL_DAY")} className="rounded-xl border px-4 py-3 disabled:opacity-50">오늘 전체 공부표</button></div></div> : <div className="grid gap-2" data-testid="c3r-t-current-plan"><p>{learnerPlanKindLabel(view.currentPlan.planKind)} · {learnerPlanStateLabel(view.currentPlan.state)}</p><div className="grid grid-cols-1 gap-2 sm:grid-cols-3"><button onClick={() => void decidePlan("ACCEPT")} className="rounded border p-2">수락</button><button onClick={() => void decidePlan("EDIT")} className="rounded border p-2">편집</button><button onClick={() => void decidePlan("REJECT")} className="rounded border p-2">거절</button></div></div>}
       </section> : null}
 
-      {restored ? <section className="grid gap-3 rounded-2xl border p-5"><h2 className="font-bold">개인 학습원장</h2>{restored.ledger.map((entry) => <p key={entry.id} className="text-sm">{entry.entry_kind} · {entry.occurred_at}</p>)}{restored.failureNotes[0] ? <p className="rounded border p-3">내 실패 메모: {restored.failureNotes[0].body}</p> : null}</section> : null}
-      <section className="grid grid-cols-2 gap-2"><button disabled={pending} onClick={() => void exportData()} className="rounded-xl border px-4 py-3">내 이론 데이터 내보내기</button><button disabled={pending} onClick={() => void deleteData()} className="rounded-xl border border-red-300 px-4 py-3 text-red-700">내 C3R-T 이론 데이터 삭제</button></section>
+      {restored ? <section className="grid gap-3 rounded-2xl border p-5"><h2 className="font-bold">내 공부 기록</h2>{restored.ledger.map((entry) => <p key={entry.id} className="text-sm">{learnerLedgerEntryLabel(entry.entry_kind)} · {learnerDueAtLabel(entry.occurred_at)}</p>)}{restored.failureNotes[0] ? <p className="rounded border p-3">내 실패 메모: {restored.failureNotes[0].body}</p> : null}</section> : null}
+      <section className="grid grid-cols-1 gap-2 sm:grid-cols-2"><button disabled={pending} onClick={() => void exportData()} className="rounded-xl border px-4 py-3">내 이론 데이터 내보내기</button><button disabled={pending} onClick={() => void deleteData()} className="rounded-xl border border-red-300 px-4 py-3 text-red-700">내 이론 데이터 삭제</button></section>
     </main>
   );
 }

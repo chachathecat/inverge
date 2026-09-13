@@ -367,7 +367,10 @@ test("Owner-only/default-off UI and API expose exact Law confirmation only", () 
   assert.match(componentSource,
     /complete_d1[\s\S]*!reconstructionReady[\s\S]*complete_d7_transfer[\s\S]*!reconstructionReady[\s\S]*complete_recurrence[\s\S]*!reconstructionReady/);
   assert.match(componentSource,
-    /record\.state === "FEEDBACK_COMMITTED"[\s\S]*c3r-l-direct-repair-reference[\s\S]*이후 독립 복습에서는 숨겨집니다/);
+    /record\.state === "FEEDBACK_COMMITTED"[\s\S]*<details[^>]*c3r-l-direct-repair-reference[\s\S]*검증용 기술 정보/);
+  assert.match(componentSource, /learnerRecordStateLabel\(record\.state\)/);
+  assert.match(componentSource,
+    /learnerPlanKindLabel\(view\.currentPlan\.planKind\)[\s\S]*learnerPlanStateLabel\(view\.currentPlan\.state\)/);
   assert.match(componentSource,
     /if \(!view\) return status \?[\s\S]*data-testid="c3r-l-load-error"[\s\S]*role="alert"[\s\S]*setInitialLoadRevision\(\(revision\) => revision \+ 1\)/);
   assert.match(componentSource,

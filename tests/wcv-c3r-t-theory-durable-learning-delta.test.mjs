@@ -375,8 +375,12 @@ test("Owner-only/default-off boundaries and UI/API flow remain closed", () => {
   assert.match(componentSource,
     /hasEligibleQueueItem[\s\S]*disabled=\{pending \|\| !hasEligibleQueueItem\}/);
   for (const marker of [
-    "prediction", "failureNote", "c3r-t-structured-claim", "D+1", "D+7",
+    "prediction", "failureNote", "c3r-t-structured-claim",
+    "다음 날 혼자 해보기", "일주일 뒤 다른 문제",
   ]) assert.ok(componentSource.includes(marker), marker);
+  assert.match(componentSource, /learnerRecordStateLabel\(record\.state\)/);
+  assert.match(componentSource,
+    /learnerPlanKindLabel\(view\.currentPlan\.planKind\)[\s\S]*learnerPlanStateLabel\(view\.currentPlan\.state\)/);
   assert.equal(contract.runtimeBoundary.publicActivation, false);
   assert.equal(contract.runtimeBoundary.paymentActivation, false);
   assert.equal(contract.runtimeBoundary.remoteSupabaseMutationCount, 0);
