@@ -68,6 +68,8 @@ test("second-stage BiggestGap cards override the legacy heading without changing
 
   assert.match(ledgerUi, /const normalizedLabel = label\?\.trim\(\) \|\| presentation\.label/);
   assert.match(todaySession, /label=\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}/);
+  assert.match(todaySession, />오늘 학습 실행 · \{modeLabel\}</);
+  assert.match(todaySession, />문단 다시쓰기 저장 화면으로 이동</);
   assert.match(itemDetail, /biggestGapLabel=\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}/);
   assert.match(itemLoading, /\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}과 다음 복습 기록/);
   assert.match(actionCard, /V3ActionLine label=\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}/);

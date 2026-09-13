@@ -318,7 +318,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
       <div className="grid gap-2 sm:grid-cols-2">
         <V3ActionLink href="/app?mode=second" tone="quiet" fullWidth>오늘 화면으로 돌아가기</V3ActionLink>
         <V3ActionLink href="/app/review?mode=second" tone="quiet" fullWidth>
-          다른 작업 보기<span className="sr-only">rewrite 저장하러 이동</span>
+          다른 작업 보기<span className="sr-only">문단 다시쓰기 저장 화면으로 이동</span>
         </V3ActionLink>
       </div>
     </V3QuietDisclosure>
@@ -338,7 +338,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
     <SessionContainer className={mode === "second" ? "space-y-5" : "border-[color:var(--border-strong)] bg-[color:var(--surface)] shadow-none"}>
       {mode === "second" && showHeader ? (
         <header className="space-y-2">
-          <p className="v3-type-caption text-[var(--color-text-secondary)]">Today Session Runner · {modeLabel}</p>
+          <p className="v3-type-caption text-[var(--color-text-secondary)]">오늘 학습 실행 · {modeLabel}</p>
           <h2 className="v3-type-section ko-keep text-[var(--color-text-primary)]">오늘은 이것만 합니다.</h2>
           <p className="v3-type-body ko-keep text-[var(--color-text-secondary)]">{focus.reason}</p>
         </header>
