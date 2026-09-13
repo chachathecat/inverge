@@ -63,10 +63,12 @@ test("second-stage BiggestGap cards override the legacy heading without changing
   const ledgerUi = read("components/learner/study-ledger-ui.tsx");
   const todaySession = read("components/review-os/today-session-runner.tsx");
   const itemDetail = read("app/app/items/[itemId]/page.tsx");
+  const actionCard = read("components/review-os/cognitive-learning-action-card.tsx");
 
   assert.match(ledgerUi, /const normalizedLabel = label\?\.trim\(\) \|\| presentation\.label/);
   assert.match(todaySession, /label=\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}/);
   assert.match(itemDetail, /biggestGapLabel=\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}/);
+  assert.match(actionCard, /V3ActionLine label=\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}/);
 });
 
 test("Today keeps one action with what, why, minutes and continuation before secondary work", () => {

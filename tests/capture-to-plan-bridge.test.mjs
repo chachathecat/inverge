@@ -181,7 +181,7 @@ test("today session runner separates first/second execution loop copy and keeps 
   ["핵심 조건 회상", "짧은 재풀이", "틀린 이유 1개", "근거 1문장"].forEach((token) =>
     assert.ok(source.includes(token), `Missing first-loop token: ${token}`),
   );
-  ["쟁점 회상", "가장 큰 간극 1개", "문단 1개만 다시 씁니다.", "전후 비교", "다음 보강 예약"].forEach((token) =>
+  ["쟁점 회상", "REVIEW_OS_LEARNER_LANGUAGE.biggestGap", "문단 1개만 다시 씁니다.", "전후 비교", "다음 보강 예약"].forEach((token) =>
     assert.ok(source.includes(token), `Missing second-loop token: ${token}`),
   );
 

@@ -866,7 +866,13 @@ export function StudyLedgerDetail({
               state="Ready"
               href={actionHref}
               label={completed ? "문단 한 번 더 다듬기" : "10분 문단 다시쓰기"}
-              status={completed ? "남은 간극 1개만 다시 확인합니다." : "가장 큰 간극 1개만 보강합니다."}
+              status={biggestGapLabel
+                ? completed
+                  ? "남은 감점 원인 하나만 다시 확인합니다."
+                  : `${biggestGapLabel} 하나만 보강합니다.`
+                : completed
+                  ? "남은 간극 1개만 다시 확인합니다."
+                  : "가장 큰 간극 1개만 보강합니다."}
             />
 
             {supportHref ? (

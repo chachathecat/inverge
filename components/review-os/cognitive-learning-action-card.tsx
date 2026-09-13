@@ -1,4 +1,5 @@
 import type { CognitiveLearningActionUnit } from "@/lib/review-os/cognitive-learning-actions";
+import { REVIEW_OS_LEARNER_LANGUAGE } from "@/lib/review-os/learner-language";
 
 type CognitiveLearningActionCardProps = {
   unit: CognitiveLearningActionUnit;
@@ -24,7 +25,7 @@ export function CognitiveLearningActionCard({
       >
         <p className="v3-type-caption text-[var(--color-text-secondary)]">결과를 학습 행동으로 전환</p>
         <dl className="mt-4 divide-y divide-[var(--color-border-default)] border-y border-[var(--color-border-default)]">
-          <V3ActionLine label="가장 큰 간극 1개" value={unit.oneBiggestGap} />
+          <V3ActionLine label={REVIEW_OS_LEARNER_LANGUAGE.biggestGap} value={unit.oneBiggestGap} />
           <V3ActionLine label="오늘 다시 쓸 문단 1개" value={unit.nextRewriteAction} />
           <V3ActionLine label={unit.retrievalCheck.label} value={unit.retrievalCheck.prompt} />
           <V3ActionLine

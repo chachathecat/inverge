@@ -64,7 +64,7 @@ type TodaySessionRunnerProps = {
 };
 
 type TrapCard = { trapType: string; prompt: string; recallPoint: string; caution: string };
-export const SECOND_LOOP_TOKENS = ["쟁점 회상", "가장 큰 간극 1개", "문단 1개만 다시 씁니다.", "전후 비교", "다음 보강 예약"] as const;
+export const SECOND_LOOP_TOKENS = ["쟁점 회상", REVIEW_OS_LEARNER_LANGUAGE.biggestGap, "문단 1개만 다시 씁니다.", "전후 비교", "다음 보강 예약"] as const;
 export const FIRST_LOOP_TOKENS = ["핵심 조건 회상", "짧은 재풀이", "틀린 이유 1개", "근거 1문장"] as const;
 const FIRST_TRAP_CATEGORIES = ["요건 누락", "원칙/예외 혼동", "선지 끝 조건 오독", "계산/단위 실수", "그래프/공식 조건 혼동", "조문/절차 순서 혼동"] as const;
 
@@ -584,7 +584,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
               <h3 className="v3-type-section ko-keep text-[var(--color-text-primary)]">문단 1개 다시쓰기</h3>
             </div>
             <p className="v3-type-body ko-keep text-[var(--color-text-primary)]">
-              가장 큰 간극 1개를 기준으로 문단 1개만 보강합니다.
+              {REVIEW_OS_LEARNER_LANGUAGE.biggestGap} 하나를 기준으로 문단 1개만 보강합니다.
             </p>
             <textarea
               className={secondTextareaClass}

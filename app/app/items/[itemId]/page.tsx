@@ -92,7 +92,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
   const secondCompletionSignal = note.missingIssue ?? note.weakPoint;
   const secondCompletionNext = rewriteComparison
     ? `다음 복습은 ${note.nextReviewDate}로 자동 예약됩니다.`
-    : `다음 행동: ${note.rewriteInstruction ?? "가장 큰 간극 1개를 문단 다시쓰기로 보강합니다."}`;
+    : `다음 행동: ${note.rewriteInstruction ?? `${REVIEW_OS_LEARNER_LANGUAGE.biggestGap} 하나를 문단 다시쓰기로 보강합니다.`}`;
   const biggestSignal = isSecond ? note.missingIssue ?? note.weakPoint : note.weakPoint;
   const nextActionLine = isSecond
     ? note.rewriteInstruction ?? "문단 하나를 다시 쓰고 오늘 작업을 끝냅니다."
