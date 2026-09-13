@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 48741)
-Total output lines: 3982
-
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -1889,7 +1886,769 @@ export function WrongAnswerCaptureForm({
       aria-labelledby={labelledBy}
       data-s224v-surface-fragment="capture-form"
       data-s224v-secondary-diagnostics="quiet-disclosure"
-…8741 tokens truncated…extractionState: ExtractionState;
+      data-s224v-primary-cta-count-above-fold="1"
+      data-s232e-capture-flow={secondWriteEnabled ? "second-write" : "four-stage"}
+      data-s232e-capture-step={currentCaptureStep}
+      data-s232e-capture-stage={stage}
+    >
+      {secondWriteEnabled ? (
+        <section
+          className="rounded-[var(--v3-radius-panel)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)] p-3 sm:p-4"
+          aria-label="다시쓰기 6단계 진행"
+          data-s232e-second-write-progress
+        >
+          <p
+            className="v3-type-label text-[var(--color-text-secondary)]"
+            data-s232e-second-write-position={stage}
+          >
+            다시쓰기 진행 · {SECOND_WRITE_STAGE_POSITION[stage] ?? "현재 작업"}
+          </p>
+          <ol
+            className="mt-3 grid grid-cols-3 gap-1.5 sm:grid-cols-6 sm:gap-2"
+            aria-label="다시쓰기 6단계 흐름"
+            data-s232e-second-write-stage-list
+          >
+            {SECOND_WRITE_FLOW_STEPS.map((item) => {
+              const isCurrent = currentSecondWriteStep === item.position;
+              const isComplete =
+                (currentSecondWriteStep !== null && item.position < currentSecondWriteStep) ||
+                stage === "confirm" ||
+                stage === "saved-plan";
+              return (
+                <li
+                  key={item.stage}
+                  className={`min-w-0 rounded-[var(--v3-radius-control)] border px-2 py-2 text-center ${
+                    isCurrent
+                      ? "border-[var(--color-border-focus)] bg-[var(--color-background-brand)] text-[var(--color-text-inverse)]"
+                      : isComplete
+                        ? "border-[var(--color-border-stable)] bg-[var(--color-background-surface)] text-[var(--color-text-primary)]"
+                        : "border-[var(--color-border-default)] bg-[var(--color-background-surface)] text-[var(--color-text-secondary)]"
+                  }`}
+                  aria-current={isCurrent ? "step" : undefined}
+                  data-s232e-second-write-progress-step={item.position}
+                  data-s232e-second-write-stage={item.stage}
+                >
+                  <span className="v3-type-label-strong block tabular-nums" aria-hidden="true">
+                    {item.position}/6
+                  </span>
+                  <span className="v3-type-caption ko-keep mt-1 block">{item.label}</span>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      ) : (
+        <>
+          <CaptureProgressPill current={currentCaptureStep} total={4} mode={mode} />
+          <ol
+            className={
+              mode === "second"
+                ? "v3-type-caption sr-only grid-cols-2 gap-2 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-2 text-[var(--color-text-secondary)] sm:not-sr-only sm:grid sm:grid-cols-4 sm:p-3"
+                : "sr-only grid-cols-2 gap-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-2 text-xs text-[color:var(--muted)] sm:not-sr-only sm:grid sm:grid-cols-4 sm:p-3"
+            }
+            data-capture-stage-flow
+            data-s224v-stage-indicator="compact"
+            aria-label={mode === "second" ? "오늘 기록 4단계 흐름" : "Capture 4단계 흐름"}
+          >
+            {currentCaptureFlowSteps.map((item, index) => {
+              const step = index + 1;
+              return (
+                <li
+                  key={item.label}
+                  className={`flex min-h-12 items-center gap-2 px-2 py-2 leading-tight sm:min-h-0 sm:px-3 ${
+                    mode === "second"
+                      ? `rounded-[var(--v3-radius-control)] border ${
+                          currentCaptureStep === step
+                            ? "border-[var(--color-border-focus)] bg-[var(--color-background-focus)] text-[var(--color-text-primary)]"
+                            : "border-[var(--color-border-default)] bg-[var(--color-background-subtle)] text-[var(--color-text-secondary)]"
+                        }`
+                      : `rounded-[var(--radius-sm)] ${
+                          currentCaptureStep === step
+                            ? "bg-[color:var(--brand-050)] text-[color:var(--foreground-strong)]"
+                            : "bg-[color:var(--surface-soft)]"
+                        }`
+                  }`}
+                  aria-current={currentCaptureStep === step ? "step" : undefined}
+                  data-capture-stage={step}
+                >
+                  <span
+                    className="v3-type-label-strong inline-flex size-11 shrink-0 items-center justify-center rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] tabular-nums"
+                    aria-hidden="true"
+                  >
+                    {String(step).padStart(2, "0")}
+                  </span>
+                  <span className="v3-type-caption ko-keep text-left">{item.label}</span>
+                </li>
+              );
+            })}
+          </ol>
+        </>
+      )}
+
+      <section
+        className="rounded-[var(--v3-radius-panel)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)] p-3 sm:p-5"
+        aria-labelledby="capture-stage-current-title"
+        data-capture-stage-context
+        data-capture-stage-current={currentCaptureStep}
+        data-capture-controller-stage={stage}
+      >
+        <p className="v3-type-caption text-[var(--color-text-brand)]">
+          지금 할 일 · {currentCaptureStageContext.eyebrow}
+        </p>
+        <h2
+          id="capture-stage-current-title"
+          ref={captureStageHeadingRef}
+          tabIndex={-1}
+          className="v3-type-section ko-keep mt-2 text-[var(--color-text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--color-border-focus)]"
+        >
+          {currentCaptureStageContext.now}
+        </h2>
+        <dl className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3" data-capture-stage-explanation>
+          <div>
+            <dt className="v3-type-caption text-[var(--color-text-secondary)]">왜 필요한가</dt>
+            <dd className="v3-type-label ko-keep mt-1 text-[var(--color-text-primary)]">{currentCaptureStageContext.why}</dd>
+          </div>
+          <div>
+            <dt className="v3-type-caption text-[var(--color-text-secondary)]">다음 결과</dt>
+            <dd className="v3-type-label ko-keep mt-1 text-[var(--color-text-primary)]">{currentCaptureStageContext.result}</dd>
+          </div>
+        </dl>
+      </section>
+
+      {submitting && !savedConfirmation ? (
+        <section
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+          className="rounded-[var(--v3-radius-panel)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)] p-5"
+          data-capture-persistence-state="saving"
+        >
+          <p className="v3-type-label-strong text-[var(--color-text-secondary)]">저장 중</p>
+          <h2 className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">현재 입력을 저장하고 있습니다.</h2>
+          <p className="v3-type-body ko-keep mt-3 text-[var(--color-text-primary)]">
+            입력은 이 화면의 작업 메모리에 남아 있으며, 저장 완료 영수증은 아직 확인되지 않았습니다.
+          </p>
+        </section>
+      ) : null}
+
+      <fieldset
+        className="contents"
+        disabled={submitting}
+        data-capture-work-lock={submitting ? "locked" : "editable"}
+      >
+        {savedConfirmation ? (
+          <SavedCaptureConfirmationPanel
+          mode={mode}
+          subject={form.subjectLabel}
+          confirmation={savedConfirmation}
+          onBack={() => {
+            setSavedConfirmation(null);
+            setStage(savedConfirmation.retryAction === "quick" ? "intake" : "confirm");
+          }}
+          onReset={() => {
+            setSavedConfirmation(null);
+            resetDraft();
+          }}
+          />
+        ) : rewriteContext && mode === "second" ? (
+          <>
+          <RewriteContextPanel
+            title={rewriteContext.sourceTitle}
+            biggestGap={rewriteContext.biggestGap}
+            rewriteInstruction={rewriteContext.rewriteInstruction}
+            referenceSummary={rewriteContext.referenceSummary}
+            myAnswerSummary={rewriteContext.myAnswerSummary}
+          />
+          <RewriteParagraphPanel form={form} update={update} />
+          </>
+        ) : secondWriteEnabled ? (
+          <>
+          <section className="rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)] p-4">
+            <div className="flex flex-wrap items-center gap-2 v3-type-label text-[var(--color-text-secondary)]">
+              <span>과목: {form.subjectLabel}</span>
+              <details className="quiet-disclosure inline-block" data-s224v-secondary-diagnostics>
+                <summary className="inline-flex min-h-11 cursor-pointer items-center text-[var(--color-text-primary)] underline underline-offset-4">과목 바꾸기</summary>
+                <div className="mt-2 min-w-64">
+                  <SubjectSelect
+                    mode={mode}
+                    subjectLabel={config.subjectLabel}
+                    subjects={config.subjects}
+                    value={form.subjectLabel}
+                    onChange={updateSubject}
+                  />
+                </div>
+              </details>
+            </div>
+          </section>
+          {stage === "second-issue-recall" ? (
+            <SecondIssueRecallPanel
+              subject={form.subjectLabel}
+              issueRecall={form.issueRecall}
+              onChange={(value) => update("issueRecall", value)}
+              onNext={() => setStage("second-outline")}
+            />
+          ) : null}
+          {stage === "second-outline" ? (
+            <SecondOutlinePanel
+              subject={form.subjectLabel}
+              outlineDraft={form.outlineDraft}
+              onChange={(value) => update("outlineDraft", value)}
+              onNext={() => setStage("second-answer")}
+            />
+          ) : null}
+          {stage === "second-answer" ? (
+            <SecondAnswerPanel
+              subject={form.subjectLabel}
+              answer={form.userAnswer}
+              onChange={(value) => {
+                update("userAnswer", value);
+                update("myAnswerSummary", firstLine(value, form.myAnswerSummary || "내 답안 요약"));
+              }}
+              onNext={() => { if (form.userAnswer.trim().length >= 8) { update("productionBeforeComparison", true); setStage("second-reference"); } }}
+            />
+          ) : null}
+          {stage === "second-reference" ? (
+            <SecondReferencePanel
+              reference={form.correctAnswer}
+              onChange={(value) => update("correctAnswer", value)}
+              onNext={() => { update("referenceAnswerAddedAfterProduction", true); setStage("second-gap"); }}
+            />
+          ) : null}
+          {stage === "second-gap" ? (
+            <SecondGapPanel
+              subject={form.subjectLabel}
+              biggestGap={form.biggestGap}
+              onChange={(value) => {
+                update("biggestGap", value);
+                update("missingIssue", value);
+                update("userReasonText", value);
+              }}
+              onNext={() => setStage("second-rewrite")}
+            />
+          ) : null}
+          {stage === "second-rewrite" ? (
+            <SecondGapRewritePanel form={form} subject={form.subjectLabel} update={update} onBack={() => setStage("second-gap")} />
+          ) : null}
+          </>
+        ) : (
+          <>
+          {mode === "first" || stage === "intake" ? (
+          <IntakePanel
+            form={form}
+            mode={mode}
+            config={config}
+            extracting={extracting}
+            extractError={extractError}
+            extractionState={extractionState}
+            uploadedPages={uploadedPages}
+            onRemovePage={removePage}
+            onMovePage={movePage}
+            needsOcrConfirmation={needsOcrConfirmation}
+            missingConfirmationFields={missingConfirmationFields.map((field) => field.label)}
+            update={update}
+            updateSubject={updateSubject}
+            onImage={handleImageImport}
+            onPdf={handlePdfImport}
+            onGenerate={() => generateStructuredDraft()}
+            onQuickSave={saveQuickCaptureFromIntake}
+            canConfirmInput={canQuickSaveCapture}
+            canQuickSave={canQuickSaveCapture && !ownerCaptureRepairSubjectEnabled}
+            saving={submitting}
+            ownerCaptureRepairEnabled={ownerCaptureRepairSubjectEnabled}
+            cameraInputRef={cameraInputRef}
+            galleryInputRef={galleryInputRef}
+            pdfInputRef={pdfInputRef}
+            textAreaRef={textAreaRef}
+          />
+          ) : null}
+
+          {mode === "first" ? (
+            <section className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4">
+              <p className="text-xs font-medium text-[color:var(--muted)]">선택 연습</p>
+              <h3 className="mt-1 text-base font-semibold text-[color:var(--foreground-strong)]">5개 선지를 O/X로 나눌 수 있습니다.</h3>
+              <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">입력 내용을 먼저 확인한 뒤 선택하면 됩니다.</p>
+              {!canBridgeToFirstOx ? (
+                <p className="mt-3 rounded-[var(--radius-md)] bg-[color:var(--surfaceQuiet)] px-3 py-2 text-sm text-[color:var(--muted-strong)]">선지 5개를 확실히 찾지 못했습니다. 직접 확인 후 O/X로 나눌 수 있습니다.</p>
+              ) : null}
+              <Button type="button" variant="outline" className="mt-4 w-full sm:w-auto" disabled={submitting || !canBridgeToFirstOx} onClick={() => { void saveCaptureAfterConfirmation("first-ox"); }}>
+                O/X 연습으로 나누기
+              </Button>
+            </section>
+          ) : null}
+
+          {(mode === "first" ? stage !== "intake" : stage === "preview") ? (
+            <>
+              {ownerCaptureRepairSubjectEnabled ? (
+                <p
+                  className="v3-type-compact ko-keep rounded-[var(--v3-radius-control)] border border-[var(--color-border-attention)] bg-[var(--color-background-attention)] px-4 py-3 text-[var(--color-text-primary)]"
+                  role="status"
+                  data-app1-ocr-confirmation-warning
+                >
+                  {APP1_OCR_CONFIRMATION_WARNING}
+                </p>
+              ) : null}
+              <ExtractionPreview
+                form={form}
+                mode={mode}
+                uploadedPages={uploadedPages}
+                needsOcrConfirmation={needsOcrConfirmation}
+                missingConfirmationFields={missingConfirmationFields.map((field) => field.label)}
+                extractError={extractError}
+                onEdit={continueAfterExtractionReview}
+                onRegenerate={() => generateStructuredDraft()}
+                onRawOcrChange={(value) => {
+                  update("rawQuestionText", value);
+                  update("rawOcrText", value);
+                  update("hasManualCorrection", true);
+                  update("ocrConfirmedByLearner", true);
+                  update("lowConfidenceFlag", form.lowConfidenceFlag || hasLowConfidenceText(value));
+                }}
+              />
+            </>
+          ) : null}
+
+          {stage === "confirm" ? (
+            <ConfirmPanel form={form} mode={mode} config={config} update={update} updateSubject={updateSubject} />
+          ) : null}
+          {mode === "second" && stage === "second-issue-recall" ? (
+            <SecondIssueRecallPanel
+              subject={form.subjectLabel}
+              issueRecall={form.issueRecall}
+              onChange={(value) => update("issueRecall", value)}
+              onNext={() => setStage("second-outline")}
+            />
+          ) : null}
+          {mode === "second" && stage === "second-outline" ? (
+            <SecondOutlinePanel
+              subject={form.subjectLabel}
+              outlineDraft={form.outlineDraft}
+              onChange={(value) => update("outlineDraft", value)}
+              onNext={() => setStage("second-answer")}
+            />
+          ) : null}
+          {mode === "second" && stage === "second-answer" ? (
+            <SecondAnswerPanel
+              subject={form.subjectLabel}
+              answer={form.userAnswer}
+              onChange={(value) => {
+                update("userAnswer", value);
+                update("myAnswerSummary", firstLine(value, form.myAnswerSummary || "내 답안 요약"));
+              }}
+              onNext={() => { if (form.userAnswer.trim().length >= 8) { update("productionBeforeComparison", true); setStage("second-reference"); } }}
+            />
+          ) : null}
+          {mode === "second" && stage === "second-reference" ? (
+            <SecondReferencePanel reference={form.correctAnswer} onChange={(value) => update("correctAnswer", value)} onNext={() => { update("referenceAnswerAddedAfterProduction", true); setStage("second-gap"); }} />
+          ) : null}
+          {mode === "second" && stage === "second-gap" ? (
+            <SecondGapPanel
+              subject={form.subjectLabel}
+              biggestGap={form.biggestGap}
+              onChange={(value) => {
+                update("biggestGap", value);
+                update("missingIssue", value);
+                update("userReasonText", value);
+              }}
+              onNext={() => setStage("second-rewrite")}
+            />
+          ) : null}
+          {mode === "second" && stage === "second-rewrite" ? (
+            <SecondGapRewritePanel form={form} subject={form.subjectLabel} update={update} onBack={() => setStage("second-gap")} />
+          ) : null}
+          </>
+        )}
+      {error ? (
+        <p
+          ref={formErrorRef}
+          role="alert"
+          aria-live="assertive"
+          aria-atomic="true"
+          tabIndex={-1}
+          className={mode === "second" ? "v3-type-compact ko-keep rounded-[var(--v3-radius-control)] border border-[var(--color-border-risk)] bg-[var(--color-background-risk)] px-4 py-3 text-[var(--color-text-risk)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-border-focus)]" : "text-sm text-[color:var(--status-red)]"}
+          data-testid={mode === "second" ? "second-write-error" : "capture-form-error"}
+        >
+          {error}
+        </p>
+      ) : null}
+
+      {!savedConfirmation && !hideGlobalFooterActions && currentCaptureStep !== 1 ? (
+        <BottomPrimaryAction secondary={footerSecondary}>
+        <div className="flex w-full flex-col gap-3 sm:flex-row">
+          {rewriteContext && mode === "second" ? (
+            <CaptureActionButton mode={mode} type="submit" disabled={submitting || !form.rewriteParagraph.trim()} className="w-full sm:w-auto">
+              {submitting ? "저장 중" : "문단 다시쓰기 저장"}
+            </CaptureActionButton>
+          ) : stage === "preview" ? (
+            <CaptureActionButton
+              mode={mode}
+              type="button"
+              disabled={submitting}
+              onClick={continueAfterExtractionReview}
+              className="w-full sm:w-auto"
+            >
+              {mode === "second" ? "쟁점 회상부터 진행" : "확인하고 저장하기"}
+            </CaptureActionButton>
+          ) : stage === "intake" ? null : mode === "second" && stage === "second-rewrite" && !rewriteContext ? (
+            <CaptureActionButton
+              mode={mode}
+              type="button"
+              disabled={submitting}
+              onClick={() => setStage("confirm")}
+              className="w-full sm:w-auto"
+              data-s232e-second-write-primary-action="6"
+            >
+              마지막 확인으로 이동
+            </CaptureActionButton>
+          ) : (
+            <CaptureActionButton
+              mode={mode}
+              type="submit"
+              disabled={submitting || (mode === "second" && stage !== "second-rewrite" && stage !== "confirm")}
+              data-testid={mode === "second" && stage === "second-rewrite" && !rewriteContext ? "second-write-submit" : undefined}
+              className="w-full sm:w-auto"
+            >
+              {submitting ? "저장 중" : mode === "second" ? `저장하고 ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}에 반영` : "저장하고 오늘 계획에 반영"}
+            </CaptureActionButton>
+          )}
+        </div>
+        </BottomPrimaryAction>
+      ) : null}
+      </fieldset>
+    </form>
+  );
+}
+
+function CaptureProgressPill({ current, total, mode }: { current: number; total: number; mode: AppraisalMode }) {
+  const safeTotal = Math.max(total, 1);
+  const safeCurrent = Math.min(Math.max(current, 0), safeTotal);
+  return (
+    <div
+      className={
+        mode === "second"
+          ? "v3-type-caption hidden max-w-full flex-wrap items-center justify-between gap-2 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] px-3 py-2 text-[var(--color-text-secondary)] sm:flex sm:max-w-md"
+          : "hidden max-w-full flex-wrap items-center justify-between gap-2 rounded-full border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-3 py-2 text-xs text-[color:var(--muted)] sm:flex sm:max-w-md"
+      }
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={safeTotal}
+      aria-valuenow={safeCurrent}
+      aria-label={mode === "second" ? "오늘 기록 진행" : "Capture 진행"}
+    >
+      <span>{mode === "second" ? "2차 답안 기록" : "1차 캡처"}</span>
+      <span className="tabular-nums">단계 {safeCurrent}/{safeTotal}</span>
+    </div>
+  );
+}
+
+type FieldProps = {
+  form: DraftState;
+  mode: AppraisalMode;
+  update: <K extends keyof DraftState>(key: K, value: DraftState[K]) => void;
+};
+
+function SavedCaptureConfirmationPanel({
+  mode,
+  subject,
+  confirmation,
+  onBack,
+  onReset,
+}: {
+  mode: AppraisalMode;
+  subject: string;
+  confirmation: SavedCaptureConfirmation;
+  onBack: () => void;
+  onReset: () => void;
+}) {
+  const encodedSubject = encodeURIComponent(normalizeSubjectForMode(subject, mode));
+  const persistenceStatus = confirmation.status ?? (confirmation.persistence === "durable" ? "durable_saved" : "local_fallback_saved");
+  const persistenceCopy = getCaptureSavePersistenceCopy(persistenceStatus);
+  const saveFailed = persistenceStatus === "save_failed";
+  const completedEvidence = confirmation.persistenceEvidence
+    ? buildCaptureCompletedEvidence(confirmation.persistenceEvidence)
+    : null;
+
+  if (confirmation.conflictEvidence) {
+    return (
+      <section
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+        data-testid="capture-save-confirmation"
+        data-capture-dedupe-conflict
+        data-capture-receipt-bound="false"
+      >
+        <FailureAwareState
+          evidence={confirmation.conflictEvidence}
+          action={{
+            kind: "link",
+            label: "학습 노트에서 기존 기록 확인",
+            href: `/app/notes?mode=${mode}&subject=${encodedSubject}`,
+          }}
+          focusHeadingOnChange
+          testId="capture-persistence-conflict-state"
+        />
+      </section>
+    );
+  }
+
+  if (saveFailed) {
+    return (
+      <section
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+        data-testid="capture-save-confirmation"
+        data-capture-persistence-failure
+        data-capture-receipt-bound="false"
+      >
+        <FailureAwareState
+          evidence={CAPTURE_MEMORY_ONLY_SAVE_ERROR_EVIDENCE}
+          action={{ kind: "button", label: "입력 확인 후 다시 저장하기", onAction: onBack }}
+          focusHeadingOnChange
+          testId="capture-persistence-error-state"
+        />
+      </section>
+    );
+  }
+
+  if (persistenceStatus === "local_fallback_saved") {
+    return (
+      <section
+        className="rounded-[var(--v3-radius-panel)] border border-[var(--color-border-attention)] bg-[var(--color-background-attention)] p-5 sm:p-6"
+        aria-live="polite"
+        data-testid="capture-save-confirmation"
+        data-capture-local-summary
+        data-capture-receipt-bound="false"
+      >
+        <p className="v3-type-label-strong text-[var(--color-text-attention)]">계정 저장 미확인 · 브라우저 요약 보관</p>
+        <h2 className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">
+          약점과 다음 행동 요약만 이 브라우저에 임시 저장되었습니다.
+        </h2>
+        <p className="v3-type-body ko-keep mt-3 text-[var(--color-text-primary)]">
+          원문 입력은 이 작성 화면에 그대로 남아 있습니다. 자동 동기화는 등록되지 않았으므로 입력을 확인한 뒤 계정 저장을 다시 시도해 주세요.
+        </p>
+        <dl className="mt-5 grid gap-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-4">
+          <PreviewLine label="브라우저에 남긴 약점 요약" value={confirmation.biggestGap} legacy={mode === "first"} />
+          <PreviewLine label="브라우저에 남긴 다음 행동" value={confirmation.nextAction} legacy={mode === "first"} />
+          <PreviewLine label="저장 범위" value={persistenceCopy.statusLabel} legacy={mode === "first"} />
+        </dl>
+        <CaptureActionButton mode={mode} type="button" className="mt-5 w-full sm:w-auto" onClick={onBack}>
+          입력 확인 후 계정 저장 다시 시도
+        </CaptureActionButton>
+      </section>
+    );
+  }
+
+  if (!completedEvidence) {
+    return (
+      <section
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+        data-testid="capture-save-confirmation"
+        data-capture-persistence-failure
+        data-capture-receipt-bound="false"
+      >
+        <FailureAwareState
+          evidence={CAPTURE_MEMORY_ONLY_SAVE_ERROR_EVIDENCE}
+          action={{ kind: "button", label: "입력 확인 후 다시 저장하기", onAction: onBack }}
+          focusHeadingOnChange
+          testId="capture-persistence-error-state"
+        />
+      </section>
+    );
+  }
+
+  return (
+    <section
+      className={
+        mode === "second"
+          ? "rounded-[var(--v3-radius-panel)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-5 sm:p-6"
+          : "rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5 sm:p-6"
+      }
+      data-testid="capture-save-confirmation"
+      data-capture-plan-reflection-stage
+      data-capture-persistence-status={persistenceStatus}
+      data-capture-receipt-bound="true"
+    >
+      <FailureAwareState
+        evidence={completedEvidence}
+        action={{
+          kind: "link",
+          label: "오늘 할 일로 이동",
+          href: `/app?mode=${mode}&subject=${encodedSubject}`,
+        }}
+        focusHeadingOnChange={false}
+        testId="capture-persistence-completed-state"
+      />
+
+      <p className="v3-type-caption mt-5 text-[var(--color-text-brand)]">4. {mode === "second" ? REVIEW_OS_LEARNER_LANGUAGE.todayPlan : "오늘 계획"} 반영 · {persistenceCopy.eyebrow}</p>
+      <h3 className="v3-type-section ko-keep mt-2 text-[var(--color-text-primary)]">이 저장 기록에서 이어갈 내용</h3>
+      {mode === "second" ? (
+        <div className="mt-5 space-y-3">
+          <BiggestGap
+            headingId="capture-saved-biggest-gap"
+            gap={confirmation.biggestGap}
+            evidence={`다음 행동 · ${confirmation.nextAction}`}
+            type="MissingLink"
+            label={REVIEW_OS_LEARNER_LANGUAGE.biggestGap}
+          />
+          <div className="grid gap-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)] p-4">
+            <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
+            <PreviewLine label="학습 노트 저장 상태" value={persistenceCopy.statusLabel} />
+            <PreviewLine label={`${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}에 반영`} value={confirmation.todayPlanCandidate ?? confirmation.nextAction} />
+            <PreviewLine label="복습에 남길 내용" value={confirmation.reviewQueueCandidate ?? confirmation.biggestGap} />
+          </div>
+        </div>
+      ) : (
+        <div className="mt-5 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
+          <PreviewLine label="가장 큰 약점 1개" value={confirmation.biggestGap} legacy />
+          <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} legacy />
+          <PreviewLine label="학습 노트 저장 상태" value={persistenceCopy.statusLabel} legacy />
+          <PreviewLine label="오늘 계획에 반영" value={confirmation.todayPlanCandidate ?? confirmation.nextAction} legacy />
+          <PreviewLine label="복습에 남길 내용" value={confirmation.reviewQueueCandidate ?? confirmation.biggestGap} legacy />
+        </div>
+      )}
+      <div className="mt-3">
+        <CognitiveLearningActionCard
+          unit={confirmation.learningAction}
+          compact
+          presentation={mode === "second" ? "v3" : "legacy"}
+        />
+      </div>
+      <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">
+        학습 노트에 저장되고 {mode === "second" ? REVIEW_OS_LEARNER_LANGUAGE.todayPlan : "오늘 계획"}과 {mode === "second" ? REVIEW_OS_LEARNER_LANGUAGE.reviewQueue : "복습"}으로 이어집니다.
+      </p>
+      <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">{persistenceCopy.description}</p>
+
+      {mode === "second" ? (
+        <V3QuietDisclosure summary="다른 저장 위치 또는 새 기록" className="mt-5">
+          <div className="grid gap-2 sm:grid-cols-3">
+            <V3ActionLink href={`/app/notes?mode=${mode}&subject=${encodedSubject}`} tone="secondary" fullWidth>
+              학습 노트에서 보기
+            </V3ActionLink>
+            <V3ActionLink href={`/app/review?mode=${mode}&subject=${encodedSubject}`} tone="secondary" fullWidth>
+              복습으로 이어가기
+            </V3ActionLink>
+            <CaptureActionButton mode={mode} type="button" variant="ghost" className="w-full" onClick={onReset}>
+              하나 더 올리기
+            </CaptureActionButton>
+          </div>
+        </V3QuietDisclosure>
+      ) : (
+        <details className="quiet-disclosure mt-5 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
+          <summary className="min-h-11 cursor-pointer px-4 py-3 text-sm font-medium text-[color:var(--foreground-strong)]">
+            다른 저장 위치 또는 새 기록
+          </summary>
+          <div className="grid gap-2 border-t border-[color:var(--border-subtle)] p-4 sm:grid-cols-3">
+            <Link
+              href={`/app/notes?mode=${mode}&subject=${encodedSubject}`}
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
+            >
+              학습 노트에서 보기
+            </Link>
+            <Link
+              href={`/app/review?mode=${mode}&subject=${encodedSubject}`}
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
+            >
+              복습으로 이어가기
+            </Link>
+            <CaptureActionButton mode={mode} type="button" variant="ghost" className="w-full" onClick={onReset}>
+              하나 더 올리기
+            </CaptureActionButton>
+          </div>
+        </details>
+      )}
+    </section>
+  );
+}
+
+function SubjectSelect({
+  mode,
+  subjectLabel,
+  subjects,
+  value,
+  onChange,
+}: {
+  mode: AppraisalMode;
+  subjectLabel: string;
+  subjects: readonly string[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  if (mode === "second") {
+    return (
+      <label className="block space-y-2">
+        <span className="v3-type-label-strong text-[var(--color-text-primary)]">{subjectLabel}</span>
+        <select
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="form-control min-h-11 rounded-[var(--v3-radius-control)] border-[var(--color-border-default)] bg-[var(--color-background-surface)] text-[var(--color-text-primary)]"
+        >
+          {subjects.map((option) => <option key={option} value={option}>{option}</option>)}
+        </select>
+      </label>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <span className="text-sm text-[color:var(--foreground-strong)]">{subjectLabel}</span>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3" role="group" aria-label={subjectLabel}>
+        {subjects.map((option) => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => onChange(option)}
+            className={`min-h-11 rounded-[var(--radius-md)] border px-3 py-2 text-left text-xs font-medium transition ${
+              option === value
+                ? "border-[color:var(--foreground-strong)] bg-[color:var(--foreground-strong)] text-white"
+                : "border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] text-[color:var(--foreground-strong)] hover:bg-[color:var(--surface-soft)]"
+            }`}
+            aria-pressed={option === value}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function IntakePanel({
+  form,
+  mode,
+  config,
+  extracting,
+  extractError,
+  update,
+  updateSubject,
+  needsOcrConfirmation,
+  missingConfirmationFields,
+  extractionState,
+  uploadedPages,
+  onRemovePage,
+  onMovePage,
+  onImage,
+  onPdf,
+  onGenerate,
+  onQuickSave,
+  canConfirmInput,
+  canQuickSave,
+  saving,
+  ownerCaptureRepairEnabled,
+  cameraInputRef,
+  galleryInputRef,
+  pdfInputRef,
+  textAreaRef,
+}: FieldProps & {
+  config: ReturnType<typeof getModeConfig>;
+  extracting: boolean;
+  extractError: string;
+  updateSubject: (value: string) => void;
+  needsOcrConfirmation: boolean;
+  missingConfirmationFields: string[];
+  extractionState: ExtractionState;
   uploadedPages: UploadedPage[];
   onRemovePage: (index: number) => void;
   onMovePage: (index: number, direction: "up" | "down") => void;
