@@ -94,7 +94,7 @@ test.describe('authenticated learner smoke', () => {
     await page.getByRole('button', { name: '다음: 기준답안/해설 입력' }).click();
 
     await page.getByLabel('기준 답안 요약').fill('기준답안은 요건 분해와 사실 적용을 더 명확히 제시합니다.');
-    await page.getByRole('button', { name: '다음: 가장 큰 간극 1개' }).click();
+    await page.getByRole('button', { name: '다음: 가장 큰 감점 원인' }).click();
 
     await page.getByLabel('보강할 논점 1개').fill('요건-사실 대응 문장을 각 소결론마다 명시하지 못함.');
     await page.getByRole('button', { name: '다음: 문단 다시쓰기' }).click();
