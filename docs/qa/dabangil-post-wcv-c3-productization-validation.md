@@ -30,6 +30,10 @@ UI, API, DB, RLS, migration, provider, dependency, 콘텐츠 또는 runtime을 �
 - 1차 공식 시간표는 제1교시 120문항/120분, 제2교시 80문항/80분으로 검증한다.
 - source 계층은 기존 저장소 권한 순서를 보존하며, live GitHub는 구현 상태의
   사실만 결정한다.
+- AI 학습용 기준안은 출처·검증·불확실성을 표시하고 법규 출처·계산·미해결 합의
+  차단 중에는 공개하지 않는다.
+- 1차 과목 runtime 전에 WCV-C3, S241A, ULC-M1, ULC-M2, ULC-K1, S238B의
+  독립 선행 체인을 보존한다.
 
 ## 검증 명령
 

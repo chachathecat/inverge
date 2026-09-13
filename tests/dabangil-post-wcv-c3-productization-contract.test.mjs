@@ -14,7 +14,11 @@ test("source package is subordinate, closed and complete", () => {
   assert.equal(contract.authority.sourceOnly, true);
   assert.equal(contract.authority.createsMasterPlan, false);
   assert.equal(contract.authority.createsControlPlane, false);
-  assert.equal(contract.authority.liveGitHubWins, true);
+  assert.equal(
+    contract.authority.liveGitHubAuthority,
+    "IMPLEMENTED_STATE_FACTS_ONLY",
+  );
+  assert.equal("liveGitHubWins" in contract.authority, false);
   assert.deepEqual(contract.authority.childIssues, [771, 773, 774, 775]);
   for (const file of Object.values(contract.documents)) {
     assert.equal(fs.existsSync(path.join(root, file)), true, `missing ${file}`);
@@ -50,6 +54,13 @@ test("critical path keeps gated activation and mandatory adjacent work explicit"
     "SESSION_1_120_QUESTIONS_120_MINUTES",
     "SESSION_2_80_QUESTIONS_80_MINUTES",
   ]);
+  assert.deepEqual(contract.firstRound.subjectRuntimePrerequisites, [
+    "WCV-C3", "S241A", "ULC-M1", "ULC-M2", "ULC-K1", "S238B",
+  ]);
+  assert.deepEqual(contract.firstRound.subjectSequence, [
+    "ULC-F1", "ULC-F2", "ULC-F3", "ULC-F4", "ULC-F5",
+  ]);
+  assert.equal("sequence" in contract.firstRound, false);
   assert.equal(contract.firstRound.correctClickCreatesMastery, false);
   assert.equal(contract.firstRound.modelOutputIsAnswerAuthority, false);
 });
@@ -124,6 +135,16 @@ test("rights, privacy and activation remain fail closed", () => {
   assert.equal(contract.secondStage.officialGradingClaim, false);
   assert.equal(contract.secondStage.officialModelAnswerClaim, false);
   assert.equal(contract.secondStage.passGuaranteeClaim, false);
+  assert.deepEqual(contract.secondStage.referenceAnswerPolicy.requiredDisclosures, [
+    "SOURCE_STATUS", "VERIFICATION_STATUS", "UNCERTAINTY",
+  ]);
+  assert.deepEqual(contract.secondStage.referenceAnswerPolicy.blockingConditions, [
+    "LEGAL_SOURCE_BLOCKER", "CALCULATION_BLOCKER", "UNRESOLVED_CONSENSUS_BLOCKER",
+  ]);
+  assert.equal(contract.secondStage.referenceAnswerPolicy.releaseWhileBlocked, false);
+  const secondRound = read(contract.documents.secondRound);
+  assert.match(secondRound, /출처 상태, 검증 상태와 불확실성/);
+  assert.match(secondRound, /차단 상태이면\s*기준안을 공개하지 않는다/);
 });
 
 test("source documents preserve accessibility and no-runtime receipt", () => {

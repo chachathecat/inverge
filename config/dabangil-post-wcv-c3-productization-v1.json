@@ -11,7 +11,7 @@
     "sourceOnly": true,
     "createsMasterPlan": false,
     "createsControlPlane": false,
-    "liveGitHubWins": true
+    "liveGitHubAuthority": "IMPLEMENTED_STATE_FACTS_ONLY"
   },
   "documents": {
     "sourceIndex": "docs/source-of-truth-index.md",
@@ -94,7 +94,17 @@
     "subjects": ["PRACTICE", "THEORY", "LAW"],
     "officialGradingClaim": false,
     "officialModelAnswerClaim": false,
-    "passGuaranteeClaim": false
+    "passGuaranteeClaim": false,
+    "referenceAnswerPolicy": {
+      "learnerLabel": "AI 학습용 기준안",
+      "requiredDisclosures": ["SOURCE_STATUS", "VERIFICATION_STATUS", "UNCERTAINTY"],
+      "blockingConditions": [
+        "LEGAL_SOURCE_BLOCKER",
+        "CALCULATION_BLOCKER",
+        "UNRESOLVED_CONSENSUS_BLOCKER"
+      ],
+      "releaseWhileBlocked": false
+    }
   },
   "oneTouchUnderstanding": {
     "learnerName": "한번 눌러 이해하기",
@@ -171,7 +181,17 @@
     ],
     "correctClickCreatesMastery": false,
     "modelOutputIsAnswerAuthority": false,
-    "sequence": ["FIRST-P0", "FIRST-P1", "ULC-F1", "ULC-F2", "ULC-F3", "ULC-F4", "ULC-F5", "FIRST-P2", "FIRST-P3", "FIRST-P4"]
+    "subjectRuntimePrerequisites": [
+      "WCV-C3",
+      "S241A",
+      "ULC-M1",
+      "ULC-M2",
+      "ULC-K1",
+      "S238B"
+    ],
+    "sourceAndKernelSlices": ["FIRST-P0", "FIRST-P1"],
+    "subjectSequence": ["ULC-F1", "ULC-F2", "ULC-F3", "ULC-F4", "ULC-F5"],
+    "postSubjectSlices": ["FIRST-P2", "FIRST-P3", "FIRST-P4"]
   },
   "rightsAndPrivacy": {
     "publicAvailabilityMeansPermission": false,
