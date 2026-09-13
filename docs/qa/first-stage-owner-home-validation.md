@@ -37,6 +37,8 @@ The full new Playwright scenario is intentionally not recorded as a local pass. 
 
 The initial PR Contract run rejected the PR-description syntax only. The description now uses the repository-required bracketed risk and exact checkbox lines. A replacement exact head is required so native checks evaluate a fresh pull-request event payload; the initial run is not treated as a pass.
 
+The first corrective Linux Full CI executed 1,835 tests and found one fixture-only conflict: the new transient-failure scenario returned HTTP 503 while the same test also required zero browser console errors. The fixture now returns a successful bodyless HTTP response with `ok: false`, preserving the unavailable application state without manufacturing a browser transport error. That failed head is not treated as evidence.
+
 ## Required exact-head evidence
 
 - Native Fast CI and Full CI pass for the published candidate.

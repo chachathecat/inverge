@@ -123,7 +123,7 @@ test("real browser selects reviewed stock, then local trial, then second-stage h
       if ([...reviewedEndpoints, trialEndpoint].includes(url.pathname)) {
         requests.push(`${scenario}:${url.pathname}`);
         if (scenario === "unavailable" && url.pathname === reviewedEndpoints[0]) {
-          response.writeHead(503, {
+          response.writeHead(200, {
             "content-type": "application/json",
             "cache-control": "private, no-store, max-age=0",
           });
