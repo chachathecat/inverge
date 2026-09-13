@@ -999,7 +999,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   });
   await page
     .getByRole("button", {
-      name: "내가 입력한 구조화 계산으로 수리 저장",
+      name: "내가 입력한 계산으로 고치기 저장",
     })
     .click();
   const submitRepairResponse = await submitRepairResponsePromise;
