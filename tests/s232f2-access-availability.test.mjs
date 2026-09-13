@@ -330,7 +330,7 @@ test("S232F.2 every data-bearing app page gates a fresh access result before dow
   const firstStageOwnerIndex = firstStagePage.indexOf("process.env[FIRST_STAGE_OWNER_ALLOWLIST]");
   const firstStageDeniedIndex = firstStagePage.lastIndexOf("notFound()");
   const firstStageShellIndex = firstStagePage.indexOf("<ReviewOsAppShell email={email}>");
-  const firstStageLoopIndex = firstStagePage.indexOf("<FirstStageMcqLoop />");
+  const firstStageLoopIndex = firstStagePage.indexOf("<FirstStageMcqLoop");
   assert.ok(firstStageFlagIndex >= 0, "first-stage must resolve its default-off feature gate");
   assert.ok(firstStageSessionIndex > firstStageFlagIndex, "first-stage must authenticate after its feature gate");
   assert.ok(firstStageAdminIndex > firstStageSessionIndex, "first-stage must require the alpha admin allowlist");

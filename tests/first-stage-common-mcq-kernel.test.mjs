@@ -1621,7 +1621,7 @@ test("keeps API/UI Owner-only, default-off, no-store, adapter-empty, and non-act
     /getReviewOsServerContext|ensureAccess|includeProfile|includeUsage/u);
   const deniedIndex = page.lastIndexOf("notFound()");
   const ownerShellIndex = page.indexOf("<ReviewOsAppShell email={email}>");
-  const loopIndex = page.indexOf("<FirstStageMcqLoop />");
+  const loopIndex = page.indexOf("<FirstStageMcqLoop");
   assert.ok(ownerShellIndex > deniedIndex, "the learner shell must render only after Owner access");
   assert.ok(loopIndex > ownerShellIndex, "the MCQ loop must render inside the authorized Owner shell");
   const queueSource = fs.readFileSync(path.join(root,

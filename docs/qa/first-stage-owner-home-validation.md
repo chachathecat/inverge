@@ -21,6 +21,8 @@ The page reads the six existing same-origin, no-store availability endpoints in 
 
 Partial availability failures remain visible as retryable status failures. The page does not render question bodies, choices, answers, or explanations.
 
+The first reviewed head received two P2 findings. The correction keeps the dominant action in a loading/retry state unless a first-stage route is actually available or every first-stage response is conclusively blocked. It also passes the capacity and legal-evidence server gate results into the client and omits those optional links when their route gates are closed.
+
 ## Local evidence
 
 - `npm run test -- tests/first-stage-common-mcq-kernel.test.mjs tests/first-stage-private-route.test.mjs tests/first-stage-economics-content.test.mjs tests/first-stage-accounting-content.test.mjs tests/first-stage-remaining-subjects.test.mjs tests/first-stage-final-release.test.mjs tests/s232f2-access-availability.test.mjs --workers=1`: 64/64 passed.
@@ -29,6 +31,7 @@ Partial availability failures remain visible as retryable status failures. The p
 - `npm run typecheck`: passed.
 - `npm run build`: passed with the six pre-existing broad filesystem tracing warnings.
 - `git diff --check`: passed.
+- Corrective Owner-home/capacity/legal route selection: 4/4 passed, followed by changed-file lint, typecheck, diff check, and a fresh production build.
 
 The full new Playwright scenario is intentionally not recorded as a local pass. This workspace had no Chromium binary, and the Playwright CDN download failed with timeout/502 responses. Native CI installs Chromium before running the registered test and is the required exact-head browser evidence.
 
@@ -43,4 +46,4 @@ The initial PR Contract run rejected the PR-description syntax only. The descrip
 
 ## Rollback
 
-Revert the component, test registration, and validation files from this slice. The five subject routes and their existing APIs remain unchanged.
+Revert the Owner-home page/component, test registration, and validation files from this slice. The five subject routes and their existing APIs remain unchanged.

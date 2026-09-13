@@ -10,6 +10,10 @@ import { chromium } from "playwright";
 const root = path.resolve(import.meta.dirname, "..");
 const componentPath = "components/review-os/first-stage-mcq-loop.tsx";
 const componentSource = fs.readFileSync(path.join(root, componentPath), "utf8");
+const pageSource = fs.readFileSync(
+  path.join(root, "app/(owner-first-stage)/app/first-stage/page.tsx"),
+  "utf8",
+);
 
 const reviewedEndpoints = [
   "/api/review-os/first-stage/sessions",
@@ -56,6 +60,12 @@ test("Owner home keeps all five subject routes bodyless and one primary fallback
   assert.match(componentSource, /cache: "no-store"/u);
   assert.match(componentSource, /credentials: "same-origin"/u);
   assert.match(componentSource, /15_000/u);
+  assert.match(componentSource, /hasUnknownAvailability/u);
+  assert.match(componentSource, /primaryAction\.kind === "link"/u);
+  assert.match(componentSource, /capacityEnabled &&/u);
+  assert.match(componentSource, /legalEvidenceEnabled &&/u);
+  assert.match(pageSource, /capacityEnabled=\{capacityEnabled\}/u);
+  assert.match(pageSource, /legalEvidenceEnabled=\{legalEvidenceOwner !== null\}/u);
   assert.match(componentSource, /학습 효능, 합격 가능성, 과목 완성이나 공식 결과를 주장하지 않습니다/u);
   assert.doesNotMatch(componentSource, /question\.stem|choice\.body|correctChoice|explanation\.text/u);
 });
@@ -112,6 +122,14 @@ test("real browser selects reviewed stock, then local trial, then second-stage h
       }
       if ([...reviewedEndpoints, trialEndpoint].includes(url.pathname)) {
         requests.push(`${scenario}:${url.pathname}`);
+        if (scenario === "unavailable" && url.pathname === reviewedEndpoints[0]) {
+          response.writeHead(503, {
+            "content-type": "application/json",
+            "cache-control": "private, no-store, max-age=0",
+          });
+          response.end(JSON.stringify({ ok: false, error: "temporarily_unavailable" }));
+          return;
+        }
         response.writeHead(200, {
           "content-type": "application/json",
           "cache-control": "private, no-store, max-age=0",
@@ -157,20 +175,26 @@ test("real browser selects reviewed stock, then local trial, then second-stage h
       await page.goto(`${origin}/app/first-stage`);
       await page.getByText(expectedSummary, { exact: true }).waitFor();
       const primary = page.locator("[data-primary-owner-action]");
+      const control = primary.locator("a, button");
       assert.equal(await primary.count(), 1);
-      assert.equal((await primary.textContent())?.trim(), expectedLabel);
-      assert.equal(await primary.getAttribute("href"), expectedHref);
+      assert.equal(await control.count(), 1);
+      assert.equal((await control.textContent())?.trim(), expectedLabel);
+      assert.equal(await control.getAttribute("href"), expectedHref);
       assert.equal(await page.getByRole("heading", { name: "1차 오늘 학습" }).count(), 1);
+      assert.equal(await page.getByRole("link", { name: "오늘 학습 가능 시간 계산" }).count(), 0);
+      assert.equal(await page.getByRole("link", { name: "보유 법령 근거 확인" }).count(), 0);
       assert.doesNotMatch(await page.locator("body").innerText(), /PRIVATE_BODY|QUESTION_STEM|CORRECT_ANSWER/u);
     }
 
     await verify("학습 가능 1/5과목", "회계학 연습 시작", "/app/first-stage/accounting");
     scenario = "trial";
     await verify("학습 가능 0/5과목", "경제학 PC 시험 이어가기", "/app/first-stage/economics-trial");
+    scenario = "unavailable";
+    await verify("학습 가능 0/5과목", "1차 상태 다시 확인", null);
     scenario = "second";
     await verify("학습 가능 0/5과목", "2차 오늘 할 일 계속하기", "/app?mode=second");
 
-    for (const currentScenario of ["reviewed", "trial", "second"]) {
+    for (const currentScenario of ["reviewed", "trial", "unavailable", "second"]) {
       const seen = requests.filter((entry) => entry.startsWith(`${currentScenario}:`)).map((entry) => entry.slice(currentScenario.length + 1));
       assert.deepEqual([...new Set(seen)].sort(), [...reviewedEndpoints, trialEndpoint].sort());
     }

@@ -30,6 +30,11 @@ type AvailabilityState = Readonly<{
   bankPractice: boolean;
 }>;
 
+type FirstStageMcqLoopProps = Readonly<{
+  capacityEnabled?: boolean;
+  legalEvidenceEnabled?: boolean;
+}>;
+
 const REVIEWED_SUBJECTS = [
   {
     id: "economics_principles",
@@ -120,7 +125,10 @@ function statusCopy(status: AvailabilityState) {
   return `학습 가능 · ${status.questionCount}문항`;
 }
 
-export function FirstStageMcqLoop() {
+export function FirstStageMcqLoop({
+  capacityEnabled = false,
+  legalEvidenceEnabled = false,
+}: FirstStageMcqLoopProps = {}) {
   const [subjects, setSubjects] = useState<Record<string, AvailabilityState>>(() =>
     Object.fromEntries(REVIEWED_SUBJECTS.map((subject) => [subject.id, INITIAL_AVAILABILITY])),
   );
@@ -172,11 +180,20 @@ export function FirstStageMcqLoop() {
     () => REVIEWED_SUBJECTS.filter((subject) => subjects[subject.id]?.state === "available"),
     [subjects],
   );
+  const hasUnknownAvailability = pending ||
+    REVIEWED_SUBJECTS.some((subject) => {
+      const state = subjects[subject.id]?.state;
+      return state === "loading" || state === "unavailable";
+    }) ||
+    localTrial.state === "loading" ||
+    localTrial.state === "unavailable";
   const primaryAction = readySubjects[0]
-    ? { href: readySubjects[0].href, label: `${readySubjects[0].label} 연습 시작` }
+    ? { kind: "link" as const, href: readySubjects[0].href, label: `${readySubjects[0].label} 연습 시작` }
     : localTrial.state === "available"
-      ? { href: OWNER_LOCAL_TRIAL.href, label: "경제학 PC 시험 이어가기" }
-      : { href: "/app?mode=second", label: "2차 오늘 할 일 계속하기" };
+      ? { kind: "link" as const, href: OWNER_LOCAL_TRIAL.href, label: "경제학 PC 시험 이어가기" }
+      : hasUnknownAvailability
+        ? { kind: "retry" as const, label: pending ? "1차 상태 확인 중…" : "1차 상태 다시 확인" }
+        : { kind: "link" as const, href: "/app?mode=second", label: "2차 오늘 할 일 계속하기" };
 
   return (
     <main className="mx-auto w-full max-w-3xl px-5 py-10">
@@ -196,21 +213,37 @@ export function FirstStageMcqLoop() {
             {pending ? "5과목 재고를 확인하고 있습니다." : `학습 가능 ${readySubjects.length}/5과목`}
           </p>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            {readySubjects.length > 0
+            {pending
+              ? "각 과목의 검토 재고를 확인한 뒤 다음 작업을 정합니다."
+              : readySubjects.length > 0
               ? "검토된 재고가 있는 과목부터 이어갑니다."
               : localTrial.state === "available"
                 ? "검토 완료 재고는 아직 없지만, 기존 PC 전용 경제학 시험은 별도 표시로 이어갈 수 있습니다."
-                : "1차 재고가 준비될 때까지 기존 2차 학습 흐름을 계속할 수 있습니다."}
+                : hasUnknownAvailability
+                  ? "일부 과목의 상태를 확인하지 못했습니다. 다시 확인하기 전에는 다른 단계로 넘기지 않습니다."
+                  : "모든 1차 경로가 명확히 대기 중이므로 기존 2차 학습 흐름을 계속할 수 있습니다."}
           </p>
         </div>
 
-        <Link
-          href={primaryAction.href}
-          data-primary-owner-action
-          className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-semibold text-white sm:w-auto"
-        >
-          {primaryAction.label}
-        </Link>
+        <div data-primary-owner-action>
+          {primaryAction.kind === "link" ? (
+            <Link
+              href={primaryAction.href}
+              className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-semibold text-white sm:w-auto"
+            >
+              {primaryAction.label}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60 sm:w-auto"
+              disabled={pending}
+              onClick={() => void refresh()}
+            >
+              {primaryAction.label}
+            </button>
+          )}
+        </div>
 
         <section className="mt-8" aria-labelledby="first-stage-subject-status-title">
           <h2 id="first-stage-subject-status-title" className="text-base font-bold text-slate-950">과목별 상태</h2>
@@ -240,12 +273,16 @@ export function FirstStageMcqLoop() {
             <Link href="/app/first-stage/economics-trial" prefetch={false} className="inline-flex min-h-11 items-center underline underline-offset-4">
               경제학 PC 전용 시험 · {statusCopy(localTrial)}
             </Link>
-            <Link href="/app/first-stage/capacity" prefetch={false} className="inline-flex min-h-11 items-center underline underline-offset-4">
-              오늘 학습 가능 시간 계산
-            </Link>
-            <Link href="/app/first-stage/legal-evidence" prefetch={false} className="inline-flex min-h-11 items-center underline underline-offset-4">
-              보유 법령 근거 확인
-            </Link>
+            {capacityEnabled && (
+              <Link href="/app/first-stage/capacity" prefetch={false} className="inline-flex min-h-11 items-center underline underline-offset-4">
+                오늘 학습 가능 시간 계산
+              </Link>
+            )}
+            {legalEvidenceEnabled && (
+              <Link href="/app/first-stage/legal-evidence" prefetch={false} className="inline-flex min-h-11 items-center underline underline-offset-4">
+                보유 법령 근거 확인
+              </Link>
+            )}
             <Link href="/app?mode=second" prefetch={false} className="inline-flex min-h-11 items-center underline underline-offset-4">
               2차 오늘 할 일
             </Link>

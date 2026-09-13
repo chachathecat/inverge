@@ -8,6 +8,7 @@ import {
   FIRST_STAGE_FEATURE_FLAG,
   FIRST_STAGE_OWNER_ALLOWLIST,
 } from "@/lib/review-os/first-stage/kernel";
+import { FIRST_STAGE_CAPACITY_BRIDGE_FEATURE_FLAG } from "@/lib/review-os/first-stage/study-capacity";
 
 export const dynamic = "force-dynamic";
 
@@ -32,10 +33,13 @@ export default async function FirstStageOwnerPage() {
     !emails(process.env[FIRST_STAGE_OWNER_ALLOWLIST]).includes(email)
   ) notFound();
   const legalEvidenceOwner = await requireOwnerLegalEvidencePage();
+  const capacityEnabled = process.env[FIRST_STAGE_CAPACITY_BRIDGE_FEATURE_FLAG] === "true";
   return (
     <ReviewOsAppShell email={email}>
-      {legalEvidenceOwner && <a className="text-sm underline" href="/app/first-stage/legal-evidence">별도 참고자료: 보유 법령 근거 보기</a>}
-      <FirstStageMcqLoop />
+      <FirstStageMcqLoop
+        capacityEnabled={capacityEnabled}
+        legalEvidenceEnabled={legalEvidenceOwner !== null}
+      />
     </ReviewOsAppShell>
   );
 }
