@@ -86,8 +86,8 @@ test("first mode is not overloaded with second-only capture quality checklist", 
 
 test("saved learner capture copy shows one biggest gap and one next action choices", async () => {
   const itemsPage = await readFile(new URL("../app/app/items/page.tsx", import.meta.url), "utf8");
-  assert.ok(itemsPage.includes("가장 큰 약점 1개와 다음 행동 1개"));
-  assert.ok(itemsPage.includes("오늘 계획에 반영"));
+  assert.ok(itemsPage.includes("{REVIEW_OS_LEARNER_LANGUAGE.biggestGap} 하나와 다음 행동 하나"));
+  assert.ok(itemsPage.includes("{REVIEW_OS_LEARNER_LANGUAGE.todayPlan}에 반영"));
   assert.ok(itemsPage.includes("답안 훈련으로 보기"));
   assert.ok(itemsPage.includes("복습 연결"));
 });
@@ -107,9 +107,13 @@ test("reset clears extraction state and uploaded pages", async () => {
 
 test("second write flow includes all micro-step labels", async () => {
   const learnerCapture = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
-  ["Step 1. 쟁점 회상", "Step 2. 목차 작성", "Step 3. 내 답안 작성", "Step 4. 강의/교재 정리 입력", "Step 5. 가장 큰 약점 1개", "Step 6. 문단 다시쓰기"].forEach((label) => {
+  ["Step 1. 쟁점 회상", "Step 2. 목차 작성", "Step 3. 내 답안 작성", "Step 4. 강의/교재 정리 입력", "Step 6. 문단 다시쓰기"].forEach((label) => {
     assert.ok(learnerCapture.includes(label), `Missing step label: ${label}`);
   });
+  assert.ok(
+    learnerCapture.includes("`Step 5. ${REVIEW_OS_LEARNER_LANGUAGE.biggestGap}`"),
+    "Step 5 must use the canonical biggest-gap label",
+  );
 });
 
 test("second write flow keeps advanced fields behind details and one-primary-step copy", async () => {
