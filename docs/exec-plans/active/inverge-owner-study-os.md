@@ -15,8 +15,9 @@ Issue #925 installs the already-authorized #772/#776 S1 source package. It is
 not a new master plan and creates no runtime or activation. It closes the Korean
 learner language, one-touch understanding, presentation-mode and preserved
 first-stage contracts needed for the next actual product slices. After its clean
-integration, continue S2/S4 dependency-ready runtime work; do not treat this
-source contract or its PR as Goal completion.
+integration, continue S2 only. S3 remains an exact Owner-only Production gate,
+and S4 is not dependency-ready until S3 is separately approved and terminally
+completed. Do not treat this source contract or its PR as Goal completion.
 
 ## Active post-#922 Goal — received 2026-09-13T08:34:47Z
 

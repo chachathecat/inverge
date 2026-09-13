@@ -132,6 +132,13 @@ test("presentation modes cannot change learning truth", () => {
 
 test("rights, privacy and activation remain fail closed", () => {
   assert.deepEqual(new Set(Object.values(contract.activation)), new Set([false]));
+  for (const deniedSurface of [
+    "runtime", "ui", "api", "database", "rls", "storage", "migration",
+    "secret", "environment", "provider", "dependency", "content", "production",
+    "payment", "publicLearner", "realLearner", "nativeStore",
+  ]) {
+    assert.equal(contract.activation[deniedSurface], false, deniedSurface);
+  }
   assert.equal(contract.rightsAndPrivacy.publicAvailabilityMeansPermission, false);
   assert.equal(contract.rightsAndPrivacy.privateUploadMayEnterSharedCache, false);
   assert.equal(contract.rightsAndPrivacy.privateUploadMayEnterAnalyticsBody, false);
