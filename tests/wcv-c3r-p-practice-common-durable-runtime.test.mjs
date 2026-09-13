@@ -61,11 +61,12 @@ const sharedRepositorySource = fs.readFileSync(path.join(root,
   "lib/review-os/repository.ts"), "utf8");
 const productionAccessBlobs = Object.freeze({
   // The original C3R-P identity remains historical Git evidence. This entry
-  // freezes the audited APP-1 repeat-repair retry successor; future access changes still require
-  // an explicit identity update and semantic audit.
+  // freezes the audited APP-1 repeat-repair retry successor plus the #923
+  // fail-closed, read-only second-stage navigation admission check. Future
+  // access changes still require an explicit identity update and semantic audit.
   "lib/review-os/repository.ts": "287af612ef296e7a7dd0bf91b4fd5e1238288157",
   "lib/review-os/server.ts": "429085a06c3104aa66c49b272738d53f00318d8a",
-  "app/app/layout.tsx": "215ec312e2102d39332eeb47e2cc3b446ad78d19",
+  "app/app/layout.tsx": "ef48f2ec1496d675233acddd5e354e62b41c3754",
   "app/app/c3r-p/page.tsx": "1183828115a8a0ef0fb04c5d9c0e42a8ae5bd240",
   "app/api/review-os/c3r-p/route.ts": "e4723d6fe303dcdeb73d099e67a6311640b25c09",
   "lib/review-os/c3r-p-service.ts": "5923cd57c2cf1d00aea258d930495a48ac1dc516",

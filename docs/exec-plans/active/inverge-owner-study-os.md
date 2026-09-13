@@ -1,5 +1,27 @@
 # Inverge Owner Study OS
 
+## Active post-#922 Goal — received 2026-09-13T08:34:47Z
+
+### Current transition: #922 integrated -> #923 three-subject Owner home
+
+PR #922 merged reviewed head `019486bb07a4b65b56f445de976fd0a45b2a2f8d`
+by expected-head-pinned manual squash as
+`499f9f30039949e553c463db81e12b6a37dba4df`, tree
+`c847fe1df4d0c645d9698cb98a16ee979807a6cf`. Exact-head required checks
+were 9/9 successful, final Codex review found no major issue, active P0/P1/P2
+was 0/0/0 and unresolved threads were zero. The resulting-main Vercel status
+was successful; GitHub emitted no Actions workflow run for the resulting commit.
+Only #921 closed. #883 and the wider Goal remain open.
+
+Issue #923 is the next bounded, dependency-ready A/C slice. It connects the
+existing Owner-only C3R Practice, Theory and Law runtimes through one bodyless
+server-derived home, with exactly one dominant next action. Existing per-subject
+flags, allowlists, non-Production denials, repositories and evidence semantics
+remain authoritative. No content, schema, migration, provider, remote data,
+Production, public or payment mutation is included. After integration, continue
+the next independent A/B/C gap; do not treat this navigation slice as Goal
+completion.
+
 ## Active post-#909 Goal — received 2026-09-09T06:07:54Z
 
 ### Current transition: #918 integrated -> #919 bounded write-result recovery

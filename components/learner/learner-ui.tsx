@@ -14,6 +14,7 @@ type LearnerShellProps = {
   email: string | null;
   children: ReactNode;
   rightSlot?: ReactNode;
+  secondStageOwnerHomeEnabled?: boolean;
   trustedRepairEnabled?: boolean;
 };
 
@@ -70,6 +71,15 @@ const TRUSTED_REPAIR_NAV_ITEM: LearnerNavItem = {
   analyticsAction: "practice_trusted_repair",
 };
 
+const SECOND_STAGE_OWNER_NAV_ITEM: LearnerNavItem = {
+  href: "/app/second-stage",
+  label: "3과목 학습",
+  mobileLabel: "3과목",
+  preserveMode: true,
+  activeHrefs: ["/app/second-stage", "/app/c3r-p", "/app/c3r-t", "/app/c3r-l"],
+  analyticsAction: "second_stage_owner_home",
+};
+
 function matchesLearnerNavPath(pathname: string, item: LearnerNavItem) {
   const activeHrefs = item.activeHrefs ?? [item.href];
   return activeHrefs.some((activeHref) => pathname === activeHref || (activeHref !== "/app" && pathname.startsWith(`${activeHref}/`)));
@@ -79,6 +89,7 @@ export function LearnerShell({
   email,
   children,
   rightSlot,
+  secondStageOwnerHomeEnabled = false,
   trustedRepairEnabled = false,
 }: LearnerShellProps) {
   const pathname = usePathname();
@@ -191,6 +202,39 @@ export function LearnerShell({
                 </Link>
               );
             })}
+            {secondStageOwnerHomeEnabled ? (
+              <Link
+                href={`${SECOND_STAGE_OWNER_NAV_ITEM.href}?mode=${currentMode}`}
+                onClick={() => {
+                  pushLocalLearnerAnalyticsEvent({
+                    event: "learner_navigation",
+                    surface: "learner_shell",
+                    route: SECOND_STAGE_OWNER_NAV_ITEM.href,
+                    mode: currentMode,
+                    action: SECOND_STAGE_OWNER_NAV_ITEM.analyticsAction,
+                    status: "clicked",
+                  });
+                }}
+                aria-current={
+                  matchesLearnerNavPath(pathname, SECOND_STAGE_OWNER_NAV_ITEM)
+                    ? "page"
+                    : undefined
+                }
+                className={cn(
+                  "v3-type-label inline-flex min-h-11 shrink-0 items-center justify-center rounded-[var(--v3-radius-control)] border px-3 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background-canvas)]",
+                  matchesLearnerNavPath(pathname, SECOND_STAGE_OWNER_NAV_ITEM)
+                    ? "border-[var(--color-border-focus)] bg-[var(--color-background-brand-soft)] text-[var(--color-text-brand)]"
+                    : "border-transparent bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-background-surface)] hover:text-[var(--color-text-primary)]",
+                )}
+              >
+                <span className="md:hidden">
+                  {SECOND_STAGE_OWNER_NAV_ITEM.mobileLabel}
+                </span>
+                <span className="hidden md:inline">
+                  {SECOND_STAGE_OWNER_NAV_ITEM.label}
+                </span>
+              </Link>
+            ) : null}
             {trustedRepairEnabled ? (
               <Link
                 href={`${TRUSTED_REPAIR_NAV_ITEM.href}?mode=${currentMode}`}
