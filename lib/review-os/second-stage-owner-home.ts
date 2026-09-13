@@ -321,7 +321,7 @@ export function buildSecondStageOwnerHome(
           kind: "new_capture",
           subjectId: null,
           label: "새 2차 답안 올리기",
-          reason: "세 과목의 현재 독립 확인 작업이 모두 끝난 상태입니다.",
+          reason: "현재 사용 가능한 과목의 독립 확인 작업이 모두 끝난 상태입니다.",
           estimatedMinutes: "약 18분",
           after: "저장된 답안에서 다음 교정과 복습 작업이 만들어집니다.",
           href: "/app/capture?mode=second",

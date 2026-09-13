@@ -96,6 +96,20 @@ test("second-stage Owner home retries when admitted reads are unknown and starts
   assert.equal(closed.primaryAction.kind, "new_capture");
   assert.equal(closed.primaryAction.href, "/app/capture?mode=second");
   assert.ok(closed.subjects.every((subject) => subject.status === "stable"));
+
+  const partiallyAdmitted = buildSecondStageOwnerHome([
+    ready("practice", {
+      record: { id: "practice-closed", state: "CLOSED", updatedAt: "2026-09-13T08:00:00.000Z" },
+    }),
+    { subjectId: "theory", readState: "unavailable", record: null, queue: [] },
+    { subjectId: "law", readState: "unavailable", record: null, queue: [] },
+  ]);
+  assert.equal(partiallyAdmitted.primaryAction.kind, "new_capture");
+  assert.equal(
+    partiallyAdmitted.primaryAction.reason,
+    "현재 사용 가능한 과목의 독립 확인 작업이 모두 끝난 상태입니다.",
+  );
+  assert.doesNotMatch(partiallyAdmitted.primaryAction.reason, /세 과목/);
 });
 
 test("second-stage Owner home refuses to render without an admitted existing gate", () => {
