@@ -47,7 +47,13 @@ test("second-stage Capture and saved handoff use Korean visible and accessible l
   assert.match(captureForm, /"2차 답안 기록"/);
   assert.match(captureForm, /REVIEW_OS_LEARNER_LANGUAGE\.biggestGap/);
   assert.match(captureForm, /REVIEW_OS_LEARNER_LANGUAGE\.d1/);
-  assert.doesNotMatch(sessionPage, /Capture → Today|가장 큰 간극/);
+  const savedPanelStart = sessionPage.indexOf("const savedCapturePanel = savedCaptureDetail ? (");
+  const secondPanelStart = sessionPage.indexOf('mode === "second" ? (', savedPanelStart);
+  const firstPanelStart = sessionPage.indexOf(") : (", secondPanelStart);
+  const secondPanel = sessionPage.slice(secondPanelStart, firstPanelStart);
+  assert.ok(savedPanelStart >= 0 && secondPanelStart >= savedPanelStart && firstPanelStart > secondPanelStart);
+  assert.doesNotMatch(secondPanel, /Capture → Today|가장 큰 간극/);
+  assert.match(sessionPage.slice(firstPanelStart), /가장 큰 간극/);
   assert.match(sessionPage, /저장 → \$\{REVIEW_OS_LEARNER_LANGUAGE\.todayPlan\}/);
 });
 

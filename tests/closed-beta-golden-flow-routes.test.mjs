@@ -132,11 +132,8 @@ test("capture save confirmation includes biggest gap, next action, and learner l
   assert.equal(captureForm.includes("복습에 남길 내용"), true, "confirmation should show the Review Queue handoff in learner-facing Korean");
   assert.equal(captureForm.includes("Today Plan candidate"), false, "confirmation should not show the English Today Plan candidate label");
   assert.equal(captureForm.includes("Review Queue candidate"), false, "confirmation should not show the English Review Queue candidate label");
-  assert.equal(
-    captureForm.includes("학습 노트에 저장되고 {REVIEW_OS_LEARNER_LANGUAGE.todayPlan}과 {REVIEW_OS_LEARNER_LANGUAGE.reviewQueue}로 이어집니다."),
-    true,
-    "confirmation should frame the handoff with canonical learner-language terms",
-  );
+  assert.equal(captureForm.includes('mode === "second" ? REVIEW_OS_LEARNER_LANGUAGE.todayPlan : "오늘 계획"'), true);
+  assert.equal(captureForm.includes('mode === "second" ? REVIEW_OS_LEARNER_LANGUAGE.reviewQueue : "복습"'), true);
   assert.equal(captureForm.includes('href={`/app/review?mode=${mode}&subject=${encodedSubject}`}'), true, "confirmation should link to Review with mode and subject");
   assert.equal(captureForm.includes('href={`/app/notes?mode=${mode}&subject=${encodedSubject}`}'), true, "confirmation should link to Notes with mode and subject");
   assert.equal(
@@ -301,7 +298,8 @@ test("Today and empty states use capture for generic input while preserving spec
   assert.equal(todayPage.includes('const secondCaptureHref = `/app/capture?mode=second&subject=${selectedSubjectQuery}`'), true, "second-mode input should use capture with subject");
   assert.equal(todayPage.includes('const secondNotesHref = `/app/notes?mode=second&subject=${selectedSubjectQuery}`'), true, "second-mode notes list should be routed through /app/notes with subject");
   assert.equal(
-    todayPage.includes('const learnerLoopSummary = `오늘 한 것 올리기 → 학습 노트 → ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan} → ${REVIEW_OS_LEARNER_LANGUAGE.reviewQueue} → ${REVIEW_OS_LEARNER_LANGUAGE.studyLedger}`'),
+    todayPage.includes('const learnerLoopSummary = mode === "second"') &&
+      todayPage.includes('`오늘 한 것 올리기 → 학습 노트 → ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan} → ${REVIEW_OS_LEARNER_LANGUAGE.reviewQueue} → ${REVIEW_OS_LEARNER_LANGUAGE.studyLedger}`'),
     true,
     "Today first-use copy should explain the learner loop through the canonical language contract",
   );
@@ -318,7 +316,7 @@ test("Today and empty states use capture for generic input while preserving spec
     "empty notes state should send learners to capture",
   );
   assert.equal(
-    itemsPage.includes("오늘 한 것을 하나 올리면 {REVIEW_OS_LEARNER_LANGUAGE.biggestGap}과 다음 행동이 만들어집니다."),
+    itemsPage.includes("오늘 한 것을 하나 올리면 {biggestGapLabel}과 다음 행동이 만들어집니다."),
     true,
     "Notes empty state should explain saved-note reflection with the canonical biggest-gap term",
   );

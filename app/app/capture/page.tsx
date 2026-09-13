@@ -61,7 +61,9 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
           오늘 한 것 올리기
         </h1>
         <p className="v3-type-body ko-keep text-[var(--color-text-secondary)]">
-          입력한 내용을 단계별로 살펴보고, 저장 결과에 따라 {REVIEW_OS_LEARNER_LANGUAGE.todayPlan}과 {REVIEW_OS_LEARNER_LANGUAGE.reviewQueue}로 이어갑니다.
+          {mode === "second"
+            ? `입력한 내용을 단계별로 살펴보고, 저장 결과에 따라 ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}과 ${REVIEW_OS_LEARNER_LANGUAGE.reviewQueue}로 이어갑니다.`
+            : "입력한 내용을 단계별로 살펴보고, 저장 결과에 따라 오늘 계획과 복습으로 이어갑니다."}
         </p>
       </header>
       <WrongAnswerCaptureForm

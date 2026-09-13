@@ -86,8 +86,9 @@ test("first mode is not overloaded with second-only capture quality checklist", 
 
 test("saved learner capture copy shows one biggest gap and one next action choices", async () => {
   const itemsPage = await readFile(new URL("../app/app/items/page.tsx", import.meta.url), "utf8");
-  assert.ok(itemsPage.includes("{REVIEW_OS_LEARNER_LANGUAGE.biggestGap} 하나와 다음 행동 하나"));
-  assert.ok(itemsPage.includes("{REVIEW_OS_LEARNER_LANGUAGE.todayPlan}에 반영"));
+  assert.ok(itemsPage.includes('const biggestGapLabel = isSecondRound ? REVIEW_OS_LEARNER_LANGUAGE.biggestGap : "가장 큰 약점"'));
+  assert.ok(itemsPage.includes("{biggestGapLabel} 하나와 다음 행동 하나"));
+  assert.ok(itemsPage.includes("{todayPlanLabel}에 반영"));
   assert.ok(itemsPage.includes("답안 훈련으로 보기"));
   assert.ok(itemsPage.includes("복습 연결"));
 });

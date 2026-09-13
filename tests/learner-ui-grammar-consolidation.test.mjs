@@ -48,7 +48,8 @@ test("Capture, Today, Review, Notes, and Agenda expose the connected learner loo
     "학습 기록",
     "가장 큰 약점",
     "다음 행동",
-    'const learnerLoopSummary = `오늘 한 것 올리기 → 학습 노트 → ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan} → ${REVIEW_OS_LEARNER_LANGUAGE.reviewQueue} → ${REVIEW_OS_LEARNER_LANGUAGE.studyLedger}`',
+    'const learnerLoopSummary = mode === "second"',
+    '`오늘 한 것 올리기 → 학습 노트 → ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan} → ${REVIEW_OS_LEARNER_LANGUAGE.reviewQueue} → ${REVIEW_OS_LEARNER_LANGUAGE.studyLedger}`',
     "학습 노트 저장 상태",
   ].forEach((term) => assert.ok(combined.includes(term), term));
 });

@@ -185,7 +185,7 @@ const CAPTURE_STAGE_CONTEXT: Record<
     eyebrow: "저장 전 확인",
     now: "저장할 핵심 내용과 다음 행동을 마지막으로 확인합니다.",
     why: "단계형 흐름에서는 저장 전에 바꿀 내용을 한 번 더 점검할 수 있습니다.",
-    result: `확인한 기록을 저장하고 ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}과 ${REVIEW_OS_LEARNER_LANGUAGE.reviewQueue}로 이어갑니다.`,
+    result: "확인한 기록을 저장하고 오늘 계획과 복습으로 이어갑니다.",
   },
   "second-issue-recall": {
     eyebrow: "세부 작업 1/6 · 쟁점 회상",
@@ -225,6 +225,11 @@ const CAPTURE_STAGE_CONTEXT: Record<
   },
   "saved-plan": CAPTURE_FLOW_STEPS[3],
 };
+
+const SECOND_CONFIRM_STAGE_CONTEXT = {
+  ...CAPTURE_STAGE_CONTEXT.confirm,
+  result: `확인한 기록을 저장하고 ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}과 ${REVIEW_OS_LEARNER_LANGUAGE.reviewQueue}로 이어갑니다.`,
+} as const;
 
 const SECOND_WRITE_STAGE_POSITION: Partial<Record<CaptureStage, string>> = {
   "second-issue-recall": "1/6 · 쟁점 회상",
@@ -503,9 +508,10 @@ function getCaptureStageContext(
   mode: AppraisalMode,
   hasRewriteContext: boolean,
 ) {
-  if (stage === "saved-plan") return CAPTURE_STAGE_CONTEXT[stage];
+  if (stage === "saved-plan") return mode === "second" ? SECOND_CAPTURE_FLOW_STEPS[3] : CAPTURE_STAGE_CONTEXT[stage];
   if (hasRewriteContext && mode === "second") return REWRITE_CONTEXT_STAGE_CONTEXT;
   if (stage === "preview" && mode === "second") return SECOND_PREVIEW_STAGE_CONTEXT;
+  if (stage === "confirm" && mode === "second") return SECOND_CONFIRM_STAGE_CONTEXT;
   return CAPTURE_STAGE_CONTEXT[stage];
 }
 
@@ -2301,7 +2307,7 @@ export function WrongAnswerCaptureForm({
               data-testid={mode === "second" && stage === "second-rewrite" && !rewriteContext ? "second-write-submit" : undefined}
               className="w-full sm:w-auto"
             >
-              {submitting ? "저장 중" : `저장하고 ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}에 반영`}
+              {submitting ? "저장 중" : mode === "second" ? `저장하고 ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}에 반영` : "저장하고 오늘 계획에 반영"}
             </CaptureActionButton>
           )}
         </div>
@@ -2476,7 +2482,7 @@ function SavedCaptureConfirmationPanel({
         testId="capture-persistence-completed-state"
       />
 
-      <p className="v3-type-caption mt-5 text-[var(--color-text-brand)]">4. {REVIEW_OS_LEARNER_LANGUAGE.todayPlan} 반영 · {persistenceCopy.eyebrow}</p>
+      <p className="v3-type-caption mt-5 text-[var(--color-text-brand)]">4. {mode === "second" ? REVIEW_OS_LEARNER_LANGUAGE.todayPlan : "오늘 계획"} 반영 · {persistenceCopy.eyebrow}</p>
       <h3 className="v3-type-section ko-keep mt-2 text-[var(--color-text-primary)]">이 저장 기록에서 이어갈 내용</h3>
       {mode === "second" ? (
         <div className="mt-5 space-y-3">
@@ -2510,7 +2516,7 @@ function SavedCaptureConfirmationPanel({
         />
       </div>
       <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">
-        학습 노트에 저장되고 {REVIEW_OS_LEARNER_LANGUAGE.todayPlan}과 {REVIEW_OS_LEARNER_LANGUAGE.reviewQueue}로 이어집니다.
+        학습 노트에 저장되고 {mode === "second" ? REVIEW_OS_LEARNER_LANGUAGE.todayPlan : "오늘 계획"}과 {mode === "second" ? REVIEW_OS_LEARNER_LANGUAGE.reviewQueue : "복습"}으로 이어집니다.
       </p>
       <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">{persistenceCopy.description}</p>
 

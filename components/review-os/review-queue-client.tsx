@@ -152,7 +152,7 @@ export function ReviewQueueClient({
             <span className={mode === "second"
               ? "v3-type-caption text-[var(--color-text-secondary)]"
               : "inline-flex w-fit rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-subtle)] px-3 py-1 text-xs text-[color:var(--muted)]"}>
-              {REVIEW_OS_LEARNER_LANGUAGE.reviewQueue} · {REVIEW_OS_LEARNER_LANGUAGE.primaryTask}
+              {mode === "second" ? `${REVIEW_OS_LEARNER_LANGUAGE.reviewQueue} · ${REVIEW_OS_LEARNER_LANGUAGE.primaryTask}` : "지금 복습할 1개"}
             </span>
             <p className={mode === "second" ? "v3-type-caption text-[var(--color-text-secondary)]" : "text-xs leading-5 text-[color:var(--muted)]"}>
               복습 예정 · {primaryItem.createdFromCapture ? "학습 노트에서 생성됨" : "미완료 항목"} · {primaryItem.subjectLabel}

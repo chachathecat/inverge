@@ -232,7 +232,8 @@ test("problem-snap learning signal is surfaced in learner plan surfaces", async 
   assert.ok(itemsSource.includes("Problem Snap"));
   assert.ok(itemsSource.includes("다시 풀기"));
   assert.ok(itemsSource.includes("답안 훈련으로 보기"));
-  assert.ok(itemsSource.includes("오늘 한 것을 하나 올리면 {REVIEW_OS_LEARNER_LANGUAGE.biggestGap}과 다음 행동이 만들어집니다."));
+  assert.ok(itemsSource.includes("오늘 한 것을 하나 올리면 {biggestGapLabel}과 다음 행동이 만들어집니다."));
+  assert.ok(itemsSource.includes('const biggestGapLabel = isSecondRound ? REVIEW_OS_LEARNER_LANGUAGE.biggestGap : "가장 큰 약점"'));
 });
 
 test("problem-snap learner surfaces keep scope and no grading/payment claims", async () => {

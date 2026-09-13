@@ -138,10 +138,8 @@ test("capture confirmation copy points to Notes, Review, and Today without forbi
   assert.match(confirmationBlock, /복습에 남길 내용/);
   assert.doesNotMatch(confirmationBlock, /Today Plan candidate|Review Queue candidate/);
   assert.match(confirmationBlock, /오늘 할 일로 이동/);
-  assert.match(
-    confirmationBlock,
-    /학습 노트에 저장되고 \{REVIEW_OS_LEARNER_LANGUAGE\.todayPlan\}과 \{REVIEW_OS_LEARNER_LANGUAGE\.reviewQueue\}로 이어집니다\./,
-  );
+  assert.match(confirmationBlock, /mode === "second" \? REVIEW_OS_LEARNER_LANGUAGE\.todayPlan : "오늘 계획"/);
+  assert.match(confirmationBlock, /mode === "second" \? REVIEW_OS_LEARNER_LANGUAGE\.reviewQueue : "복습"/);
   assert.doesNotMatch(confirmationBlock, /정답 확정|최종 판단|공식 채점(?!\s*아님)|모범답안|합격 가능성|pass-fail|score prediction/i);
 });
 

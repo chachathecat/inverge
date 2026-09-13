@@ -26,7 +26,8 @@ test("Review Queue primary surface starts with active recall before details", ()
   const source = read("components/review-os/review-queue-client.tsx");
 
   assert.ok(source.includes("data-review-primary-surface"));
-  assert.ok(source.includes("{REVIEW_OS_LEARNER_LANGUAGE.reviewQueue} · {REVIEW_OS_LEARNER_LANGUAGE.primaryTask}"));
+  assert.ok(source.includes("`${REVIEW_OS_LEARNER_LANGUAGE.reviewQueue} · ${REVIEW_OS_LEARNER_LANGUAGE.primaryTask}`"));
+  assert.ok(source.includes(': "지금 복습할 1개"'));
   assert.ok(source.includes('data-review-retrieval-step="recall"'));
   assert.ok(source.includes("먼저 떠올리기"));
   assert.ok(source.includes("문단/기준 먼저 떠올리기"));

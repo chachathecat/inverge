@@ -194,11 +194,11 @@ test.describe('learner core loop browser smoke', () => {
     await page.getByLabel('내 답안').fill('요건과 사실을 연결했지만 결론 문장이 약합니다.');
     await page.getByRole('button', { name: '다음: 기준답안/해설 입력' }).click();
     await page.getByLabel('기준 답안 요약').fill('기준답안은 결론을 더 분명히 씁니다.');
-    await page.getByRole('button', { name: '다음: 가장 큰 간극 1개' }).click();
+    await page.getByRole('button', { name: '다음: 가장 큰 감점 원인' }).click();
     await page.getByLabel('보강할 논점 1개').fill('결론 문장에서 요건-사실 대응을 명시하지 못함');
     await page.getByRole('button', { name: '다음: 문단 다시쓰기' }).click();
     await page.getByTestId('second-write-final-textarea').fill('요건을 제시하고 사실을 대응해 결론을 명확히 작성합니다.');
-    await page.getByRole('button', { name: /저장하고 오늘 계획에 반영/ }).click();
+    await page.getByRole('button', { name: /저장하고 오늘 할 일에 반영/ }).click();
 
     await expect(page).toHaveURL(/\/app\/session\?mode=second/);
     await expect(page.getByText('오늘 기록이 저장되었습니다')).toBeVisible();

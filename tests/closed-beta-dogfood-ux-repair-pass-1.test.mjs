@@ -83,7 +83,8 @@ test("Review Queue has one primary review card and collapses extra signals", () 
   const reviewQueue = read("components/review-os/review-queue-client.tsx");
 
   assert.ok(reviewQueue.includes("data-review-primary-surface"));
-  assert.ok(reviewQueue.includes("{REVIEW_OS_LEARNER_LANGUAGE.reviewQueue} · {REVIEW_OS_LEARNER_LANGUAGE.primaryTask}"));
+  assert.ok(reviewQueue.includes("`${REVIEW_OS_LEARNER_LANGUAGE.reviewQueue} · ${REVIEW_OS_LEARNER_LANGUAGE.primaryTask}`"));
+  assert.ok(reviewQueue.includes(': "지금 복습할 1개"'));
   assert.ok(reviewQueue.includes("data-review-extra-signals"));
   assert.ok(reviewQueue.includes("복습 근거 보기"));
   assert.ok(reviewQueue.includes("data-review-secondary-list"));

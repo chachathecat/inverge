@@ -57,7 +57,7 @@ const EVENT_COPY: Record<
 > = {
   capture_saved: {
     state: "기록됨",
-    description: `오늘 한 것이 ${REVIEW_OS_LEARNER_LANGUAGE.studyLedger}에 남았습니다.`,
+    description: "오늘 한 것이 학습 기록에 남았습니다.",
     marker: "border-[var(--brand-700)] bg-[var(--brand-050)]",
     v3Marker: "border-[var(--color-border-focus)] bg-[var(--color-icon-brand)]",
   },
@@ -81,7 +81,7 @@ const EVENT_COPY: Record<
   },
   today_task_completed: {
     state: "오늘 할 일 완료",
-    description: `${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}에서 선택한 행동을 마쳤습니다.`,
+    description: "오늘 계획에서 선택한 행동을 마쳤습니다.",
     marker: "border-[var(--status-green)] bg-[var(--status-green-soft)]",
     v3Marker: "border-[var(--color-border-stable)] bg-[var(--color-icon-stable)]",
   },
@@ -148,6 +148,11 @@ function eventLinkLabel(event: LearningAgendaEvent) {
 
 function TimelineEvent({ event, mode }: { event: LearningAgendaEvent; mode: AppraisalMode }) {
   const copy = EVENT_COPY[event.type];
+  const description = mode === "second" && event.type === "capture_saved"
+    ? `오늘 한 것이 ${REVIEW_OS_LEARNER_LANGUAGE.studyLedger}에 남았습니다.`
+    : mode === "second" && event.type === "today_task_completed"
+      ? `${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}에서 선택한 행동을 마쳤습니다.`
+      : copy.description;
   const href = eventHref(event, mode);
   const linkLabel = eventLinkLabel(event);
   const time = formatEventTime(event.date);
@@ -182,7 +187,7 @@ function TimelineEvent({ event, mode }: { event: LearningAgendaEvent; mode: Appr
           </div>
           {time ? <time dateTime={event.date} className={mode === "second" ? "v3-type-caption shrink-0 text-[var(--color-text-secondary)]" : "shrink-0 text-xs leading-5 text-[var(--muted)]"}>{time}</time> : null}
         </div>
-        <p className={mode === "second" ? "v3-type-compact mt-2 text-[var(--color-text-secondary)]" : "mt-2 text-sm leading-6 text-[var(--muted-strong)]"}>{copy.description}</p>
+        <p className={mode === "second" ? "v3-type-compact mt-2 text-[var(--color-text-secondary)]" : "mt-2 text-sm leading-6 text-[var(--muted-strong)]"}>{description}</p>
         {href && linkLabel ? (
           <Link
             href={href}

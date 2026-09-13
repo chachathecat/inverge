@@ -806,7 +806,7 @@ async function completeCapture(
   );
   await page.getByRole("button", { name: "다음: 강의/교재 정리 입력" }).click();
   await page.getByLabel("강의/교재 정리 요약").fill("정의와 논거 다음에 사례 적용과 결론을 연결한다.");
-  await page.getByRole("button", { name: "다음: 가장 큰 약점 1개" }).click();
+  await page.getByRole("button", { name: "다음: 가장 큰 감점 원인" }).click();
   await page.getByLabel("보강할 논점 1개").fill(originalGap);
   await page.getByRole("button", { name: "다음: 문단 다시쓰기" }).click();
   await page.getByLabel("다시 쓴 문단").fill(
@@ -814,7 +814,7 @@ async function completeCapture(
   );
   await page.getByRole("button", { name: "마지막 확인으로 이동" }).click();
   const initialSaveButton = page.getByRole("button", {
-    name: "저장하고 오늘 계획에 반영",
+    name: "저장하고 오늘 할 일에 반영",
   });
   await expect(initialSaveButton).toHaveCount(1);
   await expect(initialSaveButton).toBeVisible();
