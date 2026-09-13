@@ -6,7 +6,7 @@ import {
   V3RouteFrame,
   V3RouteHeader,
   V3Surface,
-} from "@/components/learner";
+} from "@/components/learner/v3-route-ui";
 import type { SecondStageOwnerHomeView } from "@/lib/review-os/second-stage-owner-home";
 
 export function SecondStageOwnerHome({ view }: { view: SecondStageOwnerHomeView }) {
