@@ -10,6 +10,7 @@ import { randomUUID } from "node:crypto";
 import { execFileSync, spawn } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+import { learnerDueAtLabel } from "../../lib/review-os/learner-language";
 
 const baseURL = process.env.E2E_BASE_URL ?? "";
 const emailA = process.env.C3R_P_USER_A_EMAIL ?? "";
@@ -534,10 +535,10 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     await pageA.goto(`/app/c3r-p?recordId=${prior.recordId}`);
     await expectState(pageA, "REOPENED");
     await expect(pageA.getByTestId("c3r-p-ledger")).toContainText(
-      "LATER_FAILURE_REOPEN",
+      "다시 확인 필요",
     );
     await expect(pageA.getByTestId("c3r-p-ledger")).toContainText(
-      "REOPENED_COMPLETED",
+      "다시 혼자 확인함",
     );
     const restartPlanHistory = pageA.getByTestId("c3r-p-plan-history");
     await expect(restartPlanHistory).toBeVisible();
@@ -545,7 +546,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     await restartPlanHistory.locator("summary").click();
     await expect(
       restartPlanHistory.locator(`[data-plan-id="${prior.fullDayPlanId}"]`),
-    ).toContainText("완료 상태 COMPLETED · 종료 사유 COMPLETED");
+    ).toContainText("완료 · 종료 사유 모두 완료");
 
     const contextB = await contextFor(browser, emailB, passwordB);
     const denial = await contextB.request.get(
@@ -1289,7 +1290,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   await expect(assistedButton).toBeDisabled();
   await expect(independentD1Button).toBeDisabled();
   await expect(page.getByTestId("c3r-p-d1-eligibility")).toContainText(
-    assistedRecord.d1_due_at,
+    learnerDueAtLabel(assistedRecord.d1_due_at),
   );
   await independentD1Button.evaluate((element) => {
     element.click();
@@ -1306,11 +1307,13 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   expect(earlyD1Requests).toEqual([]);
   await page.reload();
   await expectState(page, "REPAIRED");
-  await expect(page.getByTestId("c3r-p-ledger")).toContainText("D1_ASSISTED");
+  await expect(page.getByTestId("c3r-p-ledger")).toContainText(
+    "도움을 사용한 다음 날 복습",
+  );
   await expect(assistedButton).toBeDisabled();
   await expect(independentD1Button).toBeDisabled();
   await expect(page.getByTestId("c3r-p-d1-eligibility")).toContainText(
-    assistedRecord.d1_due_at,
+    learnerDueAtLabel(assistedRecord.d1_due_at),
   );
 
   const secondBrowser = await contextFor(browser, emailA, passwordA);
@@ -1326,7 +1329,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     name: "다음 날 혼자 해보기 완료",
   })).toBeDisabled();
   await expect(secondPage.getByTestId("c3r-p-d1-eligibility")).toContainText(
-    assistedRecord.d1_due_at,
+    learnerDueAtLabel(assistedRecord.d1_due_at),
   );
   await secondPage.reload();
   await expect(secondPage.getByRole("button", {
@@ -1542,7 +1545,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   });
   await expect(preDueD7Button).toBeDisabled();
   await expect(page.getByTestId("c3r-p-d7-eligibility")).toContainText(
-    sealedTransfer.view.restored.gaps[0].d7_due_at,
+    learnerDueAtLabel(sealedTransfer.view.restored.gaps[0].d7_due_at),
   );
   await expect(page.getByTestId("c3r-p-transfer-prompt")).toHaveCount(0);
   await preDueD7Button.evaluate((element) => {
@@ -1786,7 +1789,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     }),
   ]));
   await expect(secondPage.getByTestId("c3r-p-recurrence-eligibility")).toContainText(
-    transferred.view.restored.gaps[0].recurrence_due_at,
+    learnerDueAtLabel(transferred.view.restored.gaps[0].recurrence_due_at),
   );
   const preDueRecurrenceButton = secondPage.getByRole("button", {
     name: "제한시간 실전 확인 완료",
@@ -2375,10 +2378,10 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     `[data-plan-id="${fullDayPlanId}"]`,
   );
   await expect(completedReopenedHistoryItem).toContainText(
-    "완료 상태 COMPLETED · 종료 사유 COMPLETED",
+    "완료 · 종료 사유 모두 완료",
   );
   await expect(completedReopenedHistoryItem).toContainText(
-    "CORE_OUTCOME · REOPENED_REVIEW · 30분 · COMPLETE",
+    "중요 학습 · 다시 혼자 확인하기 · 30분 · 완료",
   );
   await expect(completedReopenedHistoryItem).toContainText("오늘 계획 완료: 예");
   await expect(completedReopenedHistoryItem.getByRole("button")).toHaveCount(0);
@@ -2424,14 +2427,14 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   await secondPage.reload();
   await expectState(secondPage, "CLOSED");
   await expect(secondPage.getByTestId("c3r-p-ledger")).toContainText(
-    "REOPENED_COMPLETED",
+    "다시 혼자 확인함",
   );
   const restoredPlanHistory = secondPage.getByTestId("c3r-p-plan-history");
   await expect(restoredPlanHistory).not.toHaveAttribute("open", "");
   await restoredPlanHistory.locator("summary").click();
   await expect(
     restoredPlanHistory.locator(`[data-plan-id="${fullDayPlanId}"]`),
-  ).toContainText("CORE_OUTCOME · REOPENED_REVIEW · 30분 · COMPLETE");
+  ).toContainText("중요 학습 · 다시 혼자 확인하기 · 30분 · 완료");
   await fillStructuredCalculation(secondPage, "90000000");
   await secondPage
     .getByRole("button", { name: "입력한 후속 실패로 감점 원인 다시 확인" })
@@ -2506,8 +2509,8 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     planBlockId: null,
   });
   await expect(
-    secondPage.getByRole("alert").filter({ hasText: "invalid_transition" }),
-  ).toContainText("invalid_transition");
+    secondPage.getByRole("alert").filter({ hasText: "요청을 완료하지 못했습니다" }),
+  ).toContainText("요청을 완료하지 못했습니다");
   await secondPage.unroute(c3rPApiUrl, rejectFinalRetry);
   await expectState(secondPage, "REOPENED");
   await contextB.close();
