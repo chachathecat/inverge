@@ -1,5 +1,24 @@
 # Inverge Owner Study OS
 
+## Active post-#924 Goal — received 2026-09-13T09:29:11Z
+
+### Current transition: #924 integrated -> #925 productization source contract
+
+PR #924 merged reviewed head `4a4ef07274a99e7d0ab560abde08661e546f2765`
+by expected-head-pinned squash as `b75fe81b6ab810eb4fe3b0985199d563a33e69cc`,
+tree `d9a838ca4058fd178467cc448e14feffdd749753`. All 13 required exact-head
+checks and Vercel passed, final Codex review found no major issue, active
+P0/P1/P2 was 0/0/0 and unresolved threads were zero. Only #923 closed; #772,
+#880, #883 and the wider Goal remain open.
+
+Issue #925 installs the already-authorized #772/#776 S1 source package. It is
+not a new master plan and creates no runtime or activation. It closes the Korean
+learner language, one-touch understanding, presentation-mode and preserved
+first-stage contracts needed for the next actual product slices. After its clean
+integration, continue S2 only. S3 remains an exact Owner-only Production gate,
+and S4 is not dependency-ready until S3 is separately approved and terminally
+completed. Do not treat this source contract or its PR as Goal completion.
+
 ## Active post-#922 Goal — received 2026-09-13T08:34:47Z
 
 ### Current transition: #922 integrated -> #923 three-subject Owner home
