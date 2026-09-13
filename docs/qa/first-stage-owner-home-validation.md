@@ -6,6 +6,8 @@
 - Goal: replace the stale first-stage kernel placeholder with a truthful Owner-only handoff across all five first-stage subjects.
 - Base commit: `52de8ef8ee772bae02788f140d8ecff7f0bd37c1`
 - Base tree: `75ba5d02b1f299bc985604b66756545c103cf945`
+- Draft PR: #922
+- Initial published head: `5cb893077b72cb422a88c78a995259fcc58ee231`
 - Risk: medium; navigation and availability presentation change only.
 - Non-goals: no reviewed-content installation, question generation, schema/API/environment change, remote data mutation, public activation, or completion claim for #883.
 
@@ -29,6 +31,8 @@ Partial availability failures remain visible as retryable status failures. The p
 - `git diff --check`: passed.
 
 The full new Playwright scenario is intentionally not recorded as a local pass. This workspace had no Chromium binary, and the Playwright CDN download failed with timeout/502 responses. Native CI installs Chromium before running the registered test and is the required exact-head browser evidence.
+
+The initial PR Contract run rejected the PR-description syntax only. The description now uses the repository-required bracketed risk and exact checkbox lines. A replacement exact head is required so native checks evaluate a fresh pull-request event payload; the initial run is not treated as a pass.
 
 ## Required exact-head evidence
 
