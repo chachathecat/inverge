@@ -550,7 +550,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     const restartPlanHistory = pageA.getByTestId("c3r-p-plan-history");
     await expect(restartPlanHistory).toBeVisible();
     await expect(restartPlanHistory).not.toHaveAttribute("open", "");
-    await restartPlanHistory.locator("summary").click();
+    await restartPlanHistory.locator(":scope > summary").click();
     await expect(
       restartPlanHistory.locator(`[data-plan-id="${prior.fullDayPlanId}"]`),
     ).toContainText("완료 · 종료 사유 모두 완료");
@@ -2383,7 +2383,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   const completedPlanHistory = secondPage.getByTestId("c3r-p-plan-history");
   await expect(completedPlanHistory).toBeVisible();
   await expect(completedPlanHistory).not.toHaveAttribute("open", "");
-  await completedPlanHistory.locator("summary").click();
+  await completedPlanHistory.locator(":scope > summary").click();
   const completedReopenedHistoryItem = completedPlanHistory.locator(
     `[data-plan-id="${fullDayPlanId}"]`,
   );
@@ -2441,7 +2441,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   );
   const restoredPlanHistory = secondPage.getByTestId("c3r-p-plan-history");
   await expect(restoredPlanHistory).not.toHaveAttribute("open", "");
-  await restoredPlanHistory.locator("summary").click();
+  await restoredPlanHistory.locator(":scope > summary").click();
   await expect(
     restoredPlanHistory.locator(`[data-plan-id="${fullDayPlanId}"]`),
   ).toContainText("중요 학습 · 다시 혼자 확인하기 · 30분 · 완료");
