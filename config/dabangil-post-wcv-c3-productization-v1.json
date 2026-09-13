@@ -1,0 +1,197 @@
+{
+  "schemaVersion": "dabangil.post_wcv_c3.productization.v1",
+  "contractId": "POST_WCV_C3_PRODUCTIZATION_V1",
+  "programId": "INVERGE_OWNER_STUDY_OS",
+  "deliveryId": "STUDY_OS_S1_PRODUCTIZATION_SOURCE",
+  "status": "source_contract_only",
+  "authority": {
+    "parentIssues": [772, 776, 880],
+    "childIssues": [771, 773, 774, 775],
+    "implementationIssue": 925,
+    "sourceOnly": true,
+    "createsMasterPlan": false,
+    "createsControlPlane": false,
+    "liveGitHubWins": true
+  },
+  "documents": {
+    "sourceIndex": "docs/source-of-truth-index.md",
+    "ownerDecision": "docs/decisions/2026-09-13-owner-post-wcv-c3-final-productization.md",
+    "secondRound": "docs/product/dabangil-second-round-web-pwa-product-constitution-v1.md",
+    "learnerLanguage": "docs/product/dabangil-korean-learner-language-v1.md",
+    "oneTouchUnderstanding": "docs/product/dabangil-one-touch-understanding-v1.md",
+    "presentationModes": "docs/product/dabangil-gameful-evidence-mode-v1.md",
+    "firstRound": "docs/product/dabangil-first-round-adaptive-mcq-program-v1.md",
+    "validation": "docs/qa/dabangil-post-wcv-c3-productization-validation.md"
+  },
+  "phaseGraph": {
+    "criticalPath": ["S0", "S1", "S2", "S3", "S4", "S4A", "S4B", "S5", "S6"],
+    "currentPhase": "S1",
+    "phases": {
+      "S0": "WCV_C3_TERMINAL_CLOSE",
+      "S1": "SOURCE_CONTRACT_INSTALLATION",
+      "S2": "KOREAN_FIRST_GLANCE",
+      "S3": "OWNER_ONLY_PRODUCTION_WEB_GATED",
+      "S4": "SECOND_STAGE_CORE_LEARNER_FLOW",
+      "S4A": "ONE_TOUCH_UNDERSTANDING",
+      "S4B": "OPTIONAL_PRESENTATION_MODES",
+      "S5": "OWNER_GOLDEN_DOGFOOD",
+      "S6": "SYNTHETIC_DEMO_SIGNED_IN_TECHNICAL_TRIAL"
+    },
+    "enhancementPath": [
+      "CALENDAR_AND_CONCEPT_LIBRARY",
+      "OFFICIAL_SOURCE_HARVESTER",
+      "PERSONAL_PRACTICE_GENERATION",
+      "VERIFIED_BANK_PROMOTION",
+      "PAID_READINESS",
+      "NATIVE_COMPANION"
+    ]
+  },
+  "productPromise": "답안을 올리면 가장 큰 감점 원인 하나를 찾아 오늘 고칠 문단이나 계산을 정합니다.",
+  "firstGlance": {
+    "dominantActionCount": 1,
+    "requiredFields": ["what", "whyNow", "estimatedMinutes", "nextStep"]
+  },
+  "learnerSequence": [
+    "오늘 고치기",
+    "다음 날 혼자 해보기",
+    "일주일 뒤 다른 문제",
+    "제한시간 실전 확인",
+    "현재 안정"
+  ],
+  "learnerLabels": {
+    "Today": "오늘",
+    "primaryTask": "오늘의 한 가지",
+    "TodayPlan": "오늘 할 일",
+    "FullDay": "오늘 전체 공부표",
+    "ReviewQueue": "복습 대기",
+    "PersonalStudyLedger": "내 공부 기록",
+    "biggestGap": "가장 큰 감점 원인",
+    "repair": "지금 고치기",
+    "D1": "다음 날 혼자 해보기",
+    "D7": "일주일 뒤 다른 문제",
+    "timedRecurrence": "제한시간 실전 확인",
+    "recovering": "고치는 중",
+    "stable": "현재 안정",
+    "reopened": "다시 확인 필요",
+    "insufficientEvidence": "아직 기록이 부족해요"
+  },
+  "forbiddenFirstViewportIdentifiers": [
+    "D+1",
+    "D+7",
+    "Today Plan",
+    "Full-Day",
+    "timed recurrence",
+    "CURRENTLY_CLEAR",
+    "REOPENED",
+    "NORMAL",
+    "MINIMUM_MAINTENANCE",
+    "recordVersion",
+    "anchorId",
+    "sourceVersionId",
+    "taxonomyId"
+  ],
+  "secondStage": {
+    "subjects": ["PRACTICE", "THEORY", "LAW"],
+    "officialGradingClaim": false,
+    "officialModelAnswerClaim": false,
+    "passGuaranteeClaim": false
+  },
+  "oneTouchUnderstanding": {
+    "learnerName": "한번 눌러 이해하기",
+    "maximumDefaultCandidates": 3,
+    "contracts": [
+      "DetectedLearningConceptV1",
+      "TermExplanationCardV1",
+      "FormulaExplanationCardV1",
+      "FormulaDependencyGraphV1",
+      "ContextualHelpExposureV1",
+      "RecallCheckV1"
+    ],
+    "helpLevels": [
+      { "id": "MEANING_ONLY", "label": "뜻만 보기", "strongAssistance": false },
+      { "id": "IN_THIS_PROBLEM", "label": "이 문제에서 보기", "strongAssistance": false },
+      { "id": "APPLICATION_STEPS", "practiceLabel": "계산 순서 보기", "writtenLabel": "답안에 적용하기", "strongAssistance": true }
+    ],
+    "exposureCommittedBeforeProtectedBody": true,
+    "openCreatesMastery": false,
+    "openCreatesVerified": false,
+    "sameSessionRecallQualifiesDelayedEvidence": false,
+    "cachedCompiledCardFirst": true,
+    "strongestModelPerTap": false,
+    "preserve": ["scroll", "answerDraft", "timer", "focus", "sourceAnchor"],
+    "subjectAuthority": {
+      "PRACTICE": "DETERMINISTIC_NUMBER_UNIT_SIGN_ROUNDING_INVERSE",
+      "THEORY": "TARGET_SCOPE_RUBRIC_EVIDENCE",
+      "LAW": "EXACT_SOURCE_EFFECTIVE_VERSION_CURRENTNESS"
+    }
+  },
+  "presentationModes": {
+    "default": "STANDARD",
+    "allowed": ["STANDARD", "GAMEFUL", "LOW_STIMULATION"],
+    "gamefulOptIn": true,
+    "reversible": true,
+    "remotelyDisableable": true,
+    "lowStimulationFeatureParity": true,
+    "semanticFieldsLockedAcrossModes": [
+      "answer",
+      "evidence",
+      "biggestGap",
+      "nextAction",
+      "eligibility",
+      "dueAt",
+      "mastery",
+      "score",
+      "entitlement",
+      "usage",
+      "cost"
+    ],
+    "prohibited": [
+      "RANDOM_REWARD",
+      "PUNITIVE_STREAK",
+      "PUBLIC_RANK_PRESSURE",
+      "SHAME",
+      "ARTIFICIAL_SCARCITY",
+      "PAY_TO_REPAIR"
+    ]
+  },
+  "firstRound": {
+    "mandatory": true,
+    "subjects": [
+      "CIVIL_LAW",
+      "ECONOMICS",
+      "REAL_ESTATE_PRINCIPLES",
+      "APPRAISER_RELATED_LAW",
+      "ACCOUNTING"
+    ],
+    "english": "EXTERNAL_QUALIFYING_SCORE_ONLY",
+    "timedRunners": ["40_QUESTIONS_120_MINUTES", "80_QUESTIONS_200_MINUTES"],
+    "correctClickCreatesMastery": false,
+    "modelOutputIsAnswerAuthority": false,
+    "sequence": ["FIRST-P0", "FIRST-P1", "ULC-F1", "ULC-F2", "ULC-F3", "ULC-F4", "ULC-F5", "FIRST-P2", "FIRST-P3", "FIRST-P4"]
+  },
+  "rightsAndPrivacy": {
+    "publicAvailabilityMeansPermission": false,
+    "privateUploadMayEnterSharedCache": false,
+    "privateUploadMayEnterAnalyticsBody": false,
+    "privateUploadMayEnterGeneration": false,
+    "privateUploadMayEnterModelTraining": false,
+    "privateCardMayCrossLearners": false,
+    "sharedMaterialRequiresIndependentRightsBasis": true
+  },
+  "activation": {
+    "runtime": false,
+    "ui": false,
+    "api": false,
+    "database": false,
+    "rls": false,
+    "migration": false,
+    "provider": false,
+    "dependency": false,
+    "content": false,
+    "production": false,
+    "payment": false,
+    "publicLearner": false,
+    "realLearner": false,
+    "nativeStore": false
+  }
+}
