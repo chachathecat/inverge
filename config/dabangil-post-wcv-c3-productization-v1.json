@@ -97,7 +97,25 @@
     "passGuaranteeClaim": false,
     "referenceAnswerPolicy": {
       "learnerLabel": "AI 학습용 기준안",
+      "canonicalValidator": "lib/review-os/second-round-reference-answer-package-registry.ts",
       "requiredDisclosures": ["SOURCE_STATUS", "VERIFICATION_STATUS", "UNCERTAINTY"],
+      "minimumIndependentCandidateCount": 3,
+      "minimumCriticPassCount": 1,
+      "requiredVerificationReport": {
+        "sourceStatus": "source_verified",
+        "evidenceStatus": "subject_validated",
+        "subjectValidationStatus": "subject_validated",
+        "criticConsensusStatus": "critic_consensus_passed",
+        "releaseGateStatus": "released",
+        "unresolvedConflictCount": 0
+      },
+      "requiredReleaseEvidenceAnchorStatuses": ["subject_validated", "synthetic_fixture"],
+      "allowedSectionVerificationStatuses": ["released", "source_verified"],
+      "allowedProblemTextStatuses": ["verified", "synthetic_fixture"],
+      "allowedCanonicalStructureStatuses": ["structure_verified", "synthetic_fixture"],
+      "subjectChecksMustPass": true,
+      "openBlockingReleaseBlockerCount": 0,
+      "unresolvedBlockingUncertaintyCount": 0,
       "blockingConditions": [
         "LEGAL_SOURCE_BLOCKER",
         "CALCULATION_BLOCKER",
@@ -181,14 +199,16 @@
     ],
     "correctClickCreatesMastery": false,
     "modelOutputIsAnswerAuthority": false,
-    "subjectRuntimePrerequisites": [
-      "WCV-C3",
-      "S241A",
-      "ULC-M1",
-      "ULC-M2",
-      "ULC-K1",
-      "S238B"
-    ],
+    "subjectRuntimeDependencyGraph": {
+      "ULC-M1": ["WCV-C3", "S241A"],
+      "ULC-M2": ["ULC-M1"],
+      "ULC-K1": ["ULC-M2"],
+      "ULC-F1": ["ULC-K1", "S238B"],
+      "ULC-F2": ["ULC-F1"],
+      "ULC-F3": ["ULC-F2"],
+      "ULC-F4": ["ULC-F3"],
+      "ULC-F5": ["ULC-F4"]
+    },
     "sourceAndKernelSlices": ["FIRST-P0", "FIRST-P1"],
     "subjectSequence": ["ULC-F1", "ULC-F2", "ULC-F3", "ULC-F4", "ULC-F5"],
     "postSubjectSlices": ["FIRST-P2", "FIRST-P3", "FIRST-P4"]

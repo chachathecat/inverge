@@ -26,10 +26,15 @@
 ## 순서
 
 강한 signed-in 2차 기술 trial 뒤, broad native나 다른 전문시험보다 먼저 다음을
-이어간다. 단, 첫 1차 과목 learner runtime 전에 기존 상위 계약의 선행 체인
-`WCV-C3 → S241A → ULC-M1 → ULC-M2 → ULC-K1 → S238B`가 모두 닫혀야 한다.
+이어간다. 단, 첫 1차 과목 learner runtime인 `ULC-F1`은 서로 독립적으로 진행할
+수 있는 두 선행선이 합류한 뒤에만 시작한다.
+
+- `WCV-C3`와 `S241A` → `ULC-M1` → `ULC-M2` → `ULC-K1`
+- 독립 인증 acceptance `S238B`
+- 합류: `ULC-F1`은 `ULC-K1`과 `S238B`를 모두 요구
+
 `S241A`와 `S238B`의 인증 acceptance는 서로 대체할 수 없으며, 이 문서의
-`FIRST-*` 이름은 그 선행 체인을 생략하거나 재정의하지 않는다.
+`FIRST-*` 이름은 이 dependency graph를 생략하거나 재정의하지 않는다.
 
 `FIRST-P0 → FIRST-P1 → ULC-F1 → ULC-F2 → ULC-F3 → ULC-F4 → ULC-F5 → FIRST-P2 → FIRST-P3 → FIRST-P4`
 

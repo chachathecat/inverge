@@ -54,9 +54,16 @@ test("critical path keeps gated activation and mandatory adjacent work explicit"
     "SESSION_1_120_QUESTIONS_120_MINUTES",
     "SESSION_2_80_QUESTIONS_80_MINUTES",
   ]);
-  assert.deepEqual(contract.firstRound.subjectRuntimePrerequisites, [
-    "WCV-C3", "S241A", "ULC-M1", "ULC-M2", "ULC-K1", "S238B",
-  ]);
+  assert.deepEqual(contract.firstRound.subjectRuntimeDependencyGraph, {
+    "ULC-M1": ["WCV-C3", "S241A"],
+    "ULC-M2": ["ULC-M1"],
+    "ULC-K1": ["ULC-M2"],
+    "ULC-F1": ["ULC-K1", "S238B"],
+    "ULC-F2": ["ULC-F1"],
+    "ULC-F3": ["ULC-F2"],
+    "ULC-F4": ["ULC-F3"],
+    "ULC-F5": ["ULC-F4"],
+  });
   assert.deepEqual(contract.firstRound.subjectSequence, [
     "ULC-F1", "ULC-F2", "ULC-F3", "ULC-F4", "ULC-F5",
   ]);
@@ -141,10 +148,29 @@ test("rights, privacy and activation remain fail closed", () => {
   assert.deepEqual(contract.secondStage.referenceAnswerPolicy.blockingConditions, [
     "LEGAL_SOURCE_BLOCKER", "CALCULATION_BLOCKER", "UNRESOLVED_CONSENSUS_BLOCKER",
   ]);
+  assert.equal(
+    contract.secondStage.referenceAnswerPolicy.canonicalValidator,
+    "lib/review-os/second-round-reference-answer-package-registry.ts",
+  );
+  assert.equal(contract.secondStage.referenceAnswerPolicy.minimumIndependentCandidateCount, 3);
+  assert.equal(contract.secondStage.referenceAnswerPolicy.minimumCriticPassCount, 1);
+  assert.deepEqual(contract.secondStage.referenceAnswerPolicy.requiredVerificationReport, {
+    sourceStatus: "source_verified",
+    evidenceStatus: "subject_validated",
+    subjectValidationStatus: "subject_validated",
+    criticConsensusStatus: "critic_consensus_passed",
+    releaseGateStatus: "released",
+    unresolvedConflictCount: 0,
+  });
+  assert.equal(contract.secondStage.referenceAnswerPolicy.subjectChecksMustPass, true);
+  assert.equal(contract.secondStage.referenceAnswerPolicy.openBlockingReleaseBlockerCount, 0);
+  assert.equal(contract.secondStage.referenceAnswerPolicy.unresolvedBlockingUncertaintyCount, 0);
   assert.equal(contract.secondStage.referenceAnswerPolicy.releaseWhileBlocked, false);
   const secondRound = read(contract.documents.secondRound);
   assert.match(secondRound, /출처 상태, 검증 상태와 불확실성/);
   assert.match(secondRound, /차단 상태이면\s*기준안을 공개하지 않는다/);
+  assert.match(secondRound, /독립인 후보를 최소 3개/);
+  assert.match(secondRound, /과목별 검증, 별도 critic 검토, 합의·충돌 처리와 출처 anchor/);
 });
 
 test("source documents preserve accessibility and no-runtime receipt", () => {
