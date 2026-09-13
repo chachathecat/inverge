@@ -73,7 +73,7 @@ const productionAccessBlobs = Object.freeze({
   "lib/review-os/c3r-p-service.ts": "5923cd57c2cf1d00aea258d930495a48ac1dc516",
   "lib/review-os/c3r-p-repository.ts": "c9fceb98d4a6f9dd9a2eb89f7f612fb60b0d41c8",
   "lib/review-os/c3r-p-engine.ts": "351047c5b5ed7463ec7aac96baad389b5a3a92d9",
-  "components/review-os/c3r-p-practice-loop.tsx": "746ef912a00deb903c4f51c6295253dbf83ab943",
+  "components/review-os/c3r-p-practice-loop.tsx": "703563a4e811d7886916108d43059a6fa134ae00",
 });
 
 const OWNER_BRIDGE_SECURITY_PATCHED_PACKAGE_LOCK_GIT_BLOB =

@@ -703,7 +703,7 @@ test("C3R-L initial load errors support retry and stale-bookmark recovery", asyn
     const loadError = page.getByTestId("c3r-l-load-error");
     await expect(loadError).toBeVisible();
     markBrowserFailureStage("LOAD_RETRY_ERROR_SURFACE_VISIBLE");
-    await expect(loadError.getByRole("alert")).toContainText("temporarily_unavailable");
+    await expect(loadError.getByRole("alert")).toContainText("학습 상태를 불러오지 못했습니다");
     markBrowserFailureStage("LOAD_RETRY_ERROR_TEXT_VISIBLE");
     failInitialLoads = false;
     markBrowserFailureStage("LOAD_RETRY_RELEASED");
@@ -718,7 +718,7 @@ test("C3R-L initial load errors support retry and stale-bookmark recovery", asyn
     await page.goto(`/app/c3r-l?recordId=${missingRecordId}`);
     const staleBookmarkError = page.getByTestId("c3r-l-load-error");
     await expect(staleBookmarkError).toBeVisible();
-    await expect(staleBookmarkError.getByRole("alert")).toContainText("not_found");
+    await expect(staleBookmarkError.getByRole("alert")).toContainText("학습 상태를 불러오지 못했습니다");
     markBrowserFailureStage("STALE_BOOKMARK_ERROR_VISIBLE");
     await page.getByRole("button", { name: "기본 법규 학습으로 돌아가기" }).click();
     await expect(page.getByTestId("c3r-l-runtime")).toBeVisible();

@@ -481,7 +481,7 @@ export function C3RPPracticeLoop({
               <textarea className="min-h-24 rounded-xl border p-3 font-normal" value={failureNote} onChange={(event) => setFailureNote(event.target.value)} />
             </label>
             <button disabled={pending} onClick={() => void feedback()} className="rounded-xl bg-[var(--color-action-primary)] px-4 py-3 font-semibold text-white disabled:opacity-50">
-              도움 상태를 먼저 기록하고 가장 큰 간극 보기
+              도움 상태를 먼저 기록하고 가장 큰 감점 원인 보기
             </button>
           </div>
         ) : null}
@@ -645,9 +645,9 @@ export function C3RPPracticeLoop({
 
         {record?.state === "CLOSED" ? (
           <div className="mt-5 grid gap-2">
-            <p className="text-sm text-[var(--color-text-secondary)]">후속 수행에서 실제로 입력한 값이 틀렸을 때만 간극을 다시 엽니다.</p>
+            <p className="text-sm text-[var(--color-text-secondary)]">후속 수행에서 실제로 입력한 값이 틀렸을 때만 감점 원인을 다시 확인합니다.</p>
             <button disabled={pending} onClick={() => void review("record_later_failure")} className="w-full rounded-xl border border-amber-500 px-4 py-3 font-semibold text-amber-800 disabled:opacity-50">
-              입력한 후속 실패로 간극 다시 열기
+              입력한 후속 실패로 감점 원인 다시 확인
             </button>
           </div>
         ) : null}

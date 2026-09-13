@@ -695,11 +695,11 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     });
     pageA.once("dialog", (dialog) => dialog.accept());
     await pageA
-      .getByRole("button", { name: "내 C3R-P 데이터 삭제" })
+      .getByRole("button", { name: "내 실무 데이터 삭제" })
       .click();
     await expect(
-      pageA.getByRole("alert").filter({ hasText: "temporarily_unavailable" }),
-    ).toContainText("temporarily_unavailable");
+      pageA.getByRole("alert").filter({ hasText: "요청을 완료하지 못했습니다" }),
+    ).toContainText("요청을 완료하지 못했습니다");
     await expect(pageA.getByTestId("c3r-p-ledger")).toBeVisible();
     await expect(pageA.getByTestId("c3r-p-plan-history")).toBeVisible();
     await expect(
@@ -717,7 +717,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       );
     });
     await pageA
-      .getByRole("button", { name: "내 C3R-P 데이터 삭제" })
+      .getByRole("button", { name: "내 실무 데이터 삭제" })
       .click();
     const deleteResponse = await deleteResponsePromise;
     expect(deleteResponse.status()).toBe(200);
@@ -924,11 +924,11 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
 
   await page
     .getByRole("button", {
-      name: "도움 상태를 먼저 기록하고 가장 큰 간극 보기",
+      name: "도움 상태를 먼저 기록하고 가장 큰 감점 원인 보기",
     })
     .click();
   await expectState(page, "FEEDBACK_COMMITTED");
-  await expect(page.getByText("가장 큰 간극 1개:")).toBeVisible();
+  await expect(page.getByText("가장 큰 감점 원인:")).toBeVisible();
 
   const committedResponse = await context.request.get(
     `/api/review-os/c3r-p?recordId=${recordId}`,
@@ -1892,7 +1892,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   );
   await secondPage.getByTestId("c3r-p-result").fill("90000000");
   await secondPage
-    .getByRole("button", { name: "입력한 후속 실패로 간극 다시 열기" })
+    .getByRole("button", { name: "입력한 후속 실패로 감점 원인 다시 확인" })
     .click();
   await expectState(secondPage, "REOPENED");
   const reopenedResponse = await context.request.get(
@@ -2434,7 +2434,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   ).toContainText("CORE_OUTCOME · REOPENED_REVIEW · 30분 · COMPLETE");
   await fillStructuredCalculation(secondPage, "90000000");
   await secondPage
-    .getByRole("button", { name: "입력한 후속 실패로 간극 다시 열기" })
+    .getByRole("button", { name: "입력한 후속 실패로 감점 원인 다시 확인" })
     .click();
   await expectState(secondPage, "REOPENED");
   const reopenedAgainResponse = await context.request.get(
