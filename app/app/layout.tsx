@@ -5,11 +5,23 @@ import { notFound } from "next/navigation";
 import { ReviewOsAppShell } from "@/components/review-os/app-shell";
 import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { getReviewOsServerContext } from "@/lib/review-os/server";
+import { requireC3RPAccess } from "@/lib/review-os/c3r-p-service";
+import { requireC3RTAccess } from "@/lib/review-os/c3r-t-service";
+import { requireC3RLAccess } from "@/lib/review-os/c3r-l-service";
 import {
   isTrustedRepairEnabled,
   isTrustedRepairOwner,
   requireTrustedRepairAccess,
 } from "@/lib/review-os/trusted-repair-access";
+
+async function canOpenSecondStageOwnerHome() {
+  const results = await Promise.allSettled([
+    requireC3RPAccess(),
+    requireC3RTAccess(),
+    requireC3RLAccess(),
+  ]);
+  return results.some((result) => result.status === "fulfilled");
+}
 
 export default async function ReviewOsLayout({ children }: { children: ReactNode }) {
   const currentPath = (await headers()).get("x-inverge-current-path") ?? "";
@@ -37,10 +49,12 @@ export default async function ReviewOsLayout({ children }: { children: ReactNode
   if (access.status !== "allowed") {
     return <ReviewOsAccessState access={access} />;
   }
+  const secondStageOwnerHomeEnabled = await canOpenSecondStageOwnerHome();
 
   return (
     <ReviewOsAppShell
       email={session.email}
+      secondStageOwnerHomeEnabled={secondStageOwnerHomeEnabled}
       trustedRepairEnabled={
         isTrustedRepairEnabled() && isTrustedRepairOwner(session.email)
       }
