@@ -10,7 +10,6 @@ import { randomUUID } from "node:crypto";
 import { execFileSync, spawn } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import { learnerDueAtLabel } from "../../lib/review-os/learner-language";
 
 const baseURL = process.env.E2E_BASE_URL ?? "";
 const emailA = process.env.C3R_P_USER_A_EMAIL ?? "";
@@ -102,6 +101,14 @@ async function contextFor(browser: Browser, email: string, password: string) {
   const loginStatus = await login(context, email, password);
   expect(loginStatus).toBe(200);
   return context;
+}
+
+async function learnerDueAtLabelInBrowser(page: Page, value: string) {
+  return page.evaluate((dueAt) => new Intl.DateTimeFormat("ko-KR", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Asia/Seoul",
+  }).format(new Date(dueAt)), value);
 }
 
 function dashboardEvidenceStepRoute(
@@ -1290,7 +1297,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   await expect(assistedButton).toBeDisabled();
   await expect(independentD1Button).toBeDisabled();
   await expect(page.getByTestId("c3r-p-d1-eligibility")).toContainText(
-    learnerDueAtLabel(assistedRecord.d1_due_at),
+    await learnerDueAtLabelInBrowser(page, assistedRecord.d1_due_at),
   );
   await independentD1Button.evaluate((element) => {
     element.click();
@@ -1313,7 +1320,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   await expect(assistedButton).toBeDisabled();
   await expect(independentD1Button).toBeDisabled();
   await expect(page.getByTestId("c3r-p-d1-eligibility")).toContainText(
-    learnerDueAtLabel(assistedRecord.d1_due_at),
+    await learnerDueAtLabelInBrowser(page, assistedRecord.d1_due_at),
   );
 
   const secondBrowser = await contextFor(browser, emailA, passwordA);
@@ -1329,7 +1336,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     name: "다음 날 혼자 해보기 완료",
   })).toBeDisabled();
   await expect(secondPage.getByTestId("c3r-p-d1-eligibility")).toContainText(
-    learnerDueAtLabel(assistedRecord.d1_due_at),
+    await learnerDueAtLabelInBrowser(secondPage, assistedRecord.d1_due_at),
   );
   await secondPage.reload();
   await expect(secondPage.getByRole("button", {
@@ -1545,7 +1552,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   });
   await expect(preDueD7Button).toBeDisabled();
   await expect(page.getByTestId("c3r-p-d7-eligibility")).toContainText(
-    learnerDueAtLabel(sealedTransfer.view.restored.gaps[0].d7_due_at),
+    await learnerDueAtLabelInBrowser(page, sealedTransfer.view.restored.gaps[0].d7_due_at),
   );
   await expect(page.getByTestId("c3r-p-transfer-prompt")).toHaveCount(0);
   await preDueD7Button.evaluate((element) => {
@@ -1789,7 +1796,10 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     }),
   ]));
   await expect(secondPage.getByTestId("c3r-p-recurrence-eligibility")).toContainText(
-    learnerDueAtLabel(transferred.view.restored.gaps[0].recurrence_due_at),
+    await learnerDueAtLabelInBrowser(
+      secondPage,
+      transferred.view.restored.gaps[0].recurrence_due_at,
+    ),
   );
   const preDueRecurrenceButton = secondPage.getByRole("button", {
     name: "제한시간 실전 확인 완료",
