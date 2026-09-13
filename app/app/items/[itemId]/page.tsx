@@ -16,6 +16,7 @@ import {
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { buildAnswerSkeletonGuide, mapCaptureNoteToPastExamReferenceMatches } from "@/lib/review-os/past-exam-reference";
 import { getSimilarQuestionReferenceCandidates } from "@/lib/review-os/question-reference";
+import { REVIEW_OS_LEARNER_LANGUAGE } from "@/lib/review-os/learner-language";
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildDetailStudyNote, buildRewriteComparisonNote } from "@/lib/review-os/study-note";
 import type { ConceptReviewCardPayload, WrongAnswerItemRecord } from "@/lib/review-os/types";
@@ -172,6 +173,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
           createdAt={resolvedDetail.item.createdAt}
           savedAt={resolvedDetail.item.updatedAt}
           biggestGap={note.missingIssue ?? note.weakPoint}
+          biggestGapLabel={REVIEW_OS_LEARNER_LANGUAGE.biggestGap}
           nextAction={note.rewriteInstruction ?? note.nextAction}
           coreLine={note.coreLine}
           keyTerms={note.keyTerms}

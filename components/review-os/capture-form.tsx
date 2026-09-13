@@ -2491,6 +2491,7 @@ function SavedCaptureConfirmationPanel({
             gap={confirmation.biggestGap}
             evidence={`다음 행동 · ${confirmation.nextAction}`}
             type="MissingLink"
+            label={REVIEW_OS_LEARNER_LANGUAGE.biggestGap}
           />
           <div className="grid gap-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)] p-4">
             <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
@@ -3277,6 +3278,7 @@ function ExtractionPreview({
             gap={form.biggestGap || form.missingIssue || `${REVIEW_OS_LEARNER_LANGUAGE.biggestGap} 하나를 확인해 주세요.`}
             evidence={`다음 행동 · ${form.rewriteInstruction || "확인 필요"}`}
             type="MissingLink"
+            label={REVIEW_OS_LEARNER_LANGUAGE.biggestGap}
           />
           <V3QuietDisclosure summary="추출된 세부 정보" helper="저장 전 직접 확인하고 수정할 수 있습니다.">
             <div className="divide-y divide-[var(--color-border-default)] border-y border-[var(--color-border-default)]">
@@ -3385,6 +3387,7 @@ function ConfirmPanel({
             gap={captureCopy.gapLabel.replace("가장 큰 약점: ", "")}
             evidence={`다음 행동 · ${captureCopy.nextActionLabel.replace("다음 행동: ", "")}`}
             type="MissingLink"
+            label={REVIEW_OS_LEARNER_LANGUAGE.biggestGap}
           />
           <div className="divide-y divide-[var(--color-border-default)] border-y border-[var(--color-border-default)] py-1">
             <PreviewLine label="상태" value={`${captureSummary.capturedTextStatus === "draft" ? "OCR 초안" : "직접 확인됨"} · 아직 저장 전`} />
@@ -3809,6 +3812,7 @@ function SecondGapPanel({
           evidence="비교 결과에서 다음 문단을 바꿀 약점 하나만 남깁니다."
           type="MissingLink"
           density="Compact"
+          label={REVIEW_OS_LEARNER_LANGUAGE.biggestGap}
         />
       </div>
       <label className="mt-4 block space-y-2">
@@ -3915,7 +3919,7 @@ function RewriteContextPanel({
       <p className="v3-type-caption text-[var(--color-text-attention)]">문단 다시쓰기 컨텍스트</p>
       <h3 className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">{title}</h3>
       <div className="mt-4 space-y-3">
-        <BiggestGap gap={biggestGap} evidence={`다시쓰기 지시 · ${rewriteInstruction}`} type="MissingLink" />
+        <BiggestGap gap={biggestGap} evidence={`다시쓰기 지시 · ${rewriteInstruction}`} type="MissingLink" label={REVIEW_OS_LEARNER_LANGUAGE.biggestGap} />
       </div>
       <V3QuietDisclosure summary="비교 요약 펼쳐서 보기" className="mt-3">
         <div className="grid gap-3 lg:grid-cols-2">

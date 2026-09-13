@@ -149,6 +149,7 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
             gap={savedBiggestGap}
             evidence={`다음 행동 · ${savedNextAction}`}
             type="MissingLink"
+            label={REVIEW_OS_LEARNER_LANGUAGE.biggestGap}
           />
           <V3ActionLink
             href={

@@ -14,6 +14,7 @@ import {
 import { MicroPracticeCard } from "@/components/review-os/minimal-study-system";
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
 import type { ExecutionReferenceSupport } from "@/lib/review-os/execution-reference-support";
+import { REVIEW_OS_LEARNER_LANGUAGE } from "@/lib/review-os/learner-language";
 import {
   buildLearningSignalFromExecutionResult,
   buildNextPlanSignalFromExecution,
@@ -373,6 +374,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
                   evidence={`약한 구조 · ${note?.weakStructurePoint ?? note?.weakPoint ?? "근거와 결론 연결을 한 문장으로 보강합니다."}`}
                   type="MissingLink"
                   headingId="today-session-runner-biggest-gap"
+                  label={REVIEW_OS_LEARNER_LANGUAGE.biggestGap}
                 />
                 <p className="v3-type-body ko-keep text-[var(--color-text-primary)]">
                   {note?.rewriteInstruction ?? secondTemplate.rewriteGuidance}
@@ -563,6 +565,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
               type="MissingLink"
               density="Compact"
               headingId="today-session-comparison-biggest-gap"
+              label={REVIEW_OS_LEARNER_LANGUAGE.biggestGap}
             />
             <p className="v3-type-body ko-keep text-[var(--color-text-secondary)]">
               {note?.rewriteInstruction ?? secondTemplate.rewriteGuidance}

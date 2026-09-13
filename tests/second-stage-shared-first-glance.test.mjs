@@ -47,6 +47,7 @@ test("second-stage Capture and saved handoff use Korean visible and accessible l
   assert.match(captureForm, /"2차 답안 기록"/);
   assert.match(captureForm, /REVIEW_OS_LEARNER_LANGUAGE\.biggestGap/);
   assert.match(captureForm, /REVIEW_OS_LEARNER_LANGUAGE\.d1/);
+  assert.match(captureForm, /label=\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}/);
   const savedPanelStart = sessionPage.indexOf("const savedCapturePanel = savedCaptureDetail ? (");
   const secondPanelStart = sessionPage.indexOf('mode === "second" ? (', savedPanelStart);
   const firstPanelStart = sessionPage.indexOf(") : (", secondPanelStart);
@@ -55,6 +56,17 @@ test("second-stage Capture and saved handoff use Korean visible and accessible l
   assert.doesNotMatch(secondPanel, /Capture → Today|가장 큰 간극/);
   assert.match(sessionPage.slice(firstPanelStart), /가장 큰 간극/);
   assert.match(sessionPage, /저장 → \$\{REVIEW_OS_LEARNER_LANGUAGE\.todayPlan\}/);
+  assert.match(sessionPage, /label=\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}/);
+});
+
+test("second-stage BiggestGap cards override the legacy heading without changing its default", () => {
+  const ledgerUi = read("components/learner/study-ledger-ui.tsx");
+  const todaySession = read("components/review-os/today-session-runner.tsx");
+  const itemDetail = read("app/app/items/[itemId]/page.tsx");
+
+  assert.match(ledgerUi, /const normalizedLabel = label\?\.trim\(\) \|\| presentation\.label/);
+  assert.match(todaySession, /label=\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}/);
+  assert.match(itemDetail, /biggestGapLabel=\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}/);
 });
 
 test("Today keeps one action with what, why, minutes and continuation before secondary work", () => {

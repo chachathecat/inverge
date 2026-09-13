@@ -328,6 +328,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
                           density="Compact"
                           showEvidence={false}
                           headingId={`notes-biggest-gap-${item.id}`}
+                          label={isSecondRound ? REVIEW_OS_LEARNER_LANGUAGE.biggestGap : undefined}
                         />
 
                         <div
