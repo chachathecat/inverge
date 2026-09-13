@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 
 import { LearnerLoadingState, V3Surface } from "@/components/learner";
 import { StudyLedgerFocusChrome } from "@/components/learner/study-ledger-focus-chrome";
+import { REVIEW_OS_LEARNER_LANGUAGE } from "@/lib/review-os/learner-language";
 
 export default function StudyLedgerDetailLoading() {
   const isSecond = useSearchParams().get("mode") === "second";
@@ -23,7 +24,7 @@ export default function StudyLedgerDetailLoading() {
           <V3Surface as="section" tone="subtle" className="space-y-3">
             <p className="v3-type-caption text-[var(--color-text-secondary)]">학습 노트 · 불러오는 중</p>
             <h2 className="v3-type-section ko-keep text-[var(--color-text-primary)]">학습 노트를 불러오는 중입니다.</h2>
-            <p className="v3-type-body ko-keep text-[var(--color-text-secondary)]">가장 큰 간극과 다음 복습 기록을 정리하고 있습니다.</p>
+            <p className="v3-type-body ko-keep text-[var(--color-text-secondary)]">{REVIEW_OS_LEARNER_LANGUAGE.biggestGap}과 다음 복습 기록을 정리하고 있습니다.</p>
           </V3Surface>
         ) : (
           <LearnerLoadingState

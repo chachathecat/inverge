@@ -63,11 +63,13 @@ test("second-stage BiggestGap cards override the legacy heading without changing
   const ledgerUi = read("components/learner/study-ledger-ui.tsx");
   const todaySession = read("components/review-os/today-session-runner.tsx");
   const itemDetail = read("app/app/items/[itemId]/page.tsx");
+  const itemLoading = read("app/app/items/[itemId]/loading.tsx");
   const actionCard = read("components/review-os/cognitive-learning-action-card.tsx");
 
   assert.match(ledgerUi, /const normalizedLabel = label\?\.trim\(\) \|\| presentation\.label/);
   assert.match(todaySession, /label=\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}/);
   assert.match(itemDetail, /biggestGapLabel=\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}/);
+  assert.match(itemLoading, /\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}과 다음 복습 기록/);
   assert.match(actionCard, /V3ActionLine label=\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}/);
 });
 
