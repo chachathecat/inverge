@@ -42,7 +42,8 @@ test("Review queue keeps one primary review surface and collapses extra signals"
   const client = read("components/review-os/review-queue-client.tsx");
 
   assert.ok(client.includes("data-review-primary-surface"));
-  assert.ok(client.includes("지금 복습할 1개"));
+  assert.ok(client.includes("REVIEW_OS_LEARNER_LANGUAGE.reviewQueue"));
+  assert.ok(client.includes("REVIEW_OS_LEARNER_LANGUAGE.primaryTask"));
   assert.ok(client.includes("먼저 떠올리기"));
   assert.ok(client.includes("문단/기준 먼저 떠올리기"));
   assert.ok(client.includes("복습 완료"));
@@ -59,11 +60,19 @@ test("Notes and item detail expose biggest gap, next action, and loop connection
   const localBeta = read("components/review-os/local-beta-note-reflection.tsx");
 
   assert.ok(notesPage.includes("renderReviewOsItemsPage"));
-  for (const source of [itemsPage, detailPage, localBeta]) {
+  for (const source of [detailPage, localBeta]) {
     for (const phrase of ["학습 노트", "가장 큰 약점", "다음 행동", "오늘 계획 연결", "복습 연결", "학습 기록 연결"]) {
       assert.ok(source.includes(phrase), phrase);
     }
   }
+  for (const phrase of [
+    "학습 노트",
+    "REVIEW_OS_LEARNER_LANGUAGE.biggestGap",
+    "다음 행동",
+    "REVIEW_OS_LEARNER_LANGUAGE.todayPlan",
+    "복습 연결",
+    "REVIEW_OS_LEARNER_LANGUAGE.studyLedger",
+  ]) assert.ok(itemsPage.includes(phrase), phrase);
   assert.ok(detailPage.includes("data-note-loop-bridge"));
   assert.ok(itemsPage.includes("아직 정리된 약점 후보가 없습니다."));
   assert.ok(itemsPage.includes("아직 쌓인 학습 노트가 없습니다."));

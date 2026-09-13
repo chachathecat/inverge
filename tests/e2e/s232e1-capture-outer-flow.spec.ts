@@ -200,8 +200,8 @@ test("S232E.1 exact-head Capture shell is responsive, semantic, and action-safe"
     expect(mainFrameDocumentNavigationRequestCount).toBe(0);
 
     const heading = pageRoot.locator("h1#capture-page-title.v3-type-screen");
-    const stageList = captureForm.locator('ol[data-capture-stage-flow][aria-label="Capture 4단계 흐름"]');
-    const accessibleStageList = captureForm.getByRole("list", { name: "Capture 4단계 흐름" });
+    const stageList = captureForm.locator('ol[data-capture-stage-flow][aria-label="오늘 기록 4단계 흐름"]');
+    const accessibleStageList = captureForm.getByRole("list", { name: "오늘 기록 4단계 흐름" });
     const stageItems = stageList.locator("li[data-capture-stage]");
     const accessibleStageItems = accessibleStageList.getByRole("listitem");
     const currentStage = stageList.locator('li[data-capture-stage][aria-current="step"]');

@@ -14,6 +14,7 @@ import {
   RECALL_OUTCOME_OPTIONS,
 } from "@/lib/review-os/retrieval-review";
 import type { RecallOutcome, ReviewCompletionMetadata, ReviewQueueCard } from "@/lib/review-os/types";
+import { REVIEW_OS_LEARNER_LANGUAGE } from "@/lib/review-os/learner-language";
 
 function QueueActionButton({
   mode,
@@ -89,7 +90,7 @@ export function ReviewQueueClient({
           <div data-review-empty-state>
             <h2 className="v3-type-section text-[var(--color-text-primary)]">지금 복습할 항목이 없습니다.</h2>
             <p className="v3-type-body mt-2 text-[var(--color-text-secondary)]">오늘 한 것을 올리면 복습할 항목이 만들어집니다.</p>
-            <p className="v3-type-compact mt-1 text-[var(--color-text-secondary)]">저장된 학습 노트의 가장 큰 약점과 다음 행동이 복습 예정으로 이어집니다.</p>
+            <p className="v3-type-compact mt-1 text-[var(--color-text-secondary)]">저장된 학습 노트의 {REVIEW_OS_LEARNER_LANGUAGE.biggestGap}과 다음 행동이 {REVIEW_OS_LEARNER_LANGUAGE.reviewQueue}로 이어집니다.</p>
             <V3ActionButton
               type="button"
               onClick={() => router.push("/app/capture?mode=second")}
@@ -151,7 +152,7 @@ export function ReviewQueueClient({
             <span className={mode === "second"
               ? "v3-type-caption text-[var(--color-text-secondary)]"
               : "inline-flex w-fit rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-subtle)] px-3 py-1 text-xs text-[color:var(--muted)]"}>
-              지금 복습할 1개
+              {REVIEW_OS_LEARNER_LANGUAGE.reviewQueue} · {REVIEW_OS_LEARNER_LANGUAGE.primaryTask}
             </span>
             <p className={mode === "second" ? "v3-type-caption text-[var(--color-text-secondary)]" : "text-xs leading-5 text-[color:var(--muted)]"}>
               복습 예정 · {primaryItem.createdFromCapture ? "학습 노트에서 생성됨" : "미완료 항목"} · {primaryItem.subjectLabel}

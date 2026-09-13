@@ -20,6 +20,7 @@ import { resolveEssentialCoreRouteRead } from "@/lib/review-os/core-route-read-o
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
 import type { LearningSignalEventRecord, WrongAnswerItemRecord } from "@/lib/review-os/types";
+import { REVIEW_OS_LEARNER_LANGUAGE } from "@/lib/review-os/learner-language";
 
 type PageProps = {
   searchParams?: Promise<{ mode?: string; saved?: string }>;
@@ -101,7 +102,7 @@ function sourceTypeLabel(sourceType: string) {
   if (sourceType === "answer_review") return "답안 훈련 기록";
   if (sourceType === "review_queue") return "복습 예정";
   if (sourceType === "wrong_answer") return "학습 노트";
-  return "학습 기록";
+  return REVIEW_OS_LEARNER_LANGUAGE.studyLedger;
 }
 
 function signalCta(signal: Pick<LearningSignalEventRecord, "sourceType" | "subject">, mode: AppraisalMode) {
@@ -144,7 +145,7 @@ function NoteBridgeFields({
         <dd className="mt-1 text-[color:var(--foreground-strong)]">{topic}</dd>
       </div>
       <div className={v3 ? "py-3" : "rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3"}>
-        <dt className="text-xs text-[color:var(--muted)]">가장 큰 약점</dt>
+        <dt className="text-xs text-[color:var(--muted)]">{REVIEW_OS_LEARNER_LANGUAGE.biggestGap}</dt>
         <dd className="mt-1 text-[color:var(--foreground-strong)]">{biggestGap}</dd>
       </div>
       <div className={v3 ? "py-3" : "rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3"}>
@@ -182,9 +183,9 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
   const learningSignals = learningSignalsRead.value;
   const hasItems = items.length > 0;
   const hasLearningSignals = learningSignals.length > 0;
-  const pageTitle = isNotesRoute ? "학습 노트" : "학습 기록";
+  const pageTitle = isNotesRoute ? "학습 노트" : REVIEW_OS_LEARNER_LANGUAGE.studyLedger;
   const helperCopy = isNotesRoute
-    ? "오늘 한 것에서 만든 가장 큰 약점과 다음 행동을 모아봅니다."
+    ? `오늘 한 것에서 만든 ${REVIEW_OS_LEARNER_LANGUAGE.biggestGap}과 다음 행동을 모아봅니다.`
     : "학습 노트와 복습 흐름을 기록으로 확인합니다.";
   const visibleItems = isNotesRoute ? items.slice(0, 3) : items;
   const foldedItems = isNotesRoute ? items.slice(3) : [];
@@ -207,7 +208,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
                 아직 쌓인 학습 노트가 없습니다.
               </p>
               <p className="text-sm text-[color:var(--muted)]">
-                오늘 한 것을 하나 올리면 가장 큰 약점과 다음 행동이 만들어집니다.
+                오늘 한 것을 하나 올리면 {REVIEW_OS_LEARNER_LANGUAGE.biggestGap}과 다음 행동이 만들어집니다.
               </p>
             </div>
             {isSecondRound ? (
@@ -251,7 +252,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
     >
       {isSecondRound ? (
         <V3RouteHeader
-          eyebrow={isNotesRoute ? "최근 기록 3개" : "학습 기록"}
+          eyebrow={isNotesRoute ? "최근 기록 3개" : REVIEW_OS_LEARNER_LANGUAGE.studyLedger}
           title={pageTitle}
           description={helperCopy}
         />
@@ -267,7 +268,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
           <p className={isSecondRound
             ? "v3-type-caption text-[var(--color-text-secondary)]"
             : "px-6 text-xs leading-5 text-[color:var(--muted)]"} data-notes-record-context>
-            최근 3개 기록만 먼저 봅니다. 오래된 기록은 접어 두고, 가장 큰 약점과 다음 행동을 우선 확인합니다.
+            최근 3개 기록만 먼저 봅니다. 오래된 기록은 접어 두고, {REVIEW_OS_LEARNER_LANGUAGE.biggestGap}과 다음 행동을 우선 확인합니다.
           </p>
         ) : null}
         <RecordsBody className={isSecondRound ? "space-y-5" : "space-y-4"}>
@@ -277,12 +278,12 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
               : "rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3"}>
               <p className="text-sm font-medium text-[color:var(--foreground-strong)]">방금 저장한 학습 노트가 반영되었습니다.</p>
               <p className="mt-1 text-sm text-[color:var(--muted)]">
-                가장 큰 약점 1개와 다음 행동 1개를 먼저 확인하고, 오늘 계획에 반영합니다.
+                {REVIEW_OS_LEARNER_LANGUAGE.biggestGap} 하나와 다음 행동 하나를 먼저 확인하고, {REVIEW_OS_LEARNER_LANGUAGE.todayPlan}에 반영합니다.
               </p>
               <div className="mt-3 flex flex-wrap gap-3 text-xs text-[color:var(--muted)]">
                 <Link href={`/app?mode=${mode}`} className="underline-offset-4 hover:underline">오늘 할 일</Link>
                 <Link href={`/app/review?mode=${mode}`} className="underline-offset-4 hover:underline">복습</Link>
-                <Link href={`/app/agenda?mode=${mode}`} className="underline-offset-4 hover:underline">학습 기록</Link>
+                <Link href={`/app/agenda?mode=${mode}`} className="underline-offset-4 hover:underline">{REVIEW_OS_LEARNER_LANGUAGE.studyLedger}</Link>
               </div>
             </div>
           ) : null}
@@ -353,7 +354,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
                         >
                           <span>논점 후보: {topic}</span>
                           <span>복습에 남길 내용</span>
-                          <span>학습 기록에 저장</span>
+                          <span>{REVIEW_OS_LEARNER_LANGUAGE.studyLedger}에 저장</span>
                         </div>
                       </div>
                     </section>
@@ -396,9 +397,9 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
                     </div>
 
                     <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--muted)]">
-                      <span>오늘 계획 연결: 오늘 계획에 반영</span>
+                      <span>{REVIEW_OS_LEARNER_LANGUAGE.todayPlan} 연결: {REVIEW_OS_LEARNER_LANGUAGE.todayPlan}에 반영</span>
                       <span>복습 연결: 복습에 남길 내용</span>
-                      <span>학습 기록 연결: 학습 기록에 저장</span>
+                      <span>{REVIEW_OS_LEARNER_LANGUAGE.studyLedger} 연결: {REVIEW_OS_LEARNER_LANGUAGE.studyLedger}에 저장</span>
                     </div>
                   </section>
                 );

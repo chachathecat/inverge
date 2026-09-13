@@ -22,6 +22,7 @@ import {
   type ModeScopedLocalBetaNotesReadOutcome,
 } from "@/lib/review-os/browser-storage";
 import type { FailureAwareStateEvidence } from "@/lib/review-os/failure-aware-state";
+import { REVIEW_OS_LEARNER_LANGUAGE } from "@/lib/review-os/learner-language";
 import {
   buildLearningRecordTimelineModel,
   buildLocalBetaLearningAgendaEvents,
@@ -56,7 +57,7 @@ const EVENT_COPY: Record<
 > = {
   capture_saved: {
     state: "기록됨",
-    description: "오늘 한 것이 학습 기록에 남았습니다.",
+    description: `오늘 한 것이 ${REVIEW_OS_LEARNER_LANGUAGE.studyLedger}에 남았습니다.`,
     marker: "border-[var(--brand-700)] bg-[var(--brand-050)]",
     v3Marker: "border-[var(--color-border-focus)] bg-[var(--color-icon-brand)]",
   },
@@ -80,7 +81,7 @@ const EVENT_COPY: Record<
   },
   today_task_completed: {
     state: "오늘 할 일 완료",
-    description: "오늘 계획에서 선택한 행동을 마쳤습니다.",
+    description: `${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}에서 선택한 행동을 마쳤습니다.`,
     marker: "border-[var(--status-green)] bg-[var(--status-green-soft)]",
     v3Marker: "border-[var(--color-border-stable)] bg-[var(--color-icon-stable)]",
   },
@@ -259,8 +260,8 @@ function EmptyAgendaState({ mode, isOnline }: { mode: AppraisalMode; isOnline: b
           announceChange={false}
           testId="s232f4b-agenda-empty-state"
         />
-        <section className="space-y-4 border-t border-[var(--color-border-default)] pt-4" aria-label="빈 학습 기록 다음 행동">
-          <h2 className="v3-type-section text-[var(--color-text-primary)]">아직 쌓인 학습 기록이 없습니다.</h2>
+        <section className="space-y-4 border-t border-[var(--color-border-default)] pt-4" aria-label={`빈 ${REVIEW_OS_LEARNER_LANGUAGE.studyLedger} 다음 행동`}>
+          <h2 className="v3-type-section text-[var(--color-text-primary)]">아직 {REVIEW_OS_LEARNER_LANGUAGE.studyLedger}이 없습니다.</h2>
           <p className="v3-type-body text-[var(--color-text-secondary)]">
             오늘 한 것 하나만 남기면 기록부터 복습까지의 흐름이 여기에 이어집니다.
           </p>
@@ -356,7 +357,7 @@ export function LearningAgendaClient({ mode, initialEvents }: LearningAgendaClie
     >
       {mode === "second" ? (
         <V3RouteHeader
-          eyebrow="학습 회복 기록"
+          eyebrow={REVIEW_OS_LEARNER_LANGUAGE.studyLedger}
           title="배운 흐름을 다시 이어봅니다"
           description="이번 주에 남긴 기록과 다음 복습을 시간순으로 확인합니다. 이 화면은 저장된 학습 상태만 보여 주며 성취도를 판정하지 않습니다."
         />

@@ -10,7 +10,8 @@ test("S232D.5 gives Today one labelled V3-language primary mission", () => {
   assert.match(page, /data-s232d5-today-page="single-priority"/);
   assert.match(page, /<section[\s\S]*?aria-labelledby="s232d5-today-title"[\s\S]*?data-s232d5-today-primary/);
   assert.match(page, /<header data-s232d5-today-meta>/);
-  assert.match(page, /오늘 할 일 · 오늘의 1개/);
+  assert.match(page, /REVIEW_OS_LEARNER_LANGUAGE\.todayPlan/);
+  assert.match(page, /REVIEW_OS_LEARNER_LANGUAGE\.primaryTask/);
   assert.match(
     page,
     /<h1 id="s232d5-today-title" className="v3-type-screen[^\"]*">[\s\S]*?\{missionTitle\}[\s\S]*?<\/h1>/,

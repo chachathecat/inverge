@@ -6,6 +6,7 @@ import { normalizeSubjectForMode, resolveAppraisalMode } from "@/lib/review-os/a
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildDetailStudyNote } from "@/lib/review-os/study-note";
+import { REVIEW_OS_LEARNER_LANGUAGE } from "@/lib/review-os/learner-language";
 import {
   isTrustedRepairEnabled,
   trustedRepairAuthorizedSubjects,
@@ -53,12 +54,14 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
         data-v3-layout={mode === "second" ? "route-header" : undefined}
         data-s232e-capture-header
       >
-        <p className="v3-type-caption text-[var(--color-text-secondary)]">Capture · 4단계</p>
+        <p className="v3-type-caption text-[var(--color-text-secondary)]">
+          {mode === "second" ? `${REVIEW_OS_LEARNER_LANGUAGE.today} 기록 · 4단계` : "Capture · 4단계"}
+        </p>
         <h1 id="capture-page-title" className="v3-type-screen hero-balance ko-keep text-[var(--color-text-primary)]">
           오늘 한 것 올리기
         </h1>
         <p className="v3-type-body ko-keep text-[var(--color-text-secondary)]">
-          입력한 내용을 단계별로 살펴보고, 저장 결과에 따라 오늘 계획과 복습으로 이어갑니다.
+          입력한 내용을 단계별로 살펴보고, 저장 결과에 따라 {REVIEW_OS_LEARNER_LANGUAGE.todayPlan}과 {REVIEW_OS_LEARNER_LANGUAGE.reviewQueue}로 이어갑니다.
         </p>
       </header>
       <WrongAnswerCaptureForm
