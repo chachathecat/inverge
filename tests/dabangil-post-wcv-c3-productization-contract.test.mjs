@@ -196,6 +196,8 @@ test("rights, privacy and activation remain fail closed", () => {
   assert.match(secondRound, /독립인 후보를 최소 3개/);
   assert.match(secondRound, /과목별 검증, 별도 critic 검토, 합의·충돌 처리와 출처 anchor/);
   assert.match(secondRound, /package 전체가 canonical validator를 통과/);
+  assert.match(secondRound, /release decision은\s*`released`/);
+  assert.match(secondRound, /learning-reference 상태는 `released_learning_reference`/);
 });
 
 test("source documents preserve accessibility and no-runtime receipt", () => {
