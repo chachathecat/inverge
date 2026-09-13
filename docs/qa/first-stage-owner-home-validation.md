@@ -21,7 +21,7 @@ The page reads the six existing same-origin, no-store availability endpoints in 
 
 Partial availability failures remain visible as retryable status failures. The page does not render question bodies, choices, answers, or explanations.
 
-The first reviewed head received two P2 findings. The correction keeps the dominant action in a loading/retry state unless a first-stage route is actually available or every first-stage response is conclusively blocked. It also passes the capacity and legal-evidence server gate results into the client and omits those optional links when their route gates are closed.
+The first reviewed head received two P2 findings. The correction keeps the dominant action in a loading/retry state unless a first-stage route is actually available or every first-stage response is conclusively blocked. It also passes the capacity and legal-evidence server gate results into the client and omits those optional links when their route gates are closed. A second exact-head review found the same distinction was needed for the loopback-only economics trial; the server now resolves that route gate too, so Preview treats an intentionally closed trial as blocked instead of a retryable network failure.
 
 ## Local evidence
 

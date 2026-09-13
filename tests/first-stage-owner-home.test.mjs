@@ -64,8 +64,11 @@ test("Owner home keeps all five subject routes bodyless and one primary fallback
   assert.match(componentSource, /primaryAction\.kind === "link"/u);
   assert.match(componentSource, /capacityEnabled &&/u);
   assert.match(componentSource, /legalEvidenceEnabled &&/u);
+  assert.match(componentSource, /localTrialEnabled/u);
+  assert.match(componentSource, /Promise\.resolve\(DISABLED_LOCAL_TRIAL\)/u);
   assert.match(pageSource, /capacityEnabled=\{capacityEnabled\}/u);
   assert.match(pageSource, /legalEvidenceEnabled=\{legalEvidenceOwner !== null\}/u);
+  assert.match(pageSource, /localTrialEnabled=\{localTrialOwner !== null\}/u);
   assert.match(componentSource, /학습 효능, 합격 가능성, 과목 완성이나 공식 결과를 주장하지 않습니다/u);
   assert.doesNotMatch(componentSource, /question\.stem|choice\.body|correctChoice|explanation\.text/u);
 });
@@ -75,7 +78,8 @@ test("real browser selects reviewed stock, then local trial, then second-stage h
     stdin: {
       contents: `import React from "react"; import { createRoot } from "react-dom/client";
         import { FirstStageMcqLoop } from "./components/review-os/first-stage-mcq-loop";
-        createRoot(document.getElementById("root")).render(React.createElement(FirstStageMcqLoop));`,
+        const localTrialEnabled = new URLSearchParams(window.location.search).get("trial") === "1";
+        createRoot(document.getElementById("root")).render(React.createElement(FirstStageMcqLoop, { localTrialEnabled }));`,
       resolveDir: root,
       loader: "tsx",
     },
@@ -171,8 +175,8 @@ test("real browser selects reviewed stock, then local trial, then second-stage h
       if (message.type() === "error") serverErrors.push(message.text());
     });
 
-    async function verify(expectedSummary, expectedLabel, expectedHref) {
-      await page.goto(`${origin}/app/first-stage`);
+    async function verify(expectedSummary, expectedLabel, expectedHref, localTrialEnabled = true) {
+      await page.goto(`${origin}/app/first-stage?trial=${localTrialEnabled ? "1" : "0"}`);
       await page.getByText(expectedSummary, { exact: true }).waitFor();
       const primary = page.locator("[data-primary-owner-action]");
       const control = primary.locator("a, button");
@@ -183,6 +187,9 @@ test("real browser selects reviewed stock, then local trial, then second-stage h
       assert.equal(await page.getByRole("heading", { name: "1차 오늘 학습" }).count(), 1);
       assert.equal(await page.getByRole("link", { name: "오늘 학습 가능 시간 계산" }).count(), 0);
       assert.equal(await page.getByRole("link", { name: "보유 법령 근거 확인" }).count(), 0);
+      if (!localTrialEnabled) {
+        assert.equal(await page.getByRole("link", { name: /경제학 PC 전용 시험/u }).count(), 0);
+      }
       assert.doesNotMatch(await page.locator("body").innerText(), /PRIVATE_BODY|QUESTION_STEM|CORRECT_ANSWER/u);
     }
 
@@ -193,11 +200,17 @@ test("real browser selects reviewed stock, then local trial, then second-stage h
     await verify("학습 가능 0/5과목", "1차 상태 다시 확인", null);
     scenario = "second";
     await verify("학습 가능 0/5과목", "2차 오늘 할 일 계속하기", "/app?mode=second");
+    scenario = "preview";
+    await verify("학습 가능 0/5과목", "2차 오늘 할 일 계속하기", "/app?mode=second", false);
 
     for (const currentScenario of ["reviewed", "trial", "unavailable", "second"]) {
       const seen = requests.filter((entry) => entry.startsWith(`${currentScenario}:`)).map((entry) => entry.slice(currentScenario.length + 1));
       assert.deepEqual([...new Set(seen)].sort(), [...reviewedEndpoints, trialEndpoint].sort());
     }
+    const previewRequests = requests
+      .filter((entry) => entry.startsWith("preview:"))
+      .map((entry) => entry.slice("preview:".length));
+    assert.deepEqual([...new Set(previewRequests)].sort(), [...reviewedEndpoints].sort());
     assert.deepEqual(serverErrors, []);
     assert.deepEqual(external, []);
     await context.close();

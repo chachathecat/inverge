@@ -33,6 +33,7 @@ type AvailabilityState = Readonly<{
 type FirstStageMcqLoopProps = Readonly<{
   capacityEnabled?: boolean;
   legalEvidenceEnabled?: boolean;
+  localTrialEnabled?: boolean;
 }>;
 
 const REVIEWED_SUBJECTS = [
@@ -80,6 +81,13 @@ const INITIAL_AVAILABILITY: AvailabilityState = Object.freeze({
   bankPractice: false,
 });
 
+const DISABLED_LOCAL_TRIAL: AvailabilityState = Object.freeze({
+  state: "blocked",
+  blocker: "owner_local_trial_content_required",
+  questionCount: 0,
+  bankPractice: false,
+});
+
 const BLOCKER_COPY: Record<PrivateContentBlocker, string> = {
   approved_content_required: "검토·설치 대기",
   subject_applicability_implementation_required: "과목 검토 기능 대기",
@@ -108,10 +116,12 @@ async function readAvailability(api: string, signal: AbortSignal): Promise<Avail
   }
 }
 
-async function readAllAvailability(signal: AbortSignal) {
+async function readAllAvailability(signal: AbortSignal, localTrialEnabled: boolean) {
   return Promise.all([
     Promise.all(REVIEWED_SUBJECTS.map((subject) => readAvailability(subject.api, signal))),
-    readAvailability(OWNER_LOCAL_TRIAL.api, signal),
+    localTrialEnabled
+      ? readAvailability(OWNER_LOCAL_TRIAL.api, signal)
+      : Promise.resolve(DISABLED_LOCAL_TRIAL),
   ] as const);
 }
 
@@ -128,6 +138,7 @@ function statusCopy(status: AvailabilityState) {
 export function FirstStageMcqLoop({
   capacityEnabled = false,
   legalEvidenceEnabled = false,
+  localTrialEnabled = false,
 }: FirstStageMcqLoopProps = {}) {
   const [subjects, setSubjects] = useState<Record<string, AvailabilityState>>(() =>
     Object.fromEntries(REVIEWED_SUBJECTS.map((subject) => [subject.id, INITIAL_AVAILABILITY])),
@@ -147,14 +158,14 @@ export function FirstStageMcqLoop({
     const controller = new AbortController();
     requestController.current = controller;
     const timeout = window.setTimeout(() => controller.abort(), 15_000);
-    const [reviewedStates, trialState] = await readAllAvailability(controller.signal);
+    const [reviewedStates, trialState] = await readAllAvailability(controller.signal, localTrialEnabled);
     window.clearTimeout(timeout);
     if (requestSequence.current !== sequence) return;
     requestController.current = null;
     setSubjects(Object.fromEntries(REVIEWED_SUBJECTS.map((subject, index) => [subject.id, reviewedStates[index]])));
     setLocalTrial(trialState);
     setPending(false);
-  }, []);
+  }, [localTrialEnabled]);
 
   useEffect(() => {
     const sequence = requestSequence.current + 1;
@@ -162,7 +173,7 @@ export function FirstStageMcqLoop({
     const controller = new AbortController();
     requestController.current = controller;
     const timeout = window.setTimeout(() => controller.abort(), 15_000);
-    void readAllAvailability(controller.signal).then(([reviewedStates, trialState]) => {
+    void readAllAvailability(controller.signal, localTrialEnabled).then(([reviewedStates, trialState]) => {
       if (requestSequence.current !== sequence) return;
       requestController.current = null;
       setSubjects(Object.fromEntries(REVIEWED_SUBJECTS.map((subject, index) => [subject.id, reviewedStates[index]])));
@@ -174,7 +185,7 @@ export function FirstStageMcqLoop({
       requestController.current?.abort();
       requestController.current = null;
     };
-  }, [refresh]);
+  }, [localTrialEnabled, refresh]);
 
   const readySubjects = useMemo(
     () => REVIEWED_SUBJECTS.filter((subject) => subjects[subject.id]?.state === "available"),
@@ -189,7 +200,7 @@ export function FirstStageMcqLoop({
     localTrial.state === "unavailable";
   const primaryAction = readySubjects[0]
     ? { kind: "link" as const, href: readySubjects[0].href, label: `${readySubjects[0].label} 연습 시작` }
-    : localTrial.state === "available"
+    : localTrialEnabled && localTrial.state === "available"
       ? { kind: "link" as const, href: OWNER_LOCAL_TRIAL.href, label: "경제학 PC 시험 이어가기" }
       : hasUnknownAvailability
         ? { kind: "retry" as const, label: pending ? "1차 상태 확인 중…" : "1차 상태 다시 확인" }
@@ -217,7 +228,7 @@ export function FirstStageMcqLoop({
               ? "각 과목의 검토 재고를 확인한 뒤 다음 작업을 정합니다."
               : readySubjects.length > 0
               ? "검토된 재고가 있는 과목부터 이어갑니다."
-              : localTrial.state === "available"
+              : localTrialEnabled && localTrial.state === "available"
                 ? "검토 완료 재고는 아직 없지만, 기존 PC 전용 경제학 시험은 별도 표시로 이어갈 수 있습니다."
                 : hasUnknownAvailability
                   ? "일부 과목의 상태를 확인하지 못했습니다. 다시 확인하기 전에는 다른 단계로 넘기지 않습니다."
@@ -270,9 +281,11 @@ export function FirstStageMcqLoop({
         <details className="mt-6 rounded-2xl border border-slate-200">
           <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-700">다른 작업 보기</summary>
           <nav className="flex flex-col border-t border-slate-200 px-4 py-2 text-sm" aria-label="1차 다른 작업">
-            <Link href="/app/first-stage/economics-trial" prefetch={false} className="inline-flex min-h-11 items-center underline underline-offset-4">
-              경제학 PC 전용 시험 · {statusCopy(localTrial)}
-            </Link>
+            {localTrialEnabled && (
+              <Link href="/app/first-stage/economics-trial" prefetch={false} className="inline-flex min-h-11 items-center underline underline-offset-4">
+                경제학 PC 전용 시험 · {statusCopy(localTrial)}
+              </Link>
+            )}
             {capacityEnabled && (
               <Link href="/app/first-stage/capacity" prefetch={false} className="inline-flex min-h-11 items-center underline underline-offset-4">
                 오늘 학습 가능 시간 계산
