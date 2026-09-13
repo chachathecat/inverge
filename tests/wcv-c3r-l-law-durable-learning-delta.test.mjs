@@ -367,7 +367,10 @@ test("Owner-only/default-off UI and API expose exact Law confirmation only", () 
   assert.match(componentSource,
     /complete_d1[\s\S]*!reconstructionReady[\s\S]*complete_d7_transfer[\s\S]*!reconstructionReady[\s\S]*complete_recurrence[\s\S]*!reconstructionReady/);
   assert.match(componentSource,
-    /record\.state === "FEEDBACK_COMMITTED"[\s\S]*c3r-l-direct-repair-reference[\s\S]*이후 독립 복습에서는 숨겨집니다/);
+    /record\.state === "FEEDBACK_COMMITTED"[\s\S]*<details[^>]*c3r-l-direct-repair-reference[\s\S]*검증용 기술 정보/);
+  assert.match(componentSource, /learnerRecordStateLabel\(record\.state\)/);
+  assert.match(componentSource,
+    /learnerPlanKindLabel\(view\.currentPlan\.planKind\)[\s\S]*learnerPlanStateLabel\(view\.currentPlan\.state\)/);
   assert.match(componentSource,
     /if \(!view\) return status \?[\s\S]*data-testid="c3r-l-load-error"[\s\S]*role="alert"[\s\S]*setInitialLoadRevision\(\(revision\) => revision \+ 1\)/);
   assert.match(componentSource,
@@ -665,7 +668,7 @@ test("Law evidence cannot claim cleanup before stop and absence verification", (
 test("the dedicated browser fixture covers the full Law vertical and P/T isolation", () => {
   assert.match(lawPlaywrightConfigSource, /fullyParallel: false,[\s\S]*workers: 1,[\s\S]*retries: 0,[\s\S]*maxFailures: 1/);
   assert.match(lawE2eSource,
-    /initial load errors support retry and stale-bookmark recovery[\s\S]*LOAD_RETRY_INITIAL[\s\S]*let failInitialLoads = true[\s\S]*failInitialLoads && route\.request\(\)\.method\(\) === "GET"[\s\S]*status: 503[\s\S]*LOAD_RETRY_ROUTE_INSTALLED[\s\S]*page\.goto[\s\S]*LOAD_RETRY_NAVIGATION_COMPLETE[\s\S]*const loadError = page\.getByTestId\("c3r-l-load-error"\)[\s\S]*LOAD_RETRY_ERROR_SURFACE_VISIBLE[\s\S]*loadError\.getByRole\("alert"\)[\s\S]*toContainText\("temporarily_unavailable"\)[\s\S]*LOAD_RETRY_ERROR_TEXT_VISIBLE[\s\S]*failInitialLoads = false[\s\S]*LOAD_RETRY_RELEASED[\s\S]*LOAD_RETRY_ERROR_VISIBLE[\s\S]*다시 시도[\s\S]*LOAD_RETRY_COMPLETE[\s\S]*missingRecordId[\s\S]*const staleBookmarkError = page\.getByTestId\("c3r-l-load-error"\)[\s\S]*staleBookmarkError\.getByRole\("alert"\)[\s\S]*STALE_BOOKMARK_ERROR_VISIBLE[\s\S]*기본 법규 학습으로 돌아가기[\s\S]*new URL\(page\.url\(\)\)\.search[\s\S]*STALE_BOOKMARK_RECOVERY_COMPLETE/);
+    /initial load errors support retry and stale-bookmark recovery[\s\S]*LOAD_RETRY_INITIAL[\s\S]*let failInitialLoads = true[\s\S]*failInitialLoads && route\.request\(\)\.method\(\) === "GET"[\s\S]*status: 503[\s\S]*LOAD_RETRY_ROUTE_INSTALLED[\s\S]*page\.goto[\s\S]*LOAD_RETRY_NAVIGATION_COMPLETE[\s\S]*const loadError = page\.getByTestId\("c3r-l-load-error"\)[\s\S]*LOAD_RETRY_ERROR_SURFACE_VISIBLE[\s\S]*loadError\.getByRole\("alert"\)[\s\S]*toContainText\("학습 상태를 불러오지 못했습니다"\)[\s\S]*LOAD_RETRY_ERROR_TEXT_VISIBLE[\s\S]*failInitialLoads = false[\s\S]*LOAD_RETRY_RELEASED[\s\S]*LOAD_RETRY_ERROR_VISIBLE[\s\S]*다시 시도[\s\S]*LOAD_RETRY_COMPLETE[\s\S]*missingRecordId[\s\S]*const staleBookmarkError = page\.getByTestId\("c3r-l-load-error"\)[\s\S]*staleBookmarkError\.getByRole\("alert"\)[\s\S]*STALE_BOOKMARK_ERROR_VISIBLE[\s\S]*기본 법규 학습으로 돌아가기[\s\S]*new URL\(page\.url\(\)\)\.search[\s\S]*STALE_BOOKMARK_RECOVERY_COMPLETE/);
   assert.doesNotMatch(lawE2eSource, /page\.getByRole\("alert"\)/);
   for (const stage of ["LOAD_RETRY_ROUTE_INSTALLED", "LOAD_RETRY_NAVIGATION_COMPLETE",
     "LOAD_RETRY_ERROR_SURFACE_VISIBLE", "LOAD_RETRY_ERROR_TEXT_VISIBLE",

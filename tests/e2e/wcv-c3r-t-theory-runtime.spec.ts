@@ -533,7 +533,7 @@ test("C3R-T Owner Theory journey reaches Postgres and remains isolated", async (
     page,
     recordId,
     "feedback",
-    ["도움받아 복습", "D+1 독립 재구성", "Today 계획", "Full-Day 계획"],
+    ["도움을 사용해 연습하기", "다음 날 혼자 해보기 완료", "오늘 할 일", "오늘 전체 공부표"],
     "c3r-t-d1-eligibility",
   );
 
@@ -569,7 +569,7 @@ test("C3R-T Owner Theory journey reaches Postgres and remains isolated", async (
     page,
     recordId,
     "d1Fresh",
-    ["D+7 전이 과업 열기", "Today 계획", "Full-Day 계획"],
+    ["일주일 뒤 다른 문제 열기", "오늘 할 일", "오늘 전체 공부표"],
     "c3r-t-d7-eligibility",
   );
 
@@ -604,7 +604,7 @@ test("C3R-T Owner Theory journey reaches Postgres and remains isolated", async (
     page,
     recordId,
     "d7",
-    ["시간 제한 재현 완료", "Today 계획", "Full-Day 계획"],
+    ["제한시간 실전 확인 완료", "오늘 할 일", "오늘 전체 공부표"],
     "c3r-t-recurrence-eligibility",
   );
   markBrowserFailureStage("RECURRENCE");
@@ -620,7 +620,7 @@ test("C3R-T Owner Theory journey reaches Postgres and remains isolated", async (
     page,
     recordId,
     "recurrence",
-    ["Today 계획", "Full-Day 계획"],
+    ["오늘 할 일", "오늘 전체 공부표"],
     "c3r-t-plan-eligibility",
   );
   markBrowserFailureStage("REOPEN");
@@ -635,7 +635,7 @@ test("C3R-T Owner Theory journey reaches Postgres and remains isolated", async (
     page,
     recordId,
     "d7",
-    ["재개 복습 독립 완료", "Today 계획", "Full-Day 계획"],
+    ["다시 혼자 확인하기 완료", "오늘 할 일", "오늘 전체 공부표"],
     "c3r-t-reopened-eligibility",
   );
   markBrowserFailureStage("REOPEN_COMPLETE");

@@ -703,7 +703,7 @@ test("C3R-L initial load errors support retry and stale-bookmark recovery", asyn
     const loadError = page.getByTestId("c3r-l-load-error");
     await expect(loadError).toBeVisible();
     markBrowserFailureStage("LOAD_RETRY_ERROR_SURFACE_VISIBLE");
-    await expect(loadError.getByRole("alert")).toContainText("temporarily_unavailable");
+    await expect(loadError.getByRole("alert")).toContainText("학습 상태를 불러오지 못했습니다");
     markBrowserFailureStage("LOAD_RETRY_ERROR_TEXT_VISIBLE");
     failInitialLoads = false;
     markBrowserFailureStage("LOAD_RETRY_RELEASED");
@@ -718,7 +718,7 @@ test("C3R-L initial load errors support retry and stale-bookmark recovery", asyn
     await page.goto(`/app/c3r-l?recordId=${missingRecordId}`);
     const staleBookmarkError = page.getByTestId("c3r-l-load-error");
     await expect(staleBookmarkError).toBeVisible();
-    await expect(staleBookmarkError.getByRole("alert")).toContainText("not_found");
+    await expect(staleBookmarkError.getByRole("alert")).toContainText("학습 상태를 불러오지 못했습니다");
     markBrowserFailureStage("STALE_BOOKMARK_ERROR_VISIBLE");
     await page.getByRole("button", { name: "기본 법규 학습으로 돌아가기" }).click();
     await expect(page.getByTestId("c3r-l-runtime")).toBeVisible();
@@ -810,7 +810,7 @@ test("C3R-L Owner Law journey reaches Postgres and remains isolated", async ({ b
     page,
     recordId,
     "feedback",
-    ["도움받아 복습", "D+1 독립 재구성", "Today 계획", "Full-Day 계획"],
+    ["도움을 사용해 연습하기", "다음 날 혼자 해보기 완료", "오늘 할 일", "오늘 전체 공부표"],
     "c3r-l-d1-eligibility",
   );
 
@@ -846,7 +846,7 @@ test("C3R-L Owner Law journey reaches Postgres and remains isolated", async ({ b
     page,
     recordId,
     "d1Fresh",
-    ["D+7 전이 과업 열기", "Today 계획", "Full-Day 계획"],
+    ["일주일 뒤 다른 문제 열기", "오늘 할 일", "오늘 전체 공부표"],
     "c3r-l-d7-eligibility",
   );
 
@@ -881,7 +881,7 @@ test("C3R-L Owner Law journey reaches Postgres and remains isolated", async ({ b
     page,
     recordId,
     "d7",
-    ["시간 제한 재현 완료", "Today 계획", "Full-Day 계획"],
+    ["제한시간 실전 확인 완료", "오늘 할 일", "오늘 전체 공부표"],
     "c3r-l-recurrence-eligibility",
   );
   markBrowserFailureStage("RECURRENCE");
@@ -897,7 +897,7 @@ test("C3R-L Owner Law journey reaches Postgres and remains isolated", async ({ b
     page,
     recordId,
     "recurrence",
-    ["Today 계획", "Full-Day 계획"],
+    ["오늘 할 일", "오늘 전체 공부표"],
     "c3r-l-plan-eligibility",
   );
   await assertBlankLawReconstruction(page, recordId, "recurrence", false, "후속 실패로 다시 열기");
@@ -919,7 +919,7 @@ test("C3R-L Owner Law journey reaches Postgres and remains isolated", async ({ b
     page,
     recordId,
     "d7",
-    ["재개 복습 독립 완료", "Today 계획", "Full-Day 계획"],
+    ["다시 혼자 확인하기 완료", "오늘 할 일", "오늘 전체 공부표"],
     "c3r-l-reopened-eligibility",
   );
   markBrowserFailureStage("REOPEN_COMPLETE");

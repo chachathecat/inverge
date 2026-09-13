@@ -62,8 +62,9 @@ const sharedRepositorySource = fs.readFileSync(path.join(root,
 const productionAccessBlobs = Object.freeze({
   // The original C3R-P identity remains historical Git evidence. This entry
   // freezes the audited APP-1 repeat-repair retry successor plus the #923
-  // fail-closed, read-only second-stage navigation admission check. Future
-  // access changes still require an explicit identity update and semantic audit.
+  // fail-closed navigation admission check and #927 presentation-only Korean
+  // learner-language rebind. Access and command semantics remain unchanged;
+  // future access changes still require an explicit identity update and audit.
   "lib/review-os/repository.ts": "287af612ef296e7a7dd0bf91b4fd5e1238288157",
   "lib/review-os/server.ts": "429085a06c3104aa66c49b272738d53f00318d8a",
   "app/app/layout.tsx": "ef48f2ec1496d675233acddd5e354e62b41c3754",
@@ -72,7 +73,7 @@ const productionAccessBlobs = Object.freeze({
   "lib/review-os/c3r-p-service.ts": "5923cd57c2cf1d00aea258d930495a48ac1dc516",
   "lib/review-os/c3r-p-repository.ts": "c9fceb98d4a6f9dd9a2eb89f7f612fb60b0d41c8",
   "lib/review-os/c3r-p-engine.ts": "351047c5b5ed7463ec7aac96baad389b5a3a92d9",
-  "components/review-os/c3r-p-practice-loop.tsx": "0a7897389de1a57968c10d95dedb0b7204774cd1",
+  "components/review-os/c3r-p-practice-loop.tsx": "703563a4e811d7886916108d43059a6fa134ae00",
 });
 
 const OWNER_BRIDGE_SECURITY_PATCHED_PACKAGE_LOCK_GIT_BLOB =
@@ -551,7 +552,7 @@ test("reopened Practice completion is an atomic independent retry and exact plan
   assert.match(routeSource,
     /PLAN_COMPLETION_ACTIONS\.has\(action\)[\s\S]*planBlockId/);
   assert.match(componentSource,
-    /record\?\.state === "REOPENED"[\s\S]*다시 열린 복습을 독립 수행으로 완료/);
+    /record\?\.state === "REOPENED"[\s\S]*다시 혼자 확인하기 완료/);
   assert.match(browserSource, /assistedRetryDenied: true/);
   assert.match(browserSource, /incorrectRetryDenied: true/);
   assert.match(browserSource, /staleRetryDenied: true/);
@@ -1026,7 +1027,7 @@ test("D+7 uses one persisted sealed task that is presented and exactly bound bef
   assert.match(engineSource, /grossIncome: 150_000_000/);
   assert.match(engineSource, /result: 120_000_000/);
   assert.match(componentSource, /data-testid="c3r-p-transfer-prompt"/);
-  assert.match(componentSource, /제시된 D\+7 전이 과업 제출/);
+  assert.match(componentSource, /일주일 뒤 다른 문제 제출/);
   assert.match(browserSource, /originalTaskReuseDenied: true/);
   assert.match(browserSource, /originalAnchorVersionReuseDenied: true/);
   assert.match(browserSource, /fabricatedTransferTaskDenied: true/);
@@ -1038,11 +1039,11 @@ test("delayed D+7 and recurrence controls use only canonical current queue eligi
   assert.match(componentSource,
     /c3rPCurrentQueueItem\([\s\S]*recordId: record\?\.id[\s\S]*recordState: record\?\.state[\s\S]*gapId: gap\?\.id[\s\S]*gapState: gap\?\.state/);
   assert.match(componentSource,
-    /disabled=\{pending \|\| !d7Eligible\}[\s\S]*D\+7 전이 과업 열기/);
+    /disabled=\{pending \|\| !d7Eligible\}[\s\S]*일주일 뒤 다른 문제 열기/);
   assert.match(componentSource,
-    /disabled=\{pending \|\| !recurrenceEligible\}[\s\S]*시간 기반 재출현 독립 수행 완료/);
+    /disabled=\{pending \|\| !recurrenceEligible\}[\s\S]*제한시간 실전 확인 완료/);
   assert.match(componentSource,
-    /const reopenedQueueItem = queueItem\("REOPENED_REVIEW"\)[\s\S]*disabled=\{pending \|\| !reopenedEligible\}[\s\S]*다시 열린 복습을 독립 수행으로 완료/);
+    /const reopenedQueueItem = queueItem\("REOPENED_REVIEW"\)[\s\S]*disabled=\{pending \|\| !reopenedEligible\}[\s\S]*다시 혼자 확인하기 완료/);
   assert.match(componentSource, /data-testid="c3r-p-d7-eligibility"/);
   assert.match(componentSource, /data-testid="c3r-p-recurrence-eligibility"/);
   assert.doesNotMatch(componentSource, /Date\.now\(\)/);
@@ -1092,10 +1093,10 @@ test("plans and destructive-result UI are restored from successful server state"
     /action: "decide_plan",[\s\S]*recordId: record\.id/);
   assert.match(componentSource, /const data = await request\(\{ action: "delete" \}\);\s*if \(!data\.ok\) return;/);
   assert.match(componentSource,
-    /data\.result\?\.status !== "deleted"[\s\S]*setError\("temporarily_unavailable"\)/);
+    /data\.result\?\.status !== "deleted"[\s\S]*setError\("지금은 삭제할 수 없습니다\. 잠시 후 다시 시도해 주세요\."\)/);
   assert.match(componentSource,
     /{error \? \([\s\S]*\) : null}\s*{exportStatus \? <p className="text-sm" role="status">{exportStatus}<\/p> : null}\s*<section/);
-  assert.match(browserSource, /계획 상태: EDITED/);
+  assert.match(browserSource, /고쳐서 수락함/);
   assert.match(browserSource, /baseRouteRestoredExistingRecord: true/);
   assert.match(browserSource, /terminalPlanDoesNotReviveSuperseded: true/);
   assert.match(browserSource, /priorActivePlanSuperseded: true/);

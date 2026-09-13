@@ -1,5 +1,26 @@
 # Inverge Owner Study OS
 
+## Active post-#926 Goal — received 2026-09-13T10:40:54Z
+
+### Current transition: #926 integrated -> #927 Korean learner language
+
+PR #926 merged reviewed head `d202c60e9eec7de25749d6423a385a5d084bd719`
+by expected-head-pinned squash as `2f664fc9a19d4515a6cbac3445925bf5f5947fab`,
+tree `109a7cfda2bc20dc2f46dbfe55c780e9c7616614`. All eight required
+exact-head checks and Vercel passed, final Codex review found no major issue,
+and unresolved review threads were zero. Only #925 closed; #772, #880, #883
+and the wider Goal remain open.
+
+Issue #927 is the next bounded S2 slice. It gives the existing Practice,
+Theory and Law loops one shared Korean learner-language contract and removes
+raw scheduling shorthand, English planner terms, internal states, versions and
+identifiers from their default presentation. Internal enum values, API payloads,
+storage, scheduling and evidence semantics remain unchanged. Necessary
+verification-only identifiers stay behind collapsed technical disclosure. This
+slice includes no S3 content/source release or S4 corpus/runtime expansion. S4
+remains blocked until S3 is separately approved and terminally completed. Do not
+treat this presentation slice or its PR as Goal completion.
+
 ## Active post-#924 Goal — received 2026-09-13T09:29:11Z
 
 ### Current transition: #924 integrated -> #925 productization source contract

@@ -13,6 +13,19 @@ import {
   type C3RPPracticeClaimInput,
   type C3RPView,
 } from "@/lib/review-os/c3r-p-contract";
+import {
+  learnerDueAtLabel,
+  learnerExecutionStateLabel,
+  learnerGapStateLabel,
+  learnerLedgerEntryLabel,
+  learnerPlanBlockLabel,
+  learnerPlanCompletionLabel,
+  learnerPlanKindLabel,
+  learnerPlanStateLabel,
+  learnerPlanTerminalLabel,
+  learnerRecordStateLabel,
+  learnerReviewPhaseLabel,
+} from "@/lib/review-os/learner-language";
 
 type ApiResult = {
   ok: boolean;
@@ -153,8 +166,8 @@ export function C3RPPracticeLoop({
       if (data.canonicalSentence) setCanonicalSentence(data.canonicalSentence);
       return data;
     } catch (requestError) {
-      const message = requestError instanceof Error ? requestError.message : "request_failed";
-      setError(message);
+      console.error("C3R-P request failed", requestError);
+      setError("요청을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.");
       return { ok: false };
     } finally {
       setPending(false);
@@ -173,7 +186,10 @@ export function C3RPPracticeLoop({
         if (active) setView(data.view);
       })
       .catch((loadError: unknown) => {
-        if (active) setError(loadError instanceof Error ? loadError.message : "load_failed");
+        if (active) {
+          console.error("C3R-P load failed", loadError);
+          setError("학습 기록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+        }
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -184,16 +200,8 @@ export function C3RPPracticeLoop({
   }, [initialRecordId]);
 
   const phaseLabel = useMemo(() => {
-    if (!record) return "D0 시도 시작";
-    return {
-      D0_OPEN: "피드백 전 약속 완료",
-      FEEDBACK_COMMITTED: "가장 큰 간극 1개",
-      REPAIRED: "D+1 무도움 재구성",
-      D1_COMPLETE: "봉인된 D+7 전이",
-      D7_COMPLETE: "시간 기반 재출현",
-      CLOSED: "독립 수행 완료",
-      REOPENED: "후속 실패로 다시 열림",
-    }[record.state];
+    if (!record) return "첫 답안 시작";
+    return learnerRecordStateLabel(record.state);
   }, [record]);
 
   async function start() {
@@ -232,7 +240,7 @@ export function C3RPPracticeLoop({
     if (!record) return;
     const claim = practiceClaim(structuredCalculation, view?.source.revisionId);
     if (!claim) {
-      setError("structured_claim_required");
+      setError("연간 총수익·운영비·계산 결과를 모두 올바른 숫자로 입력해 주세요.");
       return;
     }
     await request({
@@ -264,7 +272,7 @@ export function C3RPPracticeLoop({
       action === "complete_d7_transfer",
     );
     if (!claim) {
-      setError("structured_claim_required");
+      setError("연간 총수익·운영비·계산 결과를 모두 올바른 숫자로 입력해 주세요.");
       return;
     }
     const evidenceStep = action === "record_assisted_review"
@@ -381,11 +389,11 @@ export function C3RPPracticeLoop({
   }
 
   async function deleteData() {
-    if (!window.confirm("C3R-P 실무 학습 기록을 삭제할까요? 이 작업은 되돌릴 수 없습니다.")) return;
+    if (!window.confirm("실무 학습 기록을 삭제할까요? 이 작업은 되돌릴 수 없습니다.")) return;
     const data = await request({ action: "delete" });
     if (!data.ok) return;
     if (data.result?.status !== "deleted") {
-      setError("temporarily_unavailable");
+      setError("지금은 삭제할 수 없습니다. 잠시 후 다시 시도해 주세요.");
       return;
     }
     window.history.replaceState(null, "", "/app/c3r-p");
@@ -413,9 +421,9 @@ export function C3RPPracticeLoop({
     >
       <header className="grid gap-2">
         <p className="text-sm font-semibold text-[var(--color-brand-primary)]">답안길 · 감평 2차 실무</p>
-        <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">Practice 지속학습 루프</h1>
+        <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">실무 계산 답안 고치기</h1>
         <p className="text-sm text-[var(--color-text-secondary)]">
-          기본 OFF · Owner 전용 · 공식 채점이나 공식 모범답안이 아닌 학습용 Evidence Review입니다.
+          설명을 보기 전에 직접 풀고, 가장 큰 감점 원인 하나를 고친 뒤 예정된 복습까지 이어갑니다.
         </p>
       </header>
 
@@ -442,7 +450,7 @@ export function C3RPPracticeLoop({
                 onChange={(event) => setAttemptBody(event.target.value)}
               />
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="grid gap-1 text-sm font-medium">
                 예상
                 <select className="rounded-lg border p-2" value={prediction} onChange={(event) => setPrediction(event.target.value as typeof prediction)}>
@@ -473,7 +481,7 @@ export function C3RPPracticeLoop({
               <textarea className="min-h-24 rounded-xl border p-3 font-normal" value={failureNote} onChange={(event) => setFailureNote(event.target.value)} />
             </label>
             <button disabled={pending} onClick={() => void feedback()} className="rounded-xl bg-[var(--color-action-primary)] px-4 py-3 font-semibold text-white disabled:opacity-50">
-              도움 상태를 먼저 기록하고 가장 큰 간극 보기
+              도움 상태를 먼저 기록하고 가장 큰 감점 원인 보기
             </button>
           </div>
         ) : null}
@@ -534,18 +542,18 @@ export function C3RPPracticeLoop({
         {record?.state === "FEEDBACK_COMMITTED" ? (
           <div className="mt-5 grid gap-3">
             <div className="rounded-xl bg-amber-50 p-4 text-sm">
-              <strong>가장 큰 간극 1개:</strong> {view?.source.gapLabel}
+              <strong>가장 큰 감점 원인:</strong> {view?.source.gapLabel}
               <p className="mt-2">{scaffold ?? view?.source.scaffold}</p>
             </div>
             <button disabled={pending} onClick={() => void repair()} className="rounded-xl bg-[var(--color-action-primary)] px-4 py-3 font-semibold text-white disabled:opacity-50">
-              내가 입력한 구조화 계산으로 수리 저장
+              내가 입력한 계산으로 고치기 저장
             </button>
           </div>
         ) : null}
 
         {record?.state === "REPAIRED" ? (
           <div className="mt-5 grid gap-3">
-            <p className="rounded-xl bg-slate-50 p-3 text-sm">D+1은 도움 없이 다시 구성해야 독립 성공으로 기록됩니다.</p>
+            <p className="rounded-xl bg-slate-50 p-3 text-sm">다음 날에는 도움 없이 다시 구성해야 독립 성공으로 기록됩니다.</p>
             {!d1Eligible ? (
               <p
                 id="c3r-p-d1-eligibility"
@@ -553,15 +561,15 @@ export function C3RPPracticeLoop({
                 data-testid="c3r-p-d1-eligibility"
                 className="rounded-xl bg-slate-50 p-3 text-sm"
               >
-                다음 D+1 독립 복습은 서버 Review Queue 예정 시각
-                {d1QueueItem?.dueAt ? ` ${d1QueueItem.dueAt}` : ""} 이후에 열립니다.
+                다음 날 혼자 해보기는 복습 예정 시각
+                {d1QueueItem?.dueAt ? ` ${learnerDueAtLabel(d1QueueItem.dueAt)}` : ""} 이후에 열립니다.
               </p>
             ) : null}
             <button disabled={pending || !d1Eligible} aria-describedby={!d1Eligible ? "c3r-p-d1-eligibility" : undefined} onClick={() => void review("record_assisted_review")} className="rounded-xl border px-4 py-3 font-semibold disabled:opacity-50">
-              도움을 사용한 D+1 기록(독립 성공 아님)
+              도움을 사용해 연습하기(독립 성공 아님)
             </button>
             <button disabled={pending || !d1Eligible} aria-describedby={!d1Eligible ? "c3r-p-d1-eligibility" : undefined} onClick={() => void review("complete_d1")} className="rounded-xl bg-[var(--color-action-primary)] px-4 py-3 font-semibold text-white disabled:opacity-50">
-              D+1 무도움 재구성 완료
+              다음 날 혼자 해보기 완료
             </button>
           </div>
         ) : null}
@@ -575,8 +583,8 @@ export function C3RPPracticeLoop({
                 data-testid="c3r-p-d7-eligibility"
                 className="rounded-xl bg-slate-50 p-3 text-sm"
               >
-                D+7 전이 과업은 서버 Review Queue 예정 시각
-                {d7QueueItem?.dueAt ? ` ${d7QueueItem.dueAt}` : ""} 이후에 열립니다.
+                일주일 뒤 다른 문제는 복습 예정 시각
+                {d7QueueItem?.dueAt ? ` ${learnerDueAtLabel(d7QueueItem.dueAt)}` : ""} 이후에 열립니다.
               </p>
             ) : null}
             {transferTask.state === "SEALED" ? (
@@ -586,23 +594,25 @@ export function C3RPPracticeLoop({
                 onClick={() => void presentD7TransferTask()}
                 className="w-full rounded-xl border px-4 py-3 font-semibold disabled:opacity-50"
               >
-                D+7 전이 과업 열기
+                일주일 뒤 다른 문제 열기
               </button>
             ) : (
               <>
                 <p className="rounded-xl bg-slate-50 p-4 text-sm" data-testid="c3r-p-transfer-prompt">
                   {transferTask.prompt}
                 </p>
-                <p className="text-xs text-[var(--color-text-secondary)]">
-                  전이 과업 ID {transferTask.taskId} · 원래 D0 문항과 다른 문항·화면
-                </p>
+                <p className="text-xs text-[var(--color-text-secondary)]">처음 풀었던 문제와 다른 문제입니다.</p>
+                <details className="rounded-lg border p-3 text-xs text-[var(--color-text-secondary)]">
+                  <summary className="cursor-pointer">검증용 기술 정보</summary>
+                  <p className="mt-2">전이 과업 식별값: {transferTask.taskId}</p>
+                </details>
                 <button
                   disabled={pending || !d7Eligible}
                   aria-describedby={!d7Eligible ? "c3r-p-d7-eligibility" : undefined}
                   onClick={() => void review("complete_d7_transfer")}
                   className="w-full rounded-xl bg-[var(--color-action-primary)] px-4 py-3 font-semibold text-white disabled:opacity-50"
                 >
-                  제시된 D+7 전이 과업 제출
+                  일주일 뒤 다른 문제 제출
                 </button>
               </>
             )}
@@ -618,8 +628,8 @@ export function C3RPPracticeLoop({
                 data-testid="c3r-p-recurrence-eligibility"
                 className="rounded-xl bg-slate-50 p-3 text-sm"
               >
-                시간 기반 재출현은 서버 Review Queue 예정 시각
-                {recurrenceQueueItem?.dueAt ? ` ${recurrenceQueueItem.dueAt}` : ""} 이후에 실행할 수 있습니다.
+                제한시간 실전 확인은 복습 예정 시각
+                {recurrenceQueueItem?.dueAt ? ` ${learnerDueAtLabel(recurrenceQueueItem.dueAt)}` : ""} 이후에 실행할 수 있습니다.
               </p>
             ) : null}
             <button
@@ -628,25 +638,25 @@ export function C3RPPracticeLoop({
               onClick={() => void review("complete_recurrence")}
               className="w-full rounded-xl bg-[var(--color-action-primary)] px-4 py-3 font-semibold text-white disabled:opacity-50"
             >
-              시간 기반 재출현 독립 수행 완료
+              제한시간 실전 확인 완료
             </button>
           </div>
         ) : null}
 
         {record?.state === "CLOSED" ? (
           <div className="mt-5 grid gap-2">
-            <p className="text-sm text-[var(--color-text-secondary)]">후속 수행에서 실제로 입력한 값이 틀렸을 때만 간극을 다시 엽니다.</p>
+            <p className="text-sm text-[var(--color-text-secondary)]">후속 수행에서 실제로 입력한 값이 틀렸을 때만 감점 원인을 다시 확인합니다.</p>
             <button disabled={pending} onClick={() => void review("record_later_failure")} className="w-full rounded-xl border border-amber-500 px-4 py-3 font-semibold text-amber-800 disabled:opacity-50">
-              입력한 후속 실패로 간극 다시 열기
+              입력한 후속 실패로 감점 원인 다시 확인
             </button>
           </div>
         ) : null}
 
         {record?.state === "REOPENED" ? (
           <div className="mt-5 grid gap-3">
-            <p className="rounded-xl bg-amber-50 p-4 text-sm">이전 종료가 취소되고 Review Queue에 즉시 다시 등록되었습니다.</p>
+            <p className="rounded-xl bg-amber-50 p-4 text-sm">이전 안정 상태가 취소되어 복습 대기에 다시 등록되었습니다.</p>
             <button disabled={pending || !reopenedEligible} onClick={() => void review("complete_reopened_review")} className="w-full rounded-xl bg-[var(--color-action-primary)] px-4 py-3 font-semibold text-white disabled:opacity-50">
-              다시 열린 복습을 독립 수행으로 완료
+              다시 혼자 확인하기 완료
             </button>
           </div>
         ) : null}
@@ -659,17 +669,17 @@ export function C3RPPracticeLoop({
       {record ? (
         <section className="grid gap-4 rounded-2xl border border-[var(--color-border-default)] bg-white p-5 shadow-sm" data-testid="c3r-p-ledger">
           <div>
-            <h2 className="text-lg font-semibold">Personal Study Ledger</h2>
-            <p className="text-sm text-[var(--color-text-secondary)]">원문은 개인 영역에만 있고, 아래 증거 투영은 본문을 포함하지 않습니다.</p>
+            <h2 className="text-lg font-semibold">내 공부 기록</h2>
+            <p className="text-sm text-[var(--color-text-secondary)]">답안 원문은 개인 영역에만 보관됩니다.</p>
           </div>
           <ul className="grid gap-2 text-sm">
             {(restored?.ledger ?? []).map((entry) => (
               <li key={entry.id} className="rounded-lg bg-slate-50 p-3">
-                {entry.entry_kind} · {entry.evidence_ref.split("#")[1]}
+                {learnerLedgerEntryLabel(entry.entry_kind)}
               </li>
             ))}
           </ul>
-          {gap ? <p className="text-sm">현재 간극: {gap.state} · 다시 열림 {gap.reopen_count}회</p> : null}
+          {gap ? <p className="text-sm">감점 원인 상태: {learnerGapStateLabel(gap.state)} · 다시 확인 {gap.reopen_count}회</p> : null}
           {restored?.failureNotes[0] ? <p className="rounded-lg border p-3 text-sm">내 실패 메모: {restored.failureNotes[0].body}</p> : null}
         </section>
       ) : null}
@@ -679,23 +689,23 @@ export function C3RPPracticeLoop({
         currentPlan
       ) ? (
         <section className="grid gap-3 rounded-2xl border border-[var(--color-border-default)] bg-white p-5 shadow-sm" data-testid="c3r-p-planner">
-          <h2 className="text-lg font-semibold">Review Queue · Today · Full-Day</h2>
-          <p className="text-sm">실행 가능한 항목만 계획에 들어가며 CoreOutcome은 최대 3개입니다.</p>
-          <p className="text-sm" data-testid="c3r-p-queue-count">실행 가능한 Review Queue: {view?.dashboard.queue.filter((item) => item.eligible).length ?? 0}개</p>
+          <h2 className="text-lg font-semibold">복습 대기 · 오늘 할 일</h2>
+          <p className="text-sm">지금 할 수 있는 복습만 계획에 들어가며 중요 학습 항목은 최대 3개입니다.</p>
+          <p className="text-sm" data-testid="c3r-p-queue-count">지금 할 수 있는 복습: {view?.dashboard.queue.filter((item) => item.eligible).length ?? 0}개</p>
           {view?.dashboard.queue.some((item) => item.recordId === record.id && item.eligible) ? (
-            <div className="grid grid-cols-2 gap-3">
-              <button disabled={pending} onClick={() => void createPlan("TODAY")} className="rounded-xl border px-4 py-3 font-semibold">Today 90분</button>
-              <button disabled={pending} onClick={() => void createPlan("FULL_DAY")} className="rounded-xl border px-4 py-3 font-semibold">Full-Day 240분</button>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button disabled={pending} onClick={() => void createPlan("TODAY")} className="rounded-xl border px-4 py-3 font-semibold">오늘 할 일 · 90분</button>
+              <button disabled={pending} onClick={() => void createPlan("FULL_DAY")} className="rounded-xl border px-4 py-3 font-semibold">오늘 전체 공부표 · 240분</button>
             </div>
           ) : null}
           {currentPlan ? (
             <div className="grid gap-3 rounded-xl bg-slate-50 p-4">
-              <p className="font-semibold">계획 상태: {currentPlan.state}</p>
+              <p className="font-semibold">{learnerPlanKindLabel(currentPlan.planKind)} · {learnerPlanStateLabel(currentPlan.state)}</p>
               <ul className="text-sm">
-                {currentPlan.blocks.map((block) => <li key={block.blockId}>{block.ordinal}. {block.blockKind} · {block.reviewPhase} · {block.minutes}분 · {block.executionState}</li>)}
+                {currentPlan.blocks.map((block) => <li key={block.blockId}>{block.ordinal}. {learnerPlanBlockLabel(block.blockKind)} · {learnerReviewPhaseLabel(block.reviewPhase)} · {block.minutes}분 · {learnerExecutionStateLabel(block.executionState)}</li>)}
               </ul>
-              <p className="text-sm">dayComplete: {String(currentPlan.dayComplete)}</p>
-              <div className="grid grid-cols-3 gap-2">
+              <p className="text-sm">오늘 계획 완료: {currentPlan.dayComplete ? "예" : "아니요"}</p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <button onClick={() => void decidePlan("ACCEPT")} className="rounded-lg border p-2">수락</button>
                 <button onClick={() => void decidePlan("EDIT")} className="rounded-lg border p-2">편집</button>
                 <button onClick={() => void decidePlan("REJECT")} className="rounded-lg border p-2">거절</button>
@@ -722,19 +732,23 @@ export function C3RPPracticeLoop({
                 data-plan-id={plan.planId}
               >
                 <p className="font-semibold">
-                  지난 계획 · {plan.planKind} · {plan.state}
+                  지난 계획 · {learnerPlanKindLabel(plan.planKind)} · {learnerPlanStateLabel(plan.state)}
                 </p>
                 <p className="text-sm">
-                  계획 버전 {plan.recordVersion} · 완료 상태 {plan.completionState} · 종료 사유 {plan.terminalReason}
+                  {learnerPlanCompletionLabel(plan.completionState)} · 종료 사유 {learnerPlanTerminalLabel(plan.terminalReason)}
                 </p>
                 <ul className="text-sm">
                   {plan.blocks.map((block) => (
                     <li key={block.blockId}>
-                      {block.ordinal}. {block.blockKind} · {block.reviewPhase} · {block.minutes}분 · {block.executionState}
+                      {block.ordinal}. {learnerPlanBlockLabel(block.blockKind)} · {learnerReviewPhaseLabel(block.reviewPhase)} · {block.minutes}분 · {learnerExecutionStateLabel(block.executionState)}
                     </li>
                   ))}
                 </ul>
-                <p className="text-sm">dayComplete: {String(plan.dayComplete)}</p>
+                <p className="text-sm">오늘 계획 완료: {plan.dayComplete ? "예" : "아니요"}</p>
+                <details className="text-xs text-[var(--color-text-secondary)]">
+                  <summary className="cursor-pointer">검증용 기술 정보</summary>
+                  <p className="mt-2">계획 버전: {plan.recordVersion}</p>
+                </details>
               </li>
             ))}
           </ol>
@@ -745,9 +759,9 @@ export function C3RPPracticeLoop({
         <section className="grid gap-3 rounded-2xl border border-[var(--color-border-default)] bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold">복원 · 내보내기 · 삭제</h2>
           <p className="text-sm">이 URL을 새로고침하거나 두 번째 브라우저에서 열면 같은 기록을 서버에서 복원합니다.</p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <button disabled={pending} onClick={() => void exportData()} className="rounded-xl border px-4 py-3 font-semibold">내 데이터 내보내기</button>
-            <button disabled={pending} onClick={() => void deleteData()} className="rounded-xl border border-red-300 px-4 py-3 font-semibold text-red-700">내 C3R-P 데이터 삭제</button>
+            <button disabled={pending} onClick={() => void deleteData()} className="rounded-xl border border-red-300 px-4 py-3 font-semibold text-red-700">내 실무 데이터 삭제</button>
           </div>
         </section>
       ) : null}

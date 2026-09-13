@@ -103,6 +103,14 @@ async function contextFor(browser: Browser, email: string, password: string) {
   return context;
 }
 
+async function learnerDueAtLabelInBrowser(page: Page, value: string) {
+  return page.evaluate((dueAt) => new Intl.DateTimeFormat("ko-KR", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Asia/Seoul",
+  }).format(new Date(dueAt)), value);
+}
+
 function dashboardEvidenceStepRoute(
   evidenceStep:
     | "d1Fresh"
@@ -534,18 +542,18 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     await pageA.goto(`/app/c3r-p?recordId=${prior.recordId}`);
     await expectState(pageA, "REOPENED");
     await expect(pageA.getByTestId("c3r-p-ledger")).toContainText(
-      "LATER_FAILURE_REOPEN",
+      "다시 확인 필요",
     );
     await expect(pageA.getByTestId("c3r-p-ledger")).toContainText(
-      "REOPENED_COMPLETED",
+      "다시 혼자 확인함",
     );
     const restartPlanHistory = pageA.getByTestId("c3r-p-plan-history");
     await expect(restartPlanHistory).toBeVisible();
     await expect(restartPlanHistory).not.toHaveAttribute("open", "");
-    await restartPlanHistory.locator("summary").click();
+    await restartPlanHistory.locator(":scope > summary").click();
     await expect(
       restartPlanHistory.locator(`[data-plan-id="${prior.fullDayPlanId}"]`),
-    ).toContainText("완료 상태 COMPLETED · 종료 사유 COMPLETED");
+    ).toContainText("완료 · 종료 사유 모두 완료");
 
     const contextB = await contextFor(browser, emailB, passwordB);
     const denial = await contextB.request.get(
@@ -695,11 +703,11 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     });
     pageA.once("dialog", (dialog) => dialog.accept());
     await pageA
-      .getByRole("button", { name: "내 C3R-P 데이터 삭제" })
+      .getByRole("button", { name: "내 실무 데이터 삭제" })
       .click();
     await expect(
-      pageA.getByRole("alert").filter({ hasText: "temporarily_unavailable" }),
-    ).toContainText("temporarily_unavailable");
+      pageA.getByRole("alert").filter({ hasText: "요청을 완료하지 못했습니다" }),
+    ).toContainText("요청을 완료하지 못했습니다");
     await expect(pageA.getByTestId("c3r-p-ledger")).toBeVisible();
     await expect(pageA.getByTestId("c3r-p-plan-history")).toBeVisible();
     await expect(
@@ -717,7 +725,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       );
     });
     await pageA
-      .getByRole("button", { name: "내 C3R-P 데이터 삭제" })
+      .getByRole("button", { name: "내 실무 데이터 삭제" })
       .click();
     const deleteResponse = await deleteResponsePromise;
     expect(deleteResponse.status()).toBe(200);
@@ -924,11 +932,11 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
 
   await page
     .getByRole("button", {
-      name: "도움 상태를 먼저 기록하고 가장 큰 간극 보기",
+      name: "도움 상태를 먼저 기록하고 가장 큰 감점 원인 보기",
     })
     .click();
   await expectState(page, "FEEDBACK_COMMITTED");
-  await expect(page.getByText("가장 큰 간극 1개:")).toBeVisible();
+  await expect(page.getByText("가장 큰 감점 원인:")).toBeVisible();
 
   const committedResponse = await context.request.get(
     `/api/review-os/c3r-p?recordId=${recordId}`,
@@ -998,7 +1006,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   });
   await page
     .getByRole("button", {
-      name: "내가 입력한 구조화 계산으로 수리 저장",
+      name: "내가 입력한 계산으로 고치기 저장",
     })
     .click();
   const submitRepairResponse = await submitRepairResponsePromise;
@@ -1159,7 +1167,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   );
   await page
     .getByRole("button", {
-      name: "도움을 사용한 D+1 기록(독립 성공 아님)",
+      name: "도움을 사용해 연습하기(독립 성공 아님)",
     })
     .click();
   const assistedD1Response = await assistedD1ResponsePromise;
@@ -1281,15 +1289,15 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   };
   await page.route(c3rPApiUrl, preDueD1Route);
   const assistedButton = page.getByRole("button", {
-    name: "도움을 사용한 D+1 기록(독립 성공 아님)",
+    name: "도움을 사용해 연습하기(독립 성공 아님)",
   });
   const independentD1Button = page.getByRole("button", {
-    name: "D+1 무도움 재구성 완료",
+    name: "다음 날 혼자 해보기 완료",
   });
   await expect(assistedButton).toBeDisabled();
   await expect(independentD1Button).toBeDisabled();
   await expect(page.getByTestId("c3r-p-d1-eligibility")).toContainText(
-    assistedRecord.d1_due_at,
+    await learnerDueAtLabelInBrowser(page, assistedRecord.d1_due_at),
   );
   await independentD1Button.evaluate((element) => {
     element.click();
@@ -1306,11 +1314,13 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   expect(earlyD1Requests).toEqual([]);
   await page.reload();
   await expectState(page, "REPAIRED");
-  await expect(page.getByTestId("c3r-p-ledger")).toContainText("D1_ASSISTED");
+  await expect(page.getByTestId("c3r-p-ledger")).toContainText(
+    "도움을 사용한 다음 날 복습",
+  );
   await expect(assistedButton).toBeDisabled();
   await expect(independentD1Button).toBeDisabled();
   await expect(page.getByTestId("c3r-p-d1-eligibility")).toContainText(
-    assistedRecord.d1_due_at,
+    await learnerDueAtLabelInBrowser(page, assistedRecord.d1_due_at),
   );
 
   const secondBrowser = await contextFor(browser, emailA, passwordA);
@@ -1320,17 +1330,17 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   await secondPage.goto(`/app/c3r-p?recordId=${recordId}`);
   await expectState(secondPage, "REPAIRED");
   await expect(secondPage.getByRole("button", {
-    name: "도움을 사용한 D+1 기록(독립 성공 아님)",
+    name: "도움을 사용해 연습하기(독립 성공 아님)",
   })).toBeDisabled();
   await expect(secondPage.getByRole("button", {
-    name: "D+1 무도움 재구성 완료",
+    name: "다음 날 혼자 해보기 완료",
   })).toBeDisabled();
   await expect(secondPage.getByTestId("c3r-p-d1-eligibility")).toContainText(
-    assistedRecord.d1_due_at,
+    await learnerDueAtLabelInBrowser(secondPage, assistedRecord.d1_due_at),
   );
   await secondPage.reload();
   await expect(secondPage.getByRole("button", {
-    name: "D+1 무도움 재구성 완료",
+    name: "다음 날 혼자 해보기 완료",
   })).toBeDisabled();
 
   const duplicateAssistedD1 = await context.request.post(
@@ -1409,10 +1419,10 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   await expect(assistedButton).toBeEnabled();
   await expect(independentD1Button).toBeEnabled();
   await expect(secondPage.getByRole("button", {
-    name: "도움을 사용한 D+1 기록(독립 성공 아님)",
+    name: "도움을 사용해 연습하기(독립 성공 아님)",
   })).toBeEnabled();
   await expect(secondPage.getByRole("button", {
-    name: "D+1 무도움 재구성 완료",
+    name: "다음 날 혼자 해보기 완료",
   })).toBeEnabled();
   await expect(page.getByTestId("c3r-p-d1-eligibility")).toHaveCount(0);
   await fillStructuredCalculation(page);
@@ -1426,7 +1436,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   await page.reload();
   await fillStructuredCalculation(page);
   await page
-    .getByRole("button", { name: "D+1 무도움 재구성 완료" })
+    .getByRole("button", { name: "다음 날 혼자 해보기 완료" })
     .click();
   await expectState(page, "D1_COMPLETE");
   await page.unroute(c3rPApiUrl, d1RescheduledRouteA);
@@ -1538,11 +1548,11 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   await page.route(c3rPApiUrl, preDueD7Route);
   await page.reload();
   const preDueD7Button = page.getByRole("button", {
-    name: "D+7 전이 과업 열기",
+    name: "일주일 뒤 다른 문제 열기",
   });
   await expect(preDueD7Button).toBeDisabled();
   await expect(page.getByTestId("c3r-p-d7-eligibility")).toContainText(
-    sealedTransfer.view.restored.gaps[0].d7_due_at,
+    await learnerDueAtLabelInBrowser(page, sealedTransfer.view.restored.gaps[0].d7_due_at),
   );
   await expect(page.getByTestId("c3r-p-transfer-prompt")).toHaveCount(0);
   await preDueD7Button.evaluate((element) => {
@@ -1569,11 +1579,11 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   );
   await expect(secondPage.getByTestId("c3r-p-transfer-prompt")).toHaveCount(0);
   await expect(secondPage.getByRole("button", {
-    name: "D+7 전이 과업 열기",
+    name: "일주일 뒤 다른 문제 열기",
   })).toBeDisabled();
   await secondPage.reload();
   await expect(secondPage.getByRole("button", {
-    name: "D+7 전이 과업 열기",
+    name: "일주일 뒤 다른 문제 열기",
   })).toBeDisabled();
   await secondPage.unroute(c3rPApiUrl, preDueD7Route);
 
@@ -1583,21 +1593,21 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   await secondPage.route(c3rPApiUrl, d7EvidenceRouteB);
   await Promise.all([page.reload(), secondPage.reload()]);
   await expect(page.getByRole("button", {
-    name: "D+7 전이 과업 열기",
+    name: "일주일 뒤 다른 문제 열기",
   })).toBeEnabled();
   await expect(secondPage.getByRole("button", {
-    name: "D+7 전이 과업 열기",
+    name: "일주일 뒤 다른 문제 열기",
   })).toBeEnabled();
   await expect(secondPage.getByTestId("c3r-p-d7-eligibility")).toHaveCount(0);
   await secondPage.reload();
   await expect(secondPage.getByRole("button", {
-    name: "D+7 전이 과업 열기",
+    name: "일주일 뒤 다른 문제 열기",
   })).toBeEnabled();
   const presentResponsePromise = secondPage.waitForResponse((response) =>
     response.request().postDataJSON()?.action === "present_d7_transfer_task",
   );
   await secondPage
-    .getByRole("button", { name: "D+7 전이 과업 열기" })
+    .getByRole("button", { name: "일주일 뒤 다른 문제 열기" })
     .click();
   const presentResponse = await presentResponsePromise;
   expect(presentResponse.status()).toBe(200);
@@ -1637,7 +1647,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     "30000000",
   );
   await secondPage
-    .getByRole("button", { name: "제시된 D+7 전이 과업 제출" })
+    .getByRole("button", { name: "일주일 뒤 다른 문제 제출" })
     .click();
   await expect.poll(() => planlessD7Request).not.toBeNull();
   expect(planlessD7Request).toMatchObject({
@@ -1732,7 +1742,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     request.postDataJSON()?.action === "complete_d7_transfer",
   );
   await secondPage
-    .getByRole("button", { name: "제시된 D+7 전이 과업 제출" })
+    .getByRole("button", { name: "일주일 뒤 다른 문제 제출" })
     .click();
   const transferSubmit = await transferSubmitPromise;
   expect(transferSubmit.postDataJSON()).toMatchObject({
@@ -1786,10 +1796,13 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     }),
   ]));
   await expect(secondPage.getByTestId("c3r-p-recurrence-eligibility")).toContainText(
-    transferred.view.restored.gaps[0].recurrence_due_at,
+    await learnerDueAtLabelInBrowser(
+      secondPage,
+      transferred.view.restored.gaps[0].recurrence_due_at,
+    ),
   );
   const preDueRecurrenceButton = secondPage.getByRole("button", {
-    name: "시간 기반 재출현 독립 수행 완료",
+    name: "제한시간 실전 확인 완료",
   });
   await expect(preDueRecurrenceButton).toBeDisabled();
 
@@ -1847,10 +1860,10 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   await secondPage.route(c3rPApiUrl, recurrenceEvidenceRouteB);
   await Promise.all([page.reload(), secondPage.reload()]);
   await expect(page.getByRole("button", {
-    name: "시간 기반 재출현 독립 수행 완료",
+    name: "제한시간 실전 확인 완료",
   })).toBeEnabled();
   await expect(secondPage.getByRole("button", {
-    name: "시간 기반 재출현 독립 수행 완료",
+    name: "제한시간 실전 확인 완료",
   })).toBeEnabled();
   await expect(secondPage.getByTestId("c3r-p-recurrence-eligibility")).toHaveCount(0);
 
@@ -1864,11 +1877,11 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   await secondPage.reload();
   await expectState(secondPage, "D7_COMPLETE");
   await expect(secondPage.getByRole("button", {
-    name: "시간 기반 재출현 독립 수행 완료",
+    name: "제한시간 실전 확인 완료",
   })).toBeEnabled();
   await fillStructuredCalculation(secondPage);
   await secondPage
-    .getByRole("button", { name: "시간 기반 재출현 독립 수행 완료" })
+    .getByRole("button", { name: "제한시간 실전 확인 완료" })
     .click();
   await expectState(secondPage, "CLOSED");
   const completedRecurrencePlanResponse = await context.request.get(
@@ -1892,7 +1905,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   );
   await secondPage.getByTestId("c3r-p-result").fill("90000000");
   await secondPage
-    .getByRole("button", { name: "입력한 후속 실패로 간극 다시 열기" })
+    .getByRole("button", { name: "입력한 후속 실패로 감점 원인 다시 확인" })
     .click();
   await expectState(secondPage, "REOPENED");
   const reopenedResponse = await context.request.get(
@@ -2082,7 +2095,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       request.postDataJSON()?.action === "create_plan"
     );
   });
-  await secondPage.getByRole("button", { name: "Today 90분" }).click();
+  await secondPage.getByRole("button", { name: "오늘 할 일 · 90분" }).click();
   const createPlanRequest = await createPlanRequestPromise;
   expect(createPlanRequest.postDataJSON()).toMatchObject({
     action: "create_plan",
@@ -2140,8 +2153,8 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     }),
   ]));
   const actionablePlanner = secondPage.getByTestId("c3r-p-planner");
-  await expect(actionablePlanner.getByText("계획 상태: PROPOSED")).toBeVisible();
-  await expect(actionablePlanner.getByText("dayComplete: false")).toBeVisible();
+  await expect(actionablePlanner.getByText("오늘 할 일 · 확인 전")).toBeVisible();
+  await expect(actionablePlanner.getByText("오늘 계획 완료: 아니요")).toBeVisible();
   const editPlanResponsePromise = secondPage.waitForResponse((response) => {
     const request = response.request();
     return (
@@ -2178,12 +2191,12 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     executionState: "PENDING",
   });
   expect(editedTodayBlock.blockId).not.toBe(initialTodayBlockId);
-  await expect(actionablePlanner.getByText("계획 상태: EDITED")).toBeVisible();
+  await expect(actionablePlanner.getByText("오늘 할 일 · 고쳐서 수락함")).toBeVisible();
 
   const fullDayResponsePromise = secondPage.waitForResponse((response) =>
     response.request().postDataJSON()?.action === "create_plan",
   );
-  await secondPage.getByRole("button", { name: "Full-Day 240분" }).click();
+  await secondPage.getByRole("button", { name: "오늘 전체 공부표 · 240분" }).click();
   const fullDayResponse = await fullDayResponsePromise;
   expect(fullDayResponse.status()).toBe(200);
   const fullDayBody = await fullDayResponse.json();
@@ -2299,7 +2312,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   const reopenedEvidenceRoute = dashboardEvidenceStepRoute("reopenComplete");
   await secondPage.route(c3rPApiUrl, reopenedEvidenceRoute);
   await secondPage.reload();
-  await expect(actionablePlanner.getByText("계획 상태: ACCEPTED")).toBeVisible();
+  await expect(actionablePlanner.getByText("오늘 전체 공부표 · 수락함")).toBeVisible();
 
   await fillStructuredCalculation(secondPage);
   const completionRequestPromise = secondPage.waitForRequest((request) =>
@@ -2309,7 +2322,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     response.request().postDataJSON()?.action === "complete_reopened_review",
   );
   await secondPage.getByRole("button", {
-    name: "다시 열린 복습을 독립 수행으로 완료",
+    name: "다시 혼자 확인하기 완료",
   }).click();
   const completionRequest = await completionRequestPromise;
   const completionPayload = completionRequest.postDataJSON();
@@ -2370,17 +2383,17 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   const completedPlanHistory = secondPage.getByTestId("c3r-p-plan-history");
   await expect(completedPlanHistory).toBeVisible();
   await expect(completedPlanHistory).not.toHaveAttribute("open", "");
-  await completedPlanHistory.locator("summary").click();
+  await completedPlanHistory.locator(":scope > summary").click();
   const completedReopenedHistoryItem = completedPlanHistory.locator(
     `[data-plan-id="${fullDayPlanId}"]`,
   );
   await expect(completedReopenedHistoryItem).toContainText(
-    "완료 상태 COMPLETED · 종료 사유 COMPLETED",
+    "완료 · 종료 사유 모두 완료",
   );
   await expect(completedReopenedHistoryItem).toContainText(
-    "CORE_OUTCOME · REOPENED_REVIEW · 30분 · COMPLETE",
+    "중요 학습 · 다시 혼자 확인하기 · 30분 · 완료",
   );
-  await expect(completedReopenedHistoryItem).toContainText("dayComplete: true");
+  await expect(completedReopenedHistoryItem).toContainText("오늘 계획 완료: 예");
   await expect(completedReopenedHistoryItem.getByRole("button")).toHaveCount(0);
 
   const duplicateCompletion = await context.request.post(
@@ -2424,17 +2437,17 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   await secondPage.reload();
   await expectState(secondPage, "CLOSED");
   await expect(secondPage.getByTestId("c3r-p-ledger")).toContainText(
-    "REOPENED_COMPLETED",
+    "다시 혼자 확인함",
   );
   const restoredPlanHistory = secondPage.getByTestId("c3r-p-plan-history");
   await expect(restoredPlanHistory).not.toHaveAttribute("open", "");
-  await restoredPlanHistory.locator("summary").click();
+  await restoredPlanHistory.locator(":scope > summary").click();
   await expect(
     restoredPlanHistory.locator(`[data-plan-id="${fullDayPlanId}"]`),
-  ).toContainText("CORE_OUTCOME · REOPENED_REVIEW · 30분 · COMPLETE");
+  ).toContainText("중요 학습 · 다시 혼자 확인하기 · 30분 · 완료");
   await fillStructuredCalculation(secondPage, "90000000");
   await secondPage
-    .getByRole("button", { name: "입력한 후속 실패로 간극 다시 열기" })
+    .getByRole("button", { name: "입력한 후속 실패로 감점 원인 다시 확인" })
     .click();
   await expectState(secondPage, "REOPENED");
   const reopenedAgainResponse = await context.request.get(
@@ -2498,7 +2511,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   await secondPage.route(c3rPApiUrl, rejectFinalRetry);
   await fillStructuredCalculation(secondPage);
   await secondPage.getByRole("button", {
-    name: "다시 열린 복습을 독립 수행으로 완료",
+    name: "다시 혼자 확인하기 완료",
   }).click();
   await expect.poll(() => retryWithoutCompletedBlock).not.toBeNull();
   expect(retryWithoutCompletedBlock).toMatchObject({
@@ -2506,8 +2519,8 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     planBlockId: null,
   });
   await expect(
-    secondPage.getByRole("alert").filter({ hasText: "invalid_transition" }),
-  ).toContainText("invalid_transition");
+    secondPage.getByRole("alert").filter({ hasText: "요청을 완료하지 못했습니다" }),
+  ).toContainText("요청을 완료하지 못했습니다");
   await secondPage.unroute(c3rPApiUrl, rejectFinalRetry);
   await expectState(secondPage, "REOPENED");
   await contextB.close();
