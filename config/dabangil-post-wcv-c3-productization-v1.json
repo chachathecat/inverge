@@ -98,6 +98,7 @@
     "referenceAnswerPolicy": {
       "learnerLabel": "AI 학습용 기준안",
       "canonicalValidator": "lib/review-os/second-round-reference-answer-package-registry.ts",
+      "canonicalPackageValidationMustPass": true,
       "requiredDisclosures": ["SOURCE_STATUS", "VERIFICATION_STATUS", "UNCERTAINTY"],
       "minimumIndependentCandidateCount": 3,
       "minimumCriticPassCount": 1,
@@ -113,6 +114,16 @@
       "allowedSectionVerificationStatuses": ["released", "source_verified"],
       "allowedProblemTextStatuses": ["verified", "synthetic_fixture"],
       "allowedCanonicalStructureStatuses": ["structure_verified", "synthetic_fixture"],
+      "requiredLearningReferenceStatus": "released_learning_reference",
+      "requiredReleaseDecision": {
+        "status": "released",
+        "releasedAtRequired": true,
+        "requiredCaveatKey": "learning_reference_not_official_answer",
+        "noOfficialAnswerGuardrail": true,
+        "learnerFacingOfficialClaimAllowed": false,
+        "releaseRequiresNoOpenBlockers": true
+      },
+      "disallowedRightsStatuses": ["needs_legal_review", "private_reference_only"],
       "subjectChecksMustPass": true,
       "openBlockingReleaseBlockerCount": 0,
       "unresolvedBlockingUncertaintyCount": 0,

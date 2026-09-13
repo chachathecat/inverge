@@ -152,6 +152,7 @@ test("rights, privacy and activation remain fail closed", () => {
     contract.secondStage.referenceAnswerPolicy.canonicalValidator,
     "lib/review-os/second-round-reference-answer-package-registry.ts",
   );
+  assert.equal(contract.secondStage.referenceAnswerPolicy.canonicalPackageValidationMustPass, true);
   assert.equal(contract.secondStage.referenceAnswerPolicy.minimumIndependentCandidateCount, 3);
   assert.equal(contract.secondStage.referenceAnswerPolicy.minimumCriticPassCount, 1);
   assert.deepEqual(contract.secondStage.referenceAnswerPolicy.requiredVerificationReport, {
@@ -165,12 +166,36 @@ test("rights, privacy and activation remain fail closed", () => {
   assert.equal(contract.secondStage.referenceAnswerPolicy.subjectChecksMustPass, true);
   assert.equal(contract.secondStage.referenceAnswerPolicy.openBlockingReleaseBlockerCount, 0);
   assert.equal(contract.secondStage.referenceAnswerPolicy.unresolvedBlockingUncertaintyCount, 0);
+  assert.equal(
+    contract.secondStage.referenceAnswerPolicy.requiredLearningReferenceStatus,
+    "released_learning_reference",
+  );
+  assert.deepEqual(contract.secondStage.referenceAnswerPolicy.requiredReleaseDecision, {
+    status: "released",
+    releasedAtRequired: true,
+    requiredCaveatKey: "learning_reference_not_official_answer",
+    noOfficialAnswerGuardrail: true,
+    learnerFacingOfficialClaimAllowed: false,
+    releaseRequiresNoOpenBlockers: true,
+  });
+  assert.deepEqual(contract.secondStage.referenceAnswerPolicy.disallowedRightsStatuses, [
+    "needs_legal_review", "private_reference_only",
+  ]);
   assert.equal(contract.secondStage.referenceAnswerPolicy.releaseWhileBlocked, false);
+  const canonicalValidator = read(
+    contract.secondStage.referenceAnswerPolicy.canonicalValidator,
+  );
+  assert.match(canonicalValidator, /function assertReleaseRules/);
+  assert.match(canonicalValidator, /pkg\.release\.status !== "released"/);
+  assert.match(canonicalValidator, /pkg\.learningReference\.status !== "released_learning_reference"/);
+  assert.match(canonicalValidator, /!pkg\.release\.releasedAt/);
+  assert.match(canonicalValidator, /needs_legal_review.*private_reference_only/s);
   const secondRound = read(contract.documents.secondRound);
   assert.match(secondRound, /출처 상태, 검증 상태와 불확실성/);
   assert.match(secondRound, /차단 상태이면\s*기준안을 공개하지 않는다/);
   assert.match(secondRound, /독립인 후보를 최소 3개/);
   assert.match(secondRound, /과목별 검증, 별도 critic 검토, 합의·충돌 처리와 출처 anchor/);
+  assert.match(secondRound, /package 전체가 canonical validator를 통과/);
 });
 
 test("source documents preserve accessibility and no-runtime receipt", () => {

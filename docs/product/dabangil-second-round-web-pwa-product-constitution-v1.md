@@ -25,8 +25,10 @@
 기준안을 공개하지 않는다. 공개 전에는 서로 독립인 후보를 최소 3개 만들고,
 과목별 검증, 별도 critic 검토, 합의·충돌 처리와 출처 anchor 결합을 거친다.
 검증 보고서와 과목별 검사가 기존 reference-answer registry의 정확한 release
-상태를 모두 충족하고 공개를 지지하는 evidence anchor가 있을 때만 연다. 카드
-열기나 읽기만으로 숙달·안정·독립 전이 증거를 만들지 않는다.
+상태를 모두 충족하고 공개를 지지하는 evidence anchor가 있을 때만 연다. 최종
+package 전체가 canonical validator를 통과하고, 실제 release decision과 학습
+기준안 상태가 모두 `released`이며 공개 시각·비공식 답안 주의·권리 상태까지
+유효해야 한다. 카드 열기나 읽기만으로 숙달·안정·독립 전이 증거를 만들지 않는다.
 
 ## 접근 경계
 

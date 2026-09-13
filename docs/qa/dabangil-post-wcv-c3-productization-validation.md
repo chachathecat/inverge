@@ -34,6 +34,8 @@ UI, API, DB, RLS, migration, provider, dependency, 콘텐츠 또는 runtime을 �
   차단 중에는 공개하지 않는다.
 - AI 기준안 공개는 독립 후보 3개 이상, 과목 검증, critic, 합의·충돌 처리,
   출처/evidence anchor와 기존 registry의 verified release 상태를 모두 요구한다.
+- 검증 보고서만으로 공개하지 않고 canonical package validation, 실제 release
+  decision, 공개 시각, 비공식 주의문과 허용된 권리 상태까지 함께 요구한다.
 - 1차 `ULC-F1`에서 `WCV-C3 + S241A → ULC-M1 → ULC-M2 → ULC-K1` 선과
   독립 `S238B` 선이 합류하는 dependency graph를 보존한다.
 
