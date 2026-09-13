@@ -20,7 +20,9 @@ test("source package is subordinate, closed and complete", () => {
     assert.equal(fs.existsSync(path.join(root, file)), true, `missing ${file}`);
   }
   const index = read(contract.documents.sourceIndex);
-  assert.match(index, /live GitHub `main`/);
+  assert.match(index, /docs\/dabangil-unified-program-contract\.md/);
+  assert.match(index, /roadmap\/active-program\.yml/);
+  assert.match(index, /live GitHub와 현재 tree는 구현된 상태의 사실만 결정/);
   assert.match(index, /V14를 만들지 않는다/);
   assert.match(index, /계획 이슈와 과거 문서.*현재 런타임 권한이\s*아니다/s);
 });
@@ -40,6 +42,14 @@ test("critical path keeps gated activation and mandatory adjacent work explicit"
     "ACCOUNTING",
   ]);
   assert.equal(contract.firstRound.english, "EXTERNAL_QUALIFYING_SCORE_ONLY");
+  assert.equal(
+    contract.firstRound.officialProfileSource,
+    "docs/s235b-first-round-adaptive-mcq-foundation-contract.md",
+  );
+  assert.deepEqual(contract.firstRound.timedRunners, [
+    "SESSION_1_120_QUESTIONS_120_MINUTES",
+    "SESSION_2_80_QUESTIONS_80_MINUTES",
+  ]);
   assert.equal(contract.firstRound.correctClickCreatesMastery, false);
   assert.equal(contract.firstRound.modelOutputIsAnswerAuthority, false);
 });

@@ -5,17 +5,20 @@
 
 ## 우선순위
 
-1. live GitHub `main`, 실제 런타임 상태, 보호된 병합 영수증
-2. 적용 가능한 날짜가 있는 Owner 결정
-3. `AGENTS.md`
-4. 닫힌 기계 계약과 `roadmap/active-program.yml`
-5. 현재 제품 계약
-6. QA·검증 기록과 회귀 테스트
-7. 계획 이슈 #771–#776
-8. 과거 전략 문서, handoff, prompt pack, 폐기된 roadmap
+1. 정확한 범위에 적용되는 날짜가 있는 Owner 결정
+2. `docs/dabangil-unified-program-contract.md`와 기계 판독 mirror
+3. `docs/inverge-second-round-final-product-spec.md`와
+   `docs/dabangil-second-exam-premium-os.md`
+4. 구현된 versioned executable/domain 계약
+5. `roadmap/active-program.yml`
+6. `AGENTS.md`와 `config/agent-risk-policy.yml`
+7. 현재 제품 계약, QA·검증 기록과 회귀 테스트
+8. 계획 이슈 #771–#776
+9. 과거 전략 문서, handoff, prompt pack, 폐기된 roadmap
 
 계획 이슈와 과거 문서에 들어 있는 SHA, 상태, 실행 문구는 현재 런타임 권한이
-아니다. 현재 GitHub 상태와 충돌하면 실행하지 않는다.
+아니다. live GitHub와 현재 tree는 구현된 상태의 사실만 결정하며, 위의 정책,
+의존성, 승인 순서를 덮어쓰지 않는다.
 
 ## 현재 제품화 패키지
 

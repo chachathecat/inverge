@@ -164,7 +164,11 @@
       "ACCOUNTING"
     ],
     "english": "EXTERNAL_QUALIFYING_SCORE_ONLY",
-    "timedRunners": ["40_QUESTIONS_120_MINUTES", "80_QUESTIONS_200_MINUTES"],
+    "officialProfileSource": "docs/s235b-first-round-adaptive-mcq-foundation-contract.md",
+    "timedRunners": [
+      "SESSION_1_120_QUESTIONS_120_MINUTES",
+      "SESSION_2_80_QUESTIONS_80_MINUTES"
+    ],
     "correctClickCreatesMastery": false,
     "modelOutputIsAnswerAuthority": false,
     "sequence": ["FIRST-P0", "FIRST-P1", "ULC-F1", "ULC-F2", "ULC-F3", "ULC-F4", "ULC-F5", "FIRST-P2", "FIRST-P3", "FIRST-P4"]

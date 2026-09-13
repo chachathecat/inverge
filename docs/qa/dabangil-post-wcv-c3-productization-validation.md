@@ -27,6 +27,9 @@ UI, API, DB, RLS, migration, provider, dependency, 콘텐츠 또는 runtime을 �
 - 실무 결정론, 이론 목표 범위, 법규 출처·시행 버전이 모델보다 우선한다.
 - 카드 열기, 표시 모드, 즉시 생성은 독립 지연 증거나 숙달을 만들지 않는다.
 - keyboard, screen reader, 200% reflow, 390/768/1440 경계를 source에 고정한다.
+- 1차 공식 시간표는 제1교시 120문항/120분, 제2교시 80문항/80분으로 검증한다.
+- source 계층은 기존 저장소 권한 순서를 보존하며, live GitHub는 구현 상태의
+  사실만 결정한다.
 
 ## 검증 명령
 
