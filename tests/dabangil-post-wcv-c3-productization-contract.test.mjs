@@ -214,6 +214,8 @@ test("source documents preserve accessibility and no-runtime receipt", () => {
   }
   const validation = read(contract.documents.validation);
   assert.match(validation, /Production, 결제, 공개, 실제 사용자는 모두 false/);
+  const ownerDecision = read(contract.documents.ownerDecision);
+  assert.match(ownerDecision, /Storage, migration, secret,\s*environment, provider/);
   const runner = read("scripts/run-node-tests.mjs");
   assert.match(runner, /tests\/dabangil-post-wcv-c3-productization-contract\.test\.mjs/);
 });

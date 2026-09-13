@@ -33,7 +33,7 @@
 ## 멈춤 경계
 
 이 source-only 결정은 runtime, UI, API, DB·RLS·Storage, migration, secret,
-provider, dependency, 실제 콘텐츠, Production, 결제, 공개, 실제 학습자,
+environment, provider, dependency, 실제 콘텐츠, Production, 결제, 공개, 실제 학습자,
 native store를 활성화하지 않는다. 이 항목은 각각 적용 시점의 정확한 Owner
 승인이 필요하다. 일반 코드·테스트·review 수정과 비Production 병합은 기존
 권한 안에서 계속한다.
