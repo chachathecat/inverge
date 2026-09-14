@@ -83,11 +83,19 @@ test("second-stage signal and browser-local fallbacks keep the canonical Korean 
 
   assert.match(items, /sourceType === "problem-snap"\) return mode === "second" \? "문제 스냅" : "Problem Snap"/);
   assert.match(items, /sourceType === "review_queue"\) return mode === "second" \? REVIEW_OS_LEARNER_LANGUAGE\.reviewQueue : "복습 예정"/);
+  assert.match(items, /const reviewQueueLabel = isSecondRound \? REVIEW_OS_LEARNER_LANGUAGE\.reviewQueue : "복습 예정"/);
   for (const key of ["biggestGap", "todayPlan", "reviewQueue", "studyLedger"]) {
     assert.match(localBeta, new RegExp(`REVIEW_OS_LEARNER_LANGUAGE\\.${key}`), `missing second-stage ${key} fallback label`);
   }
   assert.match(localBeta, /mode === "second" \? `오늘 한 것에서 남긴 \$\{REVIEW_OS_LEARNER_LANGUAGE\.reviewQueue\}` : "오늘 한 것에서 남긴 복습"/);
   assert.match(localBeta, /mode === "second" \? `\$\{REVIEW_OS_LEARNER_LANGUAGE\.todayPlan\}에 반영` : "오늘 계획에 반영"/);
+
+  const reviewQueue = sharedRoutes.get("components/review-os/review-queue-client.tsx");
+  const agenda = sharedRoutes.get("components/review-os/learning-agenda-client.tsx");
+  assert.match(reviewQueue, /const reviewQueueLabel = mode === "second" \? REVIEW_OS_LEARNER_LANGUAGE\.reviewQueue : "복습 예정"/);
+  assert.match(reviewQueue, /buildDetailedSignals\(primaryItem, reviewQueueLabel,/);
+  assert.match(agenda, /mode === "second" && event\.type === "review_due"[\s\S]*?REVIEW_OS_LEARNER_LANGUAGE\.reviewQueue/);
+  assert.match(agenda, />\{state\}<\/span>/);
 });
 
 test("Today keeps one action with what, why, minutes and continuation before secondary work", () => {

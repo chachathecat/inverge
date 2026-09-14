@@ -187,6 +187,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
   const biggestGapLabel = isSecondRound ? REVIEW_OS_LEARNER_LANGUAGE.biggestGap : "가장 큰 약점";
   const studyLedgerLabel = isSecondRound ? REVIEW_OS_LEARNER_LANGUAGE.studyLedger : "학습 기록";
   const todayPlanLabel = isSecondRound ? REVIEW_OS_LEARNER_LANGUAGE.todayPlan : "오늘 계획";
+  const reviewQueueLabel = isSecondRound ? REVIEW_OS_LEARNER_LANGUAGE.reviewQueue : "복습 예정";
   const pageTitle = isNotesRoute ? "학습 노트" : studyLedgerLabel;
   const helperCopy = isNotesRoute
     ? `오늘 한 것에서 만든 ${biggestGapLabel}과 다음 행동을 모아봅니다.`
@@ -357,7 +358,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
                           data-s232d3-secondary-connections
                         >
                           <span>논점 후보: {topic}</span>
-                          <span>복습에 남길 내용</span>
+                          <span>{isSecondRound ? reviewQueueLabel : "복습"}에 남길 내용</span>
                           <span>{studyLedgerLabel}에 저장</span>
                         </div>
                       </div>
@@ -380,7 +381,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
                           <span className={isSecondRound
                             ? "v3-type-caption text-[var(--color-text-secondary)]"
                             : "rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-subtle)] px-3 py-1 text-xs text-[color:var(--muted)]"}>
-                            복습 연결: 복습 예정
+                            복습 연결: {reviewQueueLabel}
                           </span>
                         </div>
                         <h2 className="text-sm font-medium text-[color:var(--foreground-strong)]">
@@ -402,7 +403,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
 
                     <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--muted)]">
                       <span>{todayPlanLabel} 연결: {todayPlanLabel}에 반영</span>
-                      <span>복습 연결: 복습에 남길 내용</span>
+                      <span>복습 연결: {isSecondRound ? reviewQueueLabel : "복습에 남길 내용"}</span>
                       <span>{studyLedgerLabel} 연결: {studyLedgerLabel}에 저장</span>
                     </div>
                   </section>
