@@ -238,7 +238,10 @@ export function FirstStageMcqLoop({
         subject: (typeof REVIEWED_SUBJECTS)[number];
         action: NonNullable<Continuation["action"]>;
       } => Boolean(entry.action))
-      .sort((left, right) => rank[left.action.kind] - rank[right.action.kind])[0] ?? null;
+      .sort((left, right) =>
+        rank[left.action.kind] - rank[right.action.kind] ||
+        String(left.action.actionAt ?? "").localeCompare(String(right.action.actionAt ?? "")) ||
+        left.subject.id.localeCompare(right.subject.id))[0] ?? null;
   }, [subjects]);
   const hasUnknownAvailability = pending ||
     REVIEWED_SUBJECTS.some((subject) => {

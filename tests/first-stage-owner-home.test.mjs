@@ -145,7 +145,14 @@ test("real browser selects reviewed stock, then local trial, then second-stage h
           "content-type": "application/json",
           "cache-control": "private, no-store, max-age=0",
         });
-        if (scenario === "resume" && url.pathname === reviewedEndpoints[1]) {
+        if (scenario === "resume" && url.pathname === reviewedEndpoints[0]) {
+          response.end(availability("available", 2, null, false, {
+            kind: "review_due",
+            sessionId: "economics-due-behind-active",
+            reviewTaskId: "economics-review-behind-active",
+            actionAt: "2026-09-13T00:00:00.000Z",
+          }));
+        } else if (scenario === "resume" && url.pathname === reviewedEndpoints[1]) {
           response.end(availability("available", 2, null, false, {
             kind: "resume_attempt",
             sessionId: "accounting-session-1",
@@ -215,7 +222,7 @@ test("real browser selects reviewed stock, then local trial, then second-stage h
     }
 
     scenario = "resume";
-    await verify("학습 가능 1/5과목", "회계학 진행 중인 문제 이어가기", "/app/first-stage/accounting?sessionId=accounting-session-1");
+    await verify("학습 가능 2/5과목", "회계학 진행 중인 문제 이어가기", "/app/first-stage/accounting?sessionId=accounting-session-1");
     scenario = "due";
     await verify("학습 가능 1/5과목", "경제학 D+1 복습 시작", "/app/first-stage/practice?sessionId=economics-session-1");
     scenario = "reviewed";
