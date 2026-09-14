@@ -34,6 +34,64 @@ test("durable submission survives a new service instance and preserves the exact
   assert.equal(persisted.includes(EXPLANATION), false);
 });
 
+test("durable first-stage session drives Today continuation through resume, saved D+1 and due review", async () => {
+  const h = harness();
+  const created = await h.service.create(OWNER, {
+    requestId: "today-create",
+    questionId: reference().questionId,
+  });
+  assert.deepEqual(await h.service.getTodayContinuation(OWNER), {
+    schemaVersion: "first_stage.private_today_continuation.v1",
+    state: "ready",
+    action: {
+      kind: "resume_ready",
+      sessionId: created.sessionId,
+      reviewTaskId: null,
+      actionAt: null,
+    },
+  });
+
+  const begun = await h.service.execute(OWNER, created.sessionId, {
+    action: "begin",
+    requestId: "today-begin",
+    expectedRevision: 1,
+    questionId: reference().questionId,
+  });
+  assert.equal((await h.service.getTodayContinuation(OWNER)).action.kind, "resume_attempt");
+
+  h.setClock(SUBMIT);
+  const saved = await h.service.execute(
+    OWNER,
+    created.sessionId,
+    { ...submission(begun.state.attempts[0].attemptId), requestId: "today-submit" },
+  );
+  const reopened = harness({ rows: h.rows });
+  const scheduled = await reopened.service.getTodayContinuation(OWNER);
+  assert.equal(scheduled.action.kind, "review_scheduled");
+  assert.equal(scheduled.action.sessionId, created.sessionId);
+  assert.equal(scheduled.action.reviewTaskId, saved.state.reviewTasks[0].reviewTaskId);
+  assert.equal(scheduled.action.actionAt, saved.state.reviewTasks[0].dueAt);
+
+  reopened.setClock(saved.state.reviewTasks[0].dueAt);
+  assert.equal((await reopened.service.getTodayContinuation(OWNER)).action.kind, "review_due");
+});
+
+test("Today continuation fails closed on incomplete or same-subject drifted history", async () => {
+  const incomplete = harness({ store: {
+    async listOwnerSnapshot() { return { sessions: [], complete: false }; },
+  } });
+  assert.equal((await incomplete.service.getTodayContinuation(OWNER)).state, "history_incomplete");
+
+  const h = harness();
+  await h.service.create(OWNER, { requestId: "drift-create", questionId: reference().questionId });
+  const row = [...h.rows.values()][0];
+  row.catalogDigest = digest("stale-same-subject-catalog");
+  h.rows.set(`${row.ownerId}/${row.sessionId}`, row);
+  const drifted = await h.service.getTodayContinuation(OWNER);
+  assert.equal(drifted.state, "history_incomplete");
+  assert.equal(drifted.action, null);
+});
+
 test("failed persistence constructs and discloses no assistance; later retry completes", async () => {
   const h = harness(); const ids = await start(h); h.setClock(SUBMIT); h.failNextWrite();
   await assert.rejects(h.service.execute(OWNER, ids.sessionId, submission(ids.attemptId)), /synthetic-storage-failure/u);

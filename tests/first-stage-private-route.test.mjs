@@ -37,7 +37,7 @@ test("actual route rejects missing/OFF flag, unauthenticated, either non-Owner a
   }
 });
 
-test("actual route availability exposes metadata only and absent approved stock never opens storage", async () => {
+test("actual route availability reads bodyless durable continuation while absent stock never opens storage", async () => {
   for (const environment of [ENVIRONMENT, { ...ENVIRONMENT, NODE_ENV: "production", VERCEL_ENV: "preview" }]) {
     const h = harness();
     const route = privateRoute(h, { environment });
@@ -45,11 +45,25 @@ test("actual route availability exposes metadata only and absent approved stock 
     const text = await response.text();
     assert.equal(response.status, 200);
     assert.equal(text.includes(BODY), false); assert.equal(text.includes(EXPLANATION), false);
-    assert.equal(h.counts.explanations, 0); assert.equal(route.counts.repository, 0);
-    assert.equal(JSON.parse(text).availability.questions.length, 1);
+    assert.equal(h.counts.explanations, 0); assert.equal(route.counts.repository, 1);
+    const payload = JSON.parse(text);
+    assert.equal(payload.availability.questions.length, 1);
+    assert.deepEqual(payload.continuation, {
+      schemaVersion: "first_stage.private_today_continuation.v1",
+      state: "ready",
+      action: null,
+    });
   }
   const blocked = privateRoute(harness(), { noCatalog: true });
   assert.equal((await (await blocked.GET(new Request(URL))).json()).availability.state, "blocked");
+  const incomplete = privateRoute(harness(), {
+    repository: () => ({
+      async listOwnerSnapshot() { return { sessions: [], complete: false }; },
+    }),
+  });
+  const incompleteResponse = await incomplete.GET(new Request(URL));
+  assert.equal(incompleteResponse.status, 503);
+  assert.deepEqual(await incompleteResponse.json(), { ok: false, error: "temporarily_unavailable" });
   const request = post({ action: "create", requestId: "request-1", questionId: reference().questionId });
   const response = await blocked.POST(request);
   assert.equal(response.status, 503); assert.equal(request.bodyUsed, false);
@@ -77,6 +91,11 @@ test("actual route preserves durable-only disclosure, deterministic replay and b
   assert.equal(successful.view.explanation.text, EXPLANATION);
   assert.deepEqual(await (await route.POST(post(submit))).json(), successful);
   assert.equal(h.rows.size, 1);
+  const homeRead = await (await route.GET(new Request(URL))).json();
+  assert.equal(homeRead.continuation.state, "ready");
+  assert.equal(homeRead.continuation.action.kind, "review_scheduled");
+  assert.equal(homeRead.continuation.action.sessionId, sessionId);
+  assert.equal(homeRead.continuation.action.reviewTaskId, successful.view.reviewTasks[0].reviewTaskId);
   const reopened = privateRoute(harness({ rows: h.rows }));
   assert.deepEqual(await (await reopened.GET(new Request(`${URL}?sessionId=${sessionId}`))).json(), successful);
   assert.equal(successful.view.reviewTasks[0].dueAt, "2026-09-07T10:01:00.000Z");

@@ -54,6 +54,25 @@ export interface PrivateFirstStageSessionStore {
   replace(value: PrivateFirstStageSession, expectedRevision: number): Promise<boolean>;
 }
 
+export type PrivateFirstStageTodayContinuation = Readonly<{
+  schemaVersion: "first_stage.private_today_continuation.v1";
+  state: "ready" | "history_incomplete" | "unavailable";
+  action: Readonly<{
+    kind: "resume_attempt" | "resume_ready" | "review_due" | "review_scheduled" | "review_blocked";
+    sessionId: string;
+    reviewTaskId: string | null;
+    actionAt: string | null;
+  }> | null;
+}>;
+
+const KNOWN_FIRST_STAGE_SUBJECTS = new Set([
+  "economics_principles",
+  "accounting",
+  "civil_law",
+  "real_estate_principles",
+  "appraiser_related_law",
+]);
+
 /** Supplied only by the server's reviewed-content loader, never HTTP input. */
 export interface PrivateFirstStageCatalog {
   readonly digest: string;
@@ -336,7 +355,115 @@ export function createPrivateFirstStageSessionService(
     };
   }
 
-  return Object.freeze({ create, execute, view, projectHistory });
+  async function getTodayContinuation(ownerId: string): Promise<PrivateFirstStageTodayContinuation> {
+    requiredIdentifier(ownerId);
+    if (!store.listOwnerSnapshot) {
+      return {
+        schemaVersion: "first_stage.private_today_continuation.v1",
+        state: "unavailable",
+        action: null,
+      };
+    }
+
+    const observed = await store.listOwnerSnapshot(ownerId, sessionSchema());
+    if (!observed.complete) {
+      return {
+        schemaVersion: "first_stage.private_today_continuation.v1",
+        state: "history_incomplete",
+        action: null,
+      };
+    }
+
+    const subjectIds = new Set(catalog.initialReferences.map((item) => item.subjectId));
+    if (subjectIds.size !== 1) fail("adapter_mismatch");
+    const [subjectId] = subjectIds;
+    const histories: ReturnType<typeof projectHistory>[] = [];
+
+    for (const candidate of observed.sessions) {
+      const reference = candidate.state?.examCycle?.questionReferences?.[0];
+      const candidateSubject = reference?.subjectId;
+      if (candidateSubject !== subjectId) {
+        if (typeof candidateSubject === "string" && KNOWN_FIRST_STAGE_SUBJECTS.has(candidateSubject)) continue;
+        return {
+          schemaVersion: "first_stage.private_today_continuation.v1",
+          state: "history_incomplete",
+          action: null,
+        };
+      }
+      if (candidate.catalogDigest !== catalog.digest) {
+        return {
+          schemaVersion: "first_stage.private_today_continuation.v1",
+          state: "history_incomplete",
+          action: null,
+        };
+      }
+      try {
+        histories.push(projectHistory(candidate, ownerId));
+      } catch {
+        return {
+          schemaVersion: "first_stage.private_today_continuation.v1",
+          state: "history_incomplete",
+          action: null,
+        };
+      }
+    }
+
+    const nowMs = Date.parse(requiredUtcInstant(now()));
+    type TodayAction = NonNullable<PrivateFirstStageTodayContinuation["action"]>;
+    const actions: TodayAction[] = [];
+    for (const history of histories) {
+      if (history.active) {
+        actions.push({
+          kind: "resume_attempt" as const,
+          sessionId: history.sessionId,
+          reviewTaskId: null,
+          actionAt: history.active.startedAt,
+        });
+        continue;
+      }
+      if (history.ready) {
+        actions.push({
+          kind: "resume_ready" as const,
+          sessionId: history.sessionId,
+          reviewTaskId: null,
+          actionAt: null,
+        });
+        continue;
+      }
+      for (const review of history.reviews) {
+        if (review.status !== "pending") continue;
+        actions.push({
+          kind: review.stock !== "available"
+            ? "review_blocked" as const
+            : Date.parse(review.dueAt) <= nowMs
+              ? "review_due" as const
+              : "review_scheduled" as const,
+          sessionId: history.sessionId,
+          reviewTaskId: review.reviewTaskId,
+          actionAt: review.dueAt,
+        });
+      }
+    }
+    const rank = {
+      resume_attempt: 0,
+      resume_ready: 1,
+      review_due: 2,
+      review_blocked: 3,
+      review_scheduled: 4,
+    } as const;
+    actions.sort((left, right) =>
+      rank[left.kind] - rank[right.kind] ||
+      String(left.actionAt ?? "").localeCompare(String(right.actionAt ?? "")) ||
+      left.sessionId.localeCompare(right.sessionId));
+
+    return {
+      schemaVersion: "first_stage.private_today_continuation.v1",
+      state: "ready",
+      action: actions[0] ?? null,
+    };
+  }
+
+  return Object.freeze({ create, execute, view, projectHistory, getTodayContinuation });
 }
 
 export type PrivateSessionHistory = ReturnType<ReturnType<typeof createPrivateFirstStageSessionService>["projectHistory"]>;

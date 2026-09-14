@@ -24,7 +24,7 @@ const reviewedEndpoints = [
 ];
 const trialEndpoint = "/api/review-os/first-stage/economics-trial/sessions";
 
-function availability(state, count = 0, blocker = null, bankPractice = false) {
+function availability(state, count = 0, blocker = null, bankPractice = false, action = null) {
   return JSON.stringify({
     ok: true,
     availability: {
@@ -36,6 +36,10 @@ function availability(state, count = 0, blocker = null, bankPractice = false) {
         subjectId: "metadata-only",
         questionNumber: index + 1,
       })),
+    },
+    continuation: {
+      state: "ready",
+      action,
     },
   });
 }
@@ -61,6 +65,9 @@ test("Owner home keeps all five subject routes bodyless and one primary fallback
   assert.match(componentSource, /credentials: "same-origin"/u);
   assert.match(componentSource, /15_000/u);
   assert.match(componentSource, /hasUnknownAvailability/u);
+  assert.match(componentSource, /data-first-stage-continuation/u);
+  assert.match(componentSource, /sessionId=\$\{encodeURIComponent/u);
+  assert.match(componentSource, /D\+1 복습 시작/u);
   assert.match(componentSource, /primaryAction\.kind === "link"/u);
   assert.match(componentSource, /capacityEnabled &&/u);
   assert.match(componentSource, /legalEvidenceEnabled &&/u);
@@ -138,7 +145,21 @@ test("real browser selects reviewed stock, then local trial, then second-stage h
           "content-type": "application/json",
           "cache-control": "private, no-store, max-age=0",
         });
-        if (scenario === "reviewed" && url.pathname === reviewedEndpoints[1]) {
+        if (scenario === "resume" && url.pathname === reviewedEndpoints[1]) {
+          response.end(availability("available", 2, null, false, {
+            kind: "resume_attempt",
+            sessionId: "accounting-session-1",
+            reviewTaskId: null,
+            actionAt: "2026-09-14T01:00:00.000Z",
+          }));
+        } else if (scenario === "due" && url.pathname === reviewedEndpoints[0]) {
+          response.end(availability("available", 2, null, false, {
+            kind: "review_due",
+            sessionId: "economics-session-1",
+            reviewTaskId: "economics-review-1",
+            actionAt: "2026-09-13T01:00:00.000Z",
+          }));
+        } else if (scenario === "reviewed" && url.pathname === reviewedEndpoints[1]) {
           response.end(availability("available", 2));
         } else if (scenario === "trial" && url.pathname === trialEndpoint) {
           response.end(availability("available", 7));
@@ -193,6 +214,11 @@ test("real browser selects reviewed stock, then local trial, then second-stage h
       assert.doesNotMatch(await page.locator("body").innerText(), /PRIVATE_BODY|QUESTION_STEM|CORRECT_ANSWER/u);
     }
 
+    scenario = "resume";
+    await verify("학습 가능 1/5과목", "회계학 진행 중인 문제 이어가기", "/app/first-stage/accounting?sessionId=accounting-session-1");
+    scenario = "due";
+    await verify("학습 가능 1/5과목", "경제학 D+1 복습 시작", "/app/first-stage/practice?sessionId=economics-session-1");
+    scenario = "reviewed";
     await verify("학습 가능 1/5과목", "회계학 연습 시작", "/app/first-stage/accounting");
     scenario = "trial";
     await verify("학습 가능 0/5과목", "경제학 PC 시험 이어가기", "/app/first-stage/economics-trial");
@@ -203,7 +229,7 @@ test("real browser selects reviewed stock, then local trial, then second-stage h
     scenario = "preview";
     await verify("학습 가능 0/5과목", "2차 오늘 할 일 계속하기", "/app?mode=second", false);
 
-    for (const currentScenario of ["reviewed", "trial", "unavailable", "second"]) {
+    for (const currentScenario of ["resume", "due", "reviewed", "trial", "unavailable", "second"]) {
       const seen = requests.filter((entry) => entry.startsWith(`${currentScenario}:`)).map((entry) => entry.slice(currentScenario.length + 1));
       assert.deepEqual([...new Set(seen)].sort(), [...reviewedEndpoints, trialEndpoint].sort());
     }

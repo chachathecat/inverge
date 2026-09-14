@@ -21,13 +21,25 @@ type AvailabilityPayload = Readonly<{
       questionNumber: number;
     }>>;
   }>;
+  continuation?: Readonly<{
+    state: "ready" | "history_incomplete" | "unavailable";
+    action: Readonly<{
+      kind: "resume_attempt" | "resume_ready" | "review_due" | "review_scheduled" | "review_blocked";
+      sessionId: string;
+      reviewTaskId: string | null;
+      actionAt: string | null;
+    }> | null;
+  }>;
 }>;
+
+type Continuation = NonNullable<AvailabilityPayload["continuation"]>;
 
 type AvailabilityState = Readonly<{
   state: "loading" | "available" | "blocked" | "unavailable";
   blocker: PrivateContentBlocker | null;
   questionCount: number;
   bankPractice: boolean;
+  continuation: Continuation;
 }>;
 
 type FirstStageMcqLoopProps = Readonly<{
@@ -79,6 +91,7 @@ const INITIAL_AVAILABILITY: AvailabilityState = Object.freeze({
   blocker: null,
   questionCount: 0,
   bankPractice: false,
+  continuation: { state: "unavailable", action: null } as const,
 });
 
 const DISABLED_LOCAL_TRIAL: AvailabilityState = Object.freeze({
@@ -86,6 +99,7 @@ const DISABLED_LOCAL_TRIAL: AvailabilityState = Object.freeze({
   blocker: "owner_local_trial_content_required",
   questionCount: 0,
   bankPractice: false,
+  continuation: { state: "ready", action: null } as const,
 });
 
 const BLOCKER_COPY: Record<PrivateContentBlocker, string> = {
@@ -110,6 +124,7 @@ async function readAvailability(api: string, signal: AbortSignal): Promise<Avail
       blocker: payload.availability.blocker,
       questionCount: payload.availability.questions.length,
       bankPractice: payload.availability.bankPractice === true,
+      continuation: payload.continuation ?? { state: "unavailable", action: null },
     };
   } catch {
     return { ...INITIAL_AVAILABILITY, state: "unavailable" };
@@ -131,8 +146,23 @@ function statusCopy(status: AvailabilityState) {
   if (status.state === "blocked") {
     return status.blocker ? BLOCKER_COPY[status.blocker] : "학습 재고 대기";
   }
+  if (status.continuation.state !== "ready") return "저장 기록 확인 필요";
+  if (status.continuation.action?.kind === "resume_attempt") return "진행 중 · 이어가기";
+  if (status.continuation.action?.kind === "resume_ready") return "시작한 문제 · 이어가기";
+  if (status.continuation.action?.kind === "review_due") return "D+1 복습할 차례";
+  if (status.continuation.action?.kind === "review_scheduled") return "응답 저장됨 · D+1 예약";
+  if (status.continuation.action?.kind === "review_blocked") return "응답 저장됨 · 복습 재고 대기";
   if (status.bankPractice) return `학습 가능 · ${status.questionCount}문항 · 자동 배정 가능`;
   return `학습 가능 · ${status.questionCount}문항`;
+}
+
+function continuationLabel(subject: (typeof REVIEWED_SUBJECTS)[number], continuation: Continuation["action"]) {
+  if (!continuation) return null;
+  if (continuation.kind === "resume_attempt") return `${subject.label} 진행 중인 문제 이어가기`;
+  if (continuation.kind === "resume_ready") return `${subject.label} 시작한 문제 이어가기`;
+  if (continuation.kind === "review_due") return `${subject.label} D+1 복습 시작`;
+  if (continuation.kind === "review_blocked") return `${subject.label} 복습 준비 상태 확인`;
+  return `${subject.label} 저장 결과·복습 일정 보기`;
 }
 
 export function FirstStageMcqLoop({
@@ -188,18 +218,45 @@ export function FirstStageMcqLoop({
   }, [localTrialEnabled, refresh]);
 
   const readySubjects = useMemo(
-    () => REVIEWED_SUBJECTS.filter((subject) => subjects[subject.id]?.state === "available"),
+    () => REVIEWED_SUBJECTS.filter((subject) =>
+      subjects[subject.id]?.state === "available" && subjects[subject.id]?.continuation.state === "ready"),
     [subjects],
   );
+  const continuationSubject = useMemo(() => {
+    const rank = { resume_attempt: 0, resume_ready: 1, review_due: 2, review_blocked: 3, review_scheduled: 4 } as const;
+    return REVIEWED_SUBJECTS
+      .map((subject) => {
+        const status = subjects[subject.id];
+        return {
+          subject,
+          action: status?.state === "available" && status.continuation.state === "ready"
+            ? status.continuation.action
+            : null,
+        };
+      })
+      .filter((entry): entry is {
+        subject: (typeof REVIEWED_SUBJECTS)[number];
+        action: NonNullable<Continuation["action"]>;
+      } => Boolean(entry.action))
+      .sort((left, right) => rank[left.action.kind] - rank[right.action.kind])[0] ?? null;
+  }, [subjects]);
   const hasUnknownAvailability = pending ||
     REVIEWED_SUBJECTS.some((subject) => {
       const state = subjects[subject.id]?.state;
-      return state === "loading" || state === "unavailable";
+      const continuationState = subjects[subject.id]?.continuation.state;
+      return state === "loading" || state === "unavailable" ||
+        (state === "available" && continuationState !== "ready");
     }) ||
     localTrial.state === "loading" ||
     localTrial.state === "unavailable";
-  const primaryAction = readySubjects[0]
-    ? { kind: "link" as const, href: readySubjects[0].href, label: `${readySubjects[0].label} 연습 시작` }
+  const primaryAction = continuationSubject
+    ? {
+        kind: "link" as const,
+        href: `${continuationSubject.subject.href}?sessionId=${encodeURIComponent(continuationSubject.action.sessionId)}`,
+        label: continuationLabel(continuationSubject.subject, continuationSubject.action)!,
+      }
+    : readySubjects[0]
+      ? { kind: "link" as const, href: readySubjects[0].href, label: `${readySubjects[0].label} 연습 시작` }
     : localTrialEnabled && localTrial.state === "available"
       ? { kind: "link" as const, href: OWNER_LOCAL_TRIAL.href, label: "경제학 PC 시험 이어가기" }
       : hasUnknownAvailability
@@ -226,13 +283,15 @@ export function FirstStageMcqLoop({
           <p className="mt-2 text-sm leading-6 text-slate-600">
             {pending
               ? "각 과목의 검토 재고를 확인한 뒤 다음 작업을 정합니다."
-              : readySubjects.length > 0
-              ? "검토된 재고가 있는 과목부터 이어갑니다."
-              : localTrialEnabled && localTrial.state === "available"
-                ? "검토 완료 재고는 아직 없지만, 기존 PC 전용 경제학 시험은 별도 표시로 이어갈 수 있습니다."
-                : hasUnknownAvailability
-                  ? "일부 과목의 상태를 확인하지 못했습니다. 다시 확인하기 전에는 다른 단계로 넘기지 않습니다."
-                  : "모든 1차 경로가 명확히 대기 중이므로 기존 2차 학습 흐름을 계속할 수 있습니다."}
+              : continuationSubject
+                ? "서버에 저장된 응답과 복습 시점을 확인해 가장 먼저 이어갈 작업을 표시합니다."
+                : readySubjects.length > 0
+                  ? "검토된 재고가 있는 과목부터 이어갑니다."
+                  : localTrialEnabled && localTrial.state === "available"
+                    ? "검토 완료 재고는 아직 없지만, 기존 PC 전용 경제학 시험은 별도 표시로 이어갈 수 있습니다."
+                    : hasUnknownAvailability
+                      ? "일부 과목의 상태를 확인하지 못했습니다. 다시 확인하기 전에는 다른 단계로 넘기지 않습니다."
+                      : "모든 1차 경로가 명확히 대기 중이므로 기존 2차 학습 흐름을 계속할 수 있습니다."}
           </p>
         </div>
 
@@ -261,16 +320,26 @@ export function FirstStageMcqLoop({
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {REVIEWED_SUBJECTS.map((subject) => {
               const status = subjects[subject.id] ?? INITIAL_AVAILABILITY;
+              const continuation = status.continuation.action;
+              const href = continuation
+                ? `${subject.href}?sessionId=${encodeURIComponent(continuation.sessionId)}`
+                : subject.href;
               return (
-                <article key={subject.id} className="rounded-2xl border border-slate-200 p-4">
+                <article
+                  key={subject.id}
+                  className="rounded-2xl border border-slate-200 p-4"
+                  data-first-stage-continuation={continuation?.kind ?? "none"}
+                >
                   <div className="flex items-start justify-between gap-3">
                     <h3 className="font-semibold text-slate-950">{subject.label}</h3>
                     <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${status.state === "available" ? "bg-emerald-50 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>
                       {statusCopy(status)}
                     </span>
                   </div>
-                  <Link href={subject.href} prefetch={false} className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-slate-700 underline underline-offset-4">
-                    {status.state === "available" ? "이 과목 열기" : "대기 사유 확인"}
+                  <Link href={href} prefetch={false} className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-slate-700 underline underline-offset-4">
+                    {status.state === "available" && status.continuation.state === "ready"
+                      ? continuationLabel(subject, continuation) ?? "이 과목 열기"
+                      : "대기 사유 확인"}
                   </Link>
                 </article>
               );
