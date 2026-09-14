@@ -93,7 +93,11 @@ test("/app/capture provides editable text-first capture and existing safe save p
   assert.equal(captureForm.includes("createdFromCapture: true"), true, "save should create capture-derived learning signal metadata");
   assert.equal(captureForm.includes('data-testid="capture-save-primary"'), true, "visible primary save CTA should be present in the capture form");
   assert.equal(captureForm.includes('data-testid="capture-save-action-bar"'), true, "save CTA should live in the same visible section as learner input");
-  assert.equal(captureForm.includes("저장하고 오늘 계획에 반영"), true, "save CTA copy should match the consolidated learner grammar");
+  assert.equal(
+    captureForm.includes('`저장하고 ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}에 반영`'),
+    true,
+    "save CTA copy should use the canonical learner-language contract",
+  );
   assert.equal(captureForm.includes("disabled={!canQuickSave || saving || extracting}"), true, "save CTA should render before input and stay disabled until content exists");
   assert.equal(captureForm.includes("getLearnerCaptureContent"), true, "save readiness should account for learner text beyond raw OCR text");
   assert.equal(captureForm.includes("source.userAnswer"), true, "save CTA should enable from userAnswer/study note text");
@@ -128,7 +132,8 @@ test("capture save confirmation includes biggest gap, next action, and learner l
   assert.equal(captureForm.includes("복습에 남길 내용"), true, "confirmation should show the Review Queue handoff in learner-facing Korean");
   assert.equal(captureForm.includes("Today Plan candidate"), false, "confirmation should not show the English Today Plan candidate label");
   assert.equal(captureForm.includes("Review Queue candidate"), false, "confirmation should not show the English Review Queue candidate label");
-  assert.equal(captureForm.includes("학습 노트에 저장되고 오늘 계획과 복습으로 이어집니다."), true, "confirmation should frame the plan handoff as saved learner flow");
+  assert.equal(captureForm.includes('mode === "second" ? REVIEW_OS_LEARNER_LANGUAGE.todayPlan : "오늘 계획"'), true);
+  assert.equal(captureForm.includes('mode === "second" ? REVIEW_OS_LEARNER_LANGUAGE.reviewQueue : "복습"'), true);
   assert.equal(captureForm.includes('href={`/app/review?mode=${mode}&subject=${encodedSubject}`}'), true, "confirmation should link to Review with mode and subject");
   assert.equal(captureForm.includes('href={`/app/notes?mode=${mode}&subject=${encodedSubject}`}'), true, "confirmation should link to Notes with mode and subject");
   assert.equal(
@@ -292,7 +297,12 @@ test("Today and empty states use capture for generic input while preserving spec
   assert.equal(todayPage.includes('const modeCaptureHref = mode === "second" ? secondCaptureHref : firstCaptureHref'), true);
   assert.equal(todayPage.includes('const secondCaptureHref = `/app/capture?mode=second&subject=${selectedSubjectQuery}`'), true, "second-mode input should use capture with subject");
   assert.equal(todayPage.includes('const secondNotesHref = `/app/notes?mode=second&subject=${selectedSubjectQuery}`'), true, "second-mode notes list should be routed through /app/notes with subject");
-  assert.equal(todayPage.includes("오늘 한 것 올리기 → 학습 노트 → 오늘 할 일 → 복습 → 학습 기록"), true, "Today first-use copy should explain the closed-beta learner loop");
+  assert.equal(
+    todayPage.includes('const learnerLoopSummary = mode === "second"') &&
+      todayPage.includes('`오늘 한 것 올리기 → 학습 노트 → ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan} → ${REVIEW_OS_LEARNER_LANGUAGE.reviewQueue} → ${REVIEW_OS_LEARNER_LANGUAGE.studyLedger}`'),
+    true,
+    "Today first-use copy should explain the learner loop through the canonical language contract",
+  );
   assert.equal(todayPage.includes("오늘 할 일이 아직 없습니다."), true, "Today empty state should explain why it may be empty");
   assert.equal(todayPage.includes("오늘 한 것을 하나 올리면 다음 행동이 만들어집니다."), true, "Today empty state should guide learners back to capture");
   assert.equal(todayPage.includes("data-visible-primary-task-cap={TODAY_PLAN_MAX_PRIMARY_TASKS}"), true, "Today should keep max 3 primary plan tasks");
@@ -305,7 +315,11 @@ test("Today and empty states use capture for generic input while preserving spec
     /<Link\s+href=\{`\/app\/capture\?mode=\$\{mode\}`\}/,
     "empty notes state should send learners to capture",
   );
-  assert.equal(itemsPage.includes("오늘 한 것을 하나 올리면 가장 큰 약점과 다음 행동이 만들어집니다."), true, "Notes empty state should explain saved-note reflection");
+  assert.equal(
+    itemsPage.includes("오늘 한 것을 하나 올리면 {biggestGapLabel}과 다음 행동이 만들어집니다."),
+    true,
+    "Notes empty state should explain saved-note reflection with the canonical biggest-gap term",
+  );
   assert.equal(localBetaReflection.includes('href={`/app/capture?mode=${mode}`}'), true, "local beta empty states should preserve mode when returning to capture");
   assert.equal(localBetaReflection.includes("이 브라우저에 저장된 학습 노트"), true, "local beta Notes copy should remain browser-local scoped");
   assert.equal(weeklyPage.includes('const inputStartHref = `/app/capture?mode=${mode}`;'), true, "weekly input CTA should use capture");

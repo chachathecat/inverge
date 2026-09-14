@@ -22,6 +22,7 @@ import {
   type ModeScopedLocalBetaNotesReadOutcome,
 } from "@/lib/review-os/browser-storage";
 import type { FailureAwareStateEvidence } from "@/lib/review-os/failure-aware-state";
+import { REVIEW_OS_LEARNER_LANGUAGE } from "@/lib/review-os/learner-language";
 import {
   buildLearningRecordTimelineModel,
   buildLocalBetaLearningAgendaEvents,
@@ -147,6 +148,14 @@ function eventLinkLabel(event: LearningAgendaEvent) {
 
 function TimelineEvent({ event, mode }: { event: LearningAgendaEvent; mode: AppraisalMode }) {
   const copy = EVENT_COPY[event.type];
+  const state = mode === "second" && event.type === "review_due"
+    ? REVIEW_OS_LEARNER_LANGUAGE.reviewQueue
+    : copy.state;
+  const description = mode === "second" && event.type === "capture_saved"
+    ? `오늘 한 것이 ${REVIEW_OS_LEARNER_LANGUAGE.studyLedger}에 남았습니다.`
+    : mode === "second" && event.type === "today_task_completed"
+      ? `${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}에서 선택한 행동을 마쳤습니다.`
+      : copy.description;
   const href = eventHref(event, mode);
   const linkLabel = eventLinkLabel(event);
   const time = formatEventTime(event.date);
@@ -170,7 +179,7 @@ function TimelineEvent({ event, mode }: { event: LearningAgendaEvent; mode: Appr
             <div className={mode === "second"
               ? "v3-type-caption flex flex-wrap items-center gap-2 text-[var(--color-text-secondary)]"
               : "flex flex-wrap items-center gap-2 text-xs leading-5 text-[var(--muted)]"}>
-              <span className={mode === "second" ? "v3-type-label-strong text-[var(--color-text-primary)]" : "font-semibold text-[var(--foreground-strong)]"}>{copy.state}</span>
+              <span className={mode === "second" ? "v3-type-label-strong text-[var(--color-text-primary)]" : "font-semibold text-[var(--foreground-strong)]"}>{state}</span>
               {event.subject ? <span className="break-words">{event.subject}</span> : null}
             </div>
             <h3 className={mode === "second"
@@ -181,7 +190,7 @@ function TimelineEvent({ event, mode }: { event: LearningAgendaEvent; mode: Appr
           </div>
           {time ? <time dateTime={event.date} className={mode === "second" ? "v3-type-caption shrink-0 text-[var(--color-text-secondary)]" : "shrink-0 text-xs leading-5 text-[var(--muted)]"}>{time}</time> : null}
         </div>
-        <p className={mode === "second" ? "v3-type-compact mt-2 text-[var(--color-text-secondary)]" : "mt-2 text-sm leading-6 text-[var(--muted-strong)]"}>{copy.description}</p>
+        <p className={mode === "second" ? "v3-type-compact mt-2 text-[var(--color-text-secondary)]" : "mt-2 text-sm leading-6 text-[var(--muted-strong)]"}>{description}</p>
         {href && linkLabel ? (
           <Link
             href={href}
@@ -259,8 +268,8 @@ function EmptyAgendaState({ mode, isOnline }: { mode: AppraisalMode; isOnline: b
           announceChange={false}
           testId="s232f4b-agenda-empty-state"
         />
-        <section className="space-y-4 border-t border-[var(--color-border-default)] pt-4" aria-label="빈 학습 기록 다음 행동">
-          <h2 className="v3-type-section text-[var(--color-text-primary)]">아직 쌓인 학습 기록이 없습니다.</h2>
+        <section className="space-y-4 border-t border-[var(--color-border-default)] pt-4" aria-label={`빈 ${REVIEW_OS_LEARNER_LANGUAGE.studyLedger} 다음 행동`}>
+          <h2 className="v3-type-section text-[var(--color-text-primary)]">아직 {REVIEW_OS_LEARNER_LANGUAGE.studyLedger}이 없습니다.</h2>
           <p className="v3-type-body text-[var(--color-text-secondary)]">
             오늘 한 것 하나만 남기면 기록부터 복습까지의 흐름이 여기에 이어집니다.
           </p>
@@ -356,7 +365,7 @@ export function LearningAgendaClient({ mode, initialEvents }: LearningAgendaClie
     >
       {mode === "second" ? (
         <V3RouteHeader
-          eyebrow="학습 회복 기록"
+          eyebrow={REVIEW_OS_LEARNER_LANGUAGE.studyLedger}
           title="배운 흐름을 다시 이어봅니다"
           description="이번 주에 남긴 기록과 다음 복습을 시간순으로 확인합니다. 이 화면은 저장된 학습 상태만 보여 주며 성취도를 판정하지 않습니다."
         />
@@ -454,7 +463,7 @@ export function LearningAgendaClient({ mode, initialEvents }: LearningAgendaClie
                 <div className={mode === "second"
                   ? "mt-4 border-y border-[var(--color-border-stable)] bg-[var(--color-background-stable)] px-4 py-3"
                   : "mt-4 rounded-[var(--radius-md)] border border-[var(--status-green)] bg-[var(--status-green-soft)] p-3"} data-v3-state={mode === "second" ? "completed" : undefined} data-s230-completed-week-state role="status">
-                  <p className={mode === "second" ? "v3-type-label-strong text-[var(--color-text-stable)]" : "text-sm font-semibold text-[var(--foreground-strong)]"}>이번 주에 남은 복습 예정 기록이 없습니다.</p>
+                  <p className={mode === "second" ? "v3-type-label-strong text-[var(--color-text-stable)]" : "text-sm font-semibold text-[var(--foreground-strong)]"}>이번 주에 남은 {mode === "second" ? REVIEW_OS_LEARNER_LANGUAGE.reviewQueue : "복습 예정"} 기록이 없습니다.</p>
                   <p className={mode === "second" ? "v3-type-caption ko-keep mt-1 text-[var(--color-text-primary)]" : "mt-1 text-xs leading-5 text-[var(--muted-strong)]"}>완료 기록을 바탕으로 다음 일정이 생기면 가장 먼저 안내합니다.</p>
                 </div>
               ) : null}

@@ -1,5 +1,27 @@
 # Inverge Owner Study OS
 
+## Active post-#928 Goal — received 2026-09-13T13:12:59Z
+
+### Current transition: #928 integrated -> #929 shared-route Korean first glance
+
+PR #928 merged reviewed head `75c6f00edf1a6b8fb2182b21e91269ed73bde2bf`
+by expected-head-pinned squash as `945e0a04fb0ef2f6443b4273544b8249923c18a1`,
+tree `3fa8f06562740a89589d21f5b45042805bb9e158`. All required
+exact-head checks and Vercel passed, final Codex review found no major issue,
+and unresolved review threads were zero. Only #927 was intended to close. A
+negated closing phrase in the PR body made GitHub close parent #772; the phrase
+was removed and #772 was immediately reopened. #772, #880, #883 and the wider
+Goal remain open.
+
+Issue #929 is the next bounded S2 slice. It closes the remaining mixed-language
+gap across the shared signed-in second-stage Capture, Today/session, weekly,
+agenda, notes and review surfaces by reusing the existing learner dictionary.
+It preserves the established one-action Today structure and every API, durable
+state, scheduler, repository, access and evidence invariant. This slice includes
+no S3 Production activation or S4 corpus/runtime expansion. S4 remains blocked
+until S3 is separately approved and terminally completed. Do not treat this
+presentation slice or its PR as Goal completion.
+
 ## Active post-#926 Goal — received 2026-09-13T10:40:54Z
 
 ### Current transition: #926 integrated -> #927 Korean learner language

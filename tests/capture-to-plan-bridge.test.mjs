@@ -157,14 +157,13 @@ test("today plan stays one primary + max 3 and language is operational", () => {
 
 test("learner-facing copy includes save bridge messages", async () => {
     const source = await readFile(new URL("../app/app/session/page.tsx", import.meta.url), "utf8");
-    assert.ok(source.includes("오늘 계획에 반영했습니다."));
-    assert.ok(source.includes("오늘 계획에 반영"));
+    assert.ok(source.includes("REVIEW_OS_LEARNER_LANGUAGE.todayPlan"));
     assert.ok(source.includes("복습에 남길 내용"));
     assert.equal(source.includes("Today Plan candidate"), false);
     assert.equal(source.includes("Review Queue candidate"), false);
-  assert.ok(source.includes("가장 큰 간극:"));
+  assert.ok(source.includes("REVIEW_OS_LEARNER_LANGUAGE.biggestGap"));
   assert.ok(source.includes("다음 행동:"));
-  assert.ok(source.includes("오늘 계획으로 이동"));
+  assert.ok(source.includes("REVIEW_OS_LEARNER_LANGUAGE.todayPlan}로 이동"));
   assert.ok(source.includes("하나 더 올리기"));
   assert.ok(source.includes('id="today-session-runner"'));
   assert.ok(source.includes("savedCaptureQueueItem"));
@@ -182,7 +181,7 @@ test("today session runner separates first/second execution loop copy and keeps 
   ["핵심 조건 회상", "짧은 재풀이", "틀린 이유 1개", "근거 1문장"].forEach((token) =>
     assert.ok(source.includes(token), `Missing first-loop token: ${token}`),
   );
-  ["쟁점 회상", "가장 큰 간극 1개", "문단 1개만 다시 씁니다.", "전후 비교", "다음 보강 예약"].forEach((token) =>
+  ["쟁점 회상", "REVIEW_OS_LEARNER_LANGUAGE.biggestGap", "문단 1개만 다시 씁니다.", "전후 비교", "다음 보강 예약"].forEach((token) =>
     assert.ok(source.includes(token), `Missing second-loop token: ${token}`),
   );
 
@@ -233,7 +232,8 @@ test("problem-snap learning signal is surfaced in learner plan surfaces", async 
   assert.ok(itemsSource.includes("Problem Snap"));
   assert.ok(itemsSource.includes("다시 풀기"));
   assert.ok(itemsSource.includes("답안 훈련으로 보기"));
-  assert.ok(itemsSource.includes("오늘 한 것을 하나 올리면 가장 큰 약점과 다음 행동이 만들어집니다."));
+  assert.ok(itemsSource.includes("오늘 한 것을 하나 올리면 {biggestGapLabel}과 다음 행동이 만들어집니다."));
+  assert.ok(itemsSource.includes('const biggestGapLabel = isSecondRound ? REVIEW_OS_LEARNER_LANGUAGE.biggestGap : "가장 큰 약점"'));
 });
 
 test("problem-snap learner surfaces keep scope and no grading/payment claims", async () => {

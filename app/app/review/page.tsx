@@ -19,6 +19,7 @@ import {
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildReferenceSupportForExecution } from "@/lib/review-os/execution-reference-support";
+import { REVIEW_OS_LEARNER_LANGUAGE } from "@/lib/review-os/learner-language";
 
 type PageProps = {
   searchParams?: Promise<{ mode?: string }>;
@@ -111,7 +112,7 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
         {mode === "second" ? (
           <V3RouteHeader
             eyebrow="우선 복습"
-            title="복습"
+            title={REVIEW_OS_LEARNER_LANGUAGE.reviewQueue}
             description="학습 노트에서 만든 다시쓰기 후보를 오늘 복습으로 이어갑니다."
           />
         ) : (

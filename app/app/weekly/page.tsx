@@ -27,6 +27,7 @@ import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildPersonalWeaknessProfile } from "@/lib/review-os/weakness-diagnostics";
 import type { WeeklyPlanTask } from "@/lib/review-os/types";
+import { REVIEW_OS_LEARNER_LANGUAGE } from "@/lib/review-os/learner-language";
 
 type PageProps = {
   searchParams?: Promise<{ mode?: string }>;
@@ -147,7 +148,7 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
 
         <V3Surface tone={plan.recovery ? "attention" : "focus"} className="space-y-6">
           <V3SectionHeader
-            eyebrow="오늘의 1개"
+            eyebrow={REVIEW_OS_LEARNER_LANGUAGE.primaryTask}
             title={plan.primaryActionLabel}
             description={plan.recovery?.message ?? "가장 먼저 이어갈 작업 하나를 제시합니다."}
           />
@@ -193,7 +194,7 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
 
         <V3QuietDisclosure summary="기록 보기" helper="계획의 근거가 된 보조 기록입니다.">
           <dl className="divide-y divide-[var(--color-border-default)] border-y border-[var(--color-border-default)]">
-            <SecondaryRecord label="대기 큐" value={`${plan.secondaryRecords.queueCount}개`} v3 />
+            <SecondaryRecord label={REVIEW_OS_LEARNER_LANGUAGE.reviewQueue} value={`${plan.secondaryRecords.queueCount}개`} v3 />
             <SecondaryRecord label="밀린 항목" value={`${plan.secondaryRecords.overdueCount}개`} v3 />
             <SecondaryRecord label="최근 오답(14일)" value={`${plan.secondaryRecords.recentWrongCount}개`} v3 />
           </dl>

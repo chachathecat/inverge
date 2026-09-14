@@ -16,6 +16,7 @@ import {
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { buildAnswerSkeletonGuide, mapCaptureNoteToPastExamReferenceMatches } from "@/lib/review-os/past-exam-reference";
 import { getSimilarQuestionReferenceCandidates } from "@/lib/review-os/question-reference";
+import { REVIEW_OS_LEARNER_LANGUAGE } from "@/lib/review-os/learner-language";
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildDetailStudyNote, buildRewriteComparisonNote } from "@/lib/review-os/study-note";
 import type { ConceptReviewCardPayload, WrongAnswerItemRecord } from "@/lib/review-os/types";
@@ -91,7 +92,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
   const secondCompletionSignal = note.missingIssue ?? note.weakPoint;
   const secondCompletionNext = rewriteComparison
     ? `다음 복습은 ${note.nextReviewDate}로 자동 예약됩니다.`
-    : `다음 행동: ${note.rewriteInstruction ?? "가장 큰 간극 1개를 문단 다시쓰기로 보강합니다."}`;
+    : `다음 행동: ${note.rewriteInstruction ?? `${REVIEW_OS_LEARNER_LANGUAGE.biggestGap} 하나를 문단 다시쓰기로 보강합니다.`}`;
   const biggestSignal = isSecond ? note.missingIssue ?? note.weakPoint : note.weakPoint;
   const nextActionLine = isSecond
     ? note.rewriteInstruction ?? "문단 하나를 다시 쓰고 오늘 작업을 끝냅니다."
@@ -172,6 +173,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
           createdAt={resolvedDetail.item.createdAt}
           savedAt={resolvedDetail.item.updatedAt}
           biggestGap={note.missingIssue ?? note.weakPoint}
+          biggestGapLabel={REVIEW_OS_LEARNER_LANGUAGE.biggestGap}
           nextAction={note.rewriteInstruction ?? note.nextAction}
           coreLine={note.coreLine}
           keyTerms={note.keyTerms}

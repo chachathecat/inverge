@@ -51,8 +51,9 @@ test("S232D.3 gives every recent Note card one canonical information hierarchy",
 test("S232D.3 fails closed instead of inventing a review-queue state", () => {
   assert.doesNotMatch(notesBranch, /복습 연결:\s*복습 예정/);
   assert.doesNotMatch(notesBranch, /<StateChip|data-v3-component="StateChip"/);
-  assert.match(notesBranch, /복습에 남길 내용/);
-  assert.match(legacyCards, /복습 연결:\s*복습 예정/);
+  assert.match(itemsPage, /const reviewQueueLabel = isSecondRound \? REVIEW_OS_LEARNER_LANGUAGE\.reviewQueue : "복습 예정"/);
+  assert.match(notesBranch, /\{isSecondRound \? reviewQueueLabel : "복습"\}에 남길 내용/);
+  assert.match(legacyCards, /복습 연결: \{reviewQueueLabel\}/);
   assert.doesNotMatch(legacyCards, /data-s232d3-/);
 });
 

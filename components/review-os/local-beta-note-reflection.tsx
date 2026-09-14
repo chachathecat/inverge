@@ -19,6 +19,7 @@ import {
 } from "@/lib/review-os/browser-storage";
 import { CoreRouteLocalReadDegradedNotice } from "@/components/review-os/core-route-read-state";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { REVIEW_OS_LEARNER_LANGUAGE } from "@/lib/review-os/learner-language";
 
 type LocaleDate = string;
 
@@ -127,7 +128,7 @@ function LocalBetaCaptureNoteList({
           description={subtitle ?? "최근 브라우저 임시 학습 노트입니다."}
         />
         <p className="v3-type-caption text-[var(--color-text-secondary)]">
-          이 브라우저에 임시 저장된 학습 기록입니다. 같은 브라우저에서 학습 노트, 복습, 오늘 할 일, 학습 기록 연결 상태를 확인할 수 있습니다.
+          이 브라우저에 임시 저장된 {REVIEW_OS_LEARNER_LANGUAGE.studyLedger}입니다. 같은 브라우저에서 학습 노트, {REVIEW_OS_LEARNER_LANGUAGE.reviewQueue}, {REVIEW_OS_LEARNER_LANGUAGE.todayPlan}, {REVIEW_OS_LEARNER_LANGUAGE.studyLedger} 연결 상태를 확인할 수 있습니다.
         </p>
         <div className="divide-y divide-[var(--color-border-default)] border-y border-[var(--color-border-default)]">
           {notes.map((note) => {
@@ -142,7 +143,7 @@ function LocalBetaCaptureNoteList({
                 </h3>
                 <dl className="v3-type-compact mt-3 space-y-2 text-[var(--color-text-secondary)]">
                   <div>
-                    <dt className="inline font-medium text-[var(--color-text-primary)]">가장 큰 약점: </dt>
+                    <dt className="inline font-medium text-[var(--color-text-primary)]">{REVIEW_OS_LEARNER_LANGUAGE.biggestGap}: </dt>
                     <dd className="inline">{note.biggestGap}</dd>
                   </div>
                   <div>
@@ -151,7 +152,7 @@ function LocalBetaCaptureNoteList({
                   </div>
                 </dl>
                 <p className="v3-type-caption mt-3 text-[var(--color-text-secondary)]">
-                  오늘 계획 연결: 오늘 계획에 반영 · 복습 연결: 복습에 남길 내용 · 학습 기록 연결: 학습 기록에 저장
+                  {REVIEW_OS_LEARNER_LANGUAGE.todayPlan} 연결: {REVIEW_OS_LEARNER_LANGUAGE.todayPlan}에 반영 · {REVIEW_OS_LEARNER_LANGUAGE.reviewQueue} 연결: {REVIEW_OS_LEARNER_LANGUAGE.reviewQueue}에 남길 내용 · {REVIEW_OS_LEARNER_LANGUAGE.studyLedger} 연결: {REVIEW_OS_LEARNER_LANGUAGE.studyLedger}에 저장
                 </p>
                 {createdAt ? (
                   <p className="v3-type-caption mt-1 text-[var(--color-text-tertiary)]">저장 시각: {createdAt}</p>
@@ -250,9 +251,9 @@ export function LocalBetaNotesSection({
       notes={outcome.notes}
       mode={mode}
       title={modeNoteTitle(mode)}
-      subtitle="저장한 오늘 한 것의 가장 큰 약점과 다음 행동을 확인합니다."
+      subtitle={mode === "second" ? `저장한 오늘 한 것의 ${REVIEW_OS_LEARNER_LANGUAGE.biggestGap}과 다음 행동을 확인합니다.` : "저장한 오늘 한 것의 가장 큰 약점과 다음 행동을 확인합니다."}
       showAction
-      emptyMessage={showEmptyMessage ? "아직 이 브라우저에 저장된 학습 노트가 없습니다. 오늘 한 것을 저장하면 학습 노트에서 찾고 복습, 오늘 할 일, 학습 기록으로 이어집니다." : null}
+      emptyMessage={showEmptyMessage ? mode === "second" ? `아직 이 브라우저에 저장된 학습 노트가 없습니다. 오늘 한 것을 저장하면 학습 노트에서 찾고 ${REVIEW_OS_LEARNER_LANGUAGE.reviewQueue}, ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}, ${REVIEW_OS_LEARNER_LANGUAGE.studyLedger}으로 이어집니다.` : "아직 이 브라우저에 저장된 학습 노트가 없습니다. 오늘 한 것을 저장하면 학습 노트에서 찾고 복습, 오늘 할 일, 학습 기록으로 이어집니다." : null}
       readStatus={outcome.status}
       showReadUnavailableNotice={showReadUnavailableNotice}
     />
@@ -276,10 +277,10 @@ export function LocalBetaReviewCandidateSection({
     <LocalBetaCaptureNoteList
       notes={outcome.notes}
       mode={mode}
-      title="오늘 한 것에서 남긴 복습"
-      subtitle="저장한 학습 노트에서 다시 보기나 다시쓰기로 이어갈 내용을 모아둡니다."
+      title={mode === "second" ? `오늘 한 것에서 남긴 ${REVIEW_OS_LEARNER_LANGUAGE.reviewQueue}` : "오늘 한 것에서 남긴 복습"}
+      subtitle={mode === "second" ? `저장한 학습 노트에서 ${REVIEW_OS_LEARNER_LANGUAGE.reviewQueue}로 이어갈 내용을 모아둡니다.` : "저장한 학습 노트에서 다시 보기나 다시쓰기로 이어갈 내용을 모아둡니다."}
       showAction
-      emptyMessage={hasDurableQueue || !showEmptyMessage ? undefined : "아직 복습에 남긴 내용이 없습니다. 오늘 한 것 1개를 저장하면 가장 큰 약점과 다음 행동이 복습으로 이어집니다."}
+      emptyMessage={hasDurableQueue || !showEmptyMessage ? undefined : mode === "second" ? `아직 ${REVIEW_OS_LEARNER_LANGUAGE.reviewQueue}에 남긴 내용이 없습니다. 오늘 한 것 1개를 저장하면 ${REVIEW_OS_LEARNER_LANGUAGE.biggestGap}과 다음 행동이 ${REVIEW_OS_LEARNER_LANGUAGE.reviewQueue}로 이어집니다.` : "아직 복습에 남긴 내용이 없습니다. 오늘 한 것 1개를 저장하면 가장 큰 약점과 다음 행동이 복습으로 이어집니다."}
       readStatus={outcome.status}
       showReadUnavailableNotice={showReadUnavailableNotice}
     />
@@ -305,10 +306,10 @@ export function LocalBetaTodayReflection({
     <LocalBetaCaptureNoteList
       notes={outcome.notes}
       mode={mode}
-      title="오늘 계획에 반영"
-      subtitle="오늘 할 일에 이어갈 최근 학습 노트입니다."
+      title={mode === "second" ? `${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}에 반영` : "오늘 계획에 반영"}
+      subtitle={mode === "second" ? `${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}에 이어갈 최근 학습 노트입니다.` : "오늘 할 일에 이어갈 최근 학습 노트입니다."}
       showAction={false}
-      emptyMessage={showEmptyMessage ? "오늘 한 것 1개를 올리면 오늘 할 일에 반영됩니다." : null}
+      emptyMessage={showEmptyMessage ? mode === "second" ? `오늘 한 것 1개를 올리면 ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}에 반영됩니다.` : "오늘 한 것 1개를 올리면 오늘 할 일에 반영됩니다." : null}
       readStatus={outcome.status}
       showReadUnavailableNotice={showReadUnavailableNotice}
     />

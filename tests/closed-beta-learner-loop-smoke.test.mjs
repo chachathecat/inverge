@@ -286,7 +286,7 @@ test("2차 rewrite/CASIO keeps answer separation, one gap/action, and no grading
   assert.ok(fallback.casioUnsupportedMessage.includes("지원되는 계산 템플릿"));
 
   const source = read("components/review-os/today-session-runner.tsx") + read("lib/review-os/second-answer-rewrite.ts") + read("components/review-os/capture-form.tsx");
-  ["가장 큰 간극", "문단 1개 다시쓰기", "내 답안 요약", "지원되는 계산 템플릿"].forEach((phrase) => assert.ok(source.includes(phrase), `missing rewrite phrase: ${phrase}`));
+  ["REVIEW_OS_LEARNER_LANGUAGE.biggestGap", "문단 1개 다시쓰기", "내 답안 요약", "지원되는 계산 템플릿"].forEach((contract) => assert.ok(source.includes(contract), `missing rewrite contract: ${contract}`));
   assert.equal(OFFICIAL_GRADING_CLAIM_PATTERN.test(source), false);
   ["모범답안 확정", "확정 점수", "합격 판정"].forEach((phrase) => assert.equal(source.toLowerCase().includes(phrase.toLowerCase()), false));
 });

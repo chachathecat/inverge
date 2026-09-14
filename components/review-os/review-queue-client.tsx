@@ -14,6 +14,7 @@ import {
   RECALL_OUTCOME_OPTIONS,
 } from "@/lib/review-os/retrieval-review";
 import type { RecallOutcome, ReviewCompletionMetadata, ReviewQueueCard } from "@/lib/review-os/types";
+import { REVIEW_OS_LEARNER_LANGUAGE } from "@/lib/review-os/learner-language";
 
 function QueueActionButton({
   mode,
@@ -89,7 +90,7 @@ export function ReviewQueueClient({
           <div data-review-empty-state>
             <h2 className="v3-type-section text-[var(--color-text-primary)]">지금 복습할 항목이 없습니다.</h2>
             <p className="v3-type-body mt-2 text-[var(--color-text-secondary)]">오늘 한 것을 올리면 복습할 항목이 만들어집니다.</p>
-            <p className="v3-type-compact mt-1 text-[var(--color-text-secondary)]">저장된 학습 노트의 가장 큰 약점과 다음 행동이 복습 예정으로 이어집니다.</p>
+            <p className="v3-type-compact mt-1 text-[var(--color-text-secondary)]">저장된 학습 노트의 {REVIEW_OS_LEARNER_LANGUAGE.biggestGap}과 다음 행동이 {REVIEW_OS_LEARNER_LANGUAGE.reviewQueue}로 이어집니다.</p>
             <V3ActionButton
               type="button"
               onClick={() => router.push("/app/capture?mode=second")}
@@ -129,6 +130,7 @@ export function ReviewQueueClient({
   const primaryOutcome = recallOutcomeByQueueId[primaryItem.queueId] ?? null;
   const hasRevealedHint = Boolean(revealedHintByQueueId[primaryItem.queueId]) || primaryRecallText.trim().length > 0;
   const retrievalPrompt = getRetrievalPrompt(primaryItem, mode);
+  const reviewQueueLabel = mode === "second" ? REVIEW_OS_LEARNER_LANGUAGE.reviewQueue : "복습 예정";
 
   return (
     <div
@@ -151,10 +153,10 @@ export function ReviewQueueClient({
             <span className={mode === "second"
               ? "v3-type-caption text-[var(--color-text-secondary)]"
               : "inline-flex w-fit rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-subtle)] px-3 py-1 text-xs text-[color:var(--muted)]"}>
-              지금 복습할 1개
+              {mode === "second" ? `${REVIEW_OS_LEARNER_LANGUAGE.reviewQueue} · ${REVIEW_OS_LEARNER_LANGUAGE.primaryTask}` : "지금 복습할 1개"}
             </span>
             <p className={mode === "second" ? "v3-type-caption text-[var(--color-text-secondary)]" : "text-xs leading-5 text-[color:var(--muted)]"}>
-              복습 예정 · {primaryItem.createdFromCapture ? "학습 노트에서 생성됨" : "미완료 항목"} · {primaryItem.subjectLabel}
+              {reviewQueueLabel} · {primaryItem.createdFromCapture ? "학습 노트에서 생성됨" : "미완료 항목"} · {primaryItem.subjectLabel}
             </p>
             <h2 className={mode === "second" ? "v3-type-section ko-keep text-[var(--color-text-primary)]" : "text-base font-medium leading-7 text-[color:var(--foreground-strong)] sm:text-lg"}>
               {primaryItem.problemTitle}
@@ -276,7 +278,7 @@ export function ReviewQueueClient({
                   ? "v3-type-label-strong flex min-h-11 cursor-pointer items-center text-[var(--color-text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
                   : "cursor-pointer text-xs font-medium text-[color:var(--muted)]"}>복습 근거 보기</summary>
                 <ul className={mode === "second" ? "v3-type-compact mt-2 space-y-1 text-[var(--color-text-secondary)]" : "mt-2 space-y-1 text-xs leading-5 text-[color:var(--muted)]"}>
-                  {buildDetailedSignals(primaryItem, captureReferenceLineByItemId[primaryItem.itemId]).map((signal) => (
+                  {buildDetailedSignals(primaryItem, reviewQueueLabel, captureReferenceLineByItemId[primaryItem.itemId]).map((signal) => (
                     <li key={signal}>• {signal}</li>
                   ))}
                 </ul>
@@ -386,7 +388,7 @@ export function ReviewQueueClient({
               <li key={item.queueId} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className={mode === "second" ? "v3-type-caption text-[var(--color-text-secondary)]" : "text-xs text-[color:var(--muted)]"}>
-                    복습 예정 · {item.createdFromCapture ? "학습 노트에서 생성됨" : "미완료 항목"} · {item.subjectLabel}
+                    {reviewQueueLabel} · {item.createdFromCapture ? "학습 노트에서 생성됨" : "미완료 항목"} · {item.subjectLabel}
                   </p>
                   <p className={mode === "second" ? "v3-type-body-strong mt-1 truncate text-[var(--color-text-primary)]" : "mt-1 truncate text-sm font-medium text-[color:var(--foreground-strong)]"}>{item.problemTitle}</p>
                   <p className={mode === "second" ? "v3-type-compact mt-1 text-[var(--color-text-secondary)]" : "mt-1 text-xs text-[color:var(--muted)]"}>복습 이유: {getReviewReason(item)}</p>
@@ -448,9 +450,9 @@ function getReviewReason(item: ReviewQueueCard) {
   return item.createdFromCapture ? "방금 남긴 기록이라 기억이 남아 있을 때 바로 연결합니다." : item.reviewReason;
 }
 
-function buildDetailedSignals(item: ReviewQueueCard, captureReferenceLine?: string): string[] {
+function buildDetailedSignals(item: ReviewQueueCard, reviewQueueLabel: string, captureReferenceLine?: string): string[] {
   const signals = [
-    `상태: 복습 예정`,
+    `상태: ${reviewQueueLabel}`,
     `출처: ${item.createdFromCapture ? "학습 노트에서 생성됨" : "미완료 항목"}`,
     `복습 이유: ${item.reviewReason}`,
     `실수 유형: ${item.mistakeType}`,

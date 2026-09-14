@@ -23,6 +23,7 @@ import { buildDetailStudyNote } from "@/lib/review-os/study-note";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { DailyCommandCard } from "@/components/review-os/minimal-study-system";
+import { REVIEW_OS_LEARNER_LANGUAGE } from "@/lib/review-os/learner-language";
 
 type PageProps = {
   searchParams?: Promise<{ mode?: string; savedCapture?: string; itemId?: string }>;
@@ -125,7 +126,7 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
     savedCaptureSignals?.one_biggest_gap ??
       savedCaptureNote?.missingIssue ??
       savedCaptureNote?.weakPoint ??
-      "간극 1개를 먼저 고정합니다.",
+      (mode === "second" ? `${REVIEW_OS_LEARNER_LANGUAGE.biggestGap} 하나를 먼저 정합니다.` : "간극 1개를 먼저 고정합니다."),
   );
   const savedNextAction = String(
     savedCaptureSignals?.one_next_action ??
@@ -139,8 +140,8 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
       <V3Surface as="section" tone="stable">
         <div className="space-y-5" aria-live="polite">
           <V3SectionHeader
-            eyebrow="Capture → Today"
-            title="오늘 계획에 반영했습니다."
+            eyebrow={`저장 → ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}`}
+            title={`${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}에 반영했습니다.`}
             description="학습 노트에 저장한 약점과 다음 행동을 복습 흐름으로 이어갑니다."
           />
           <BiggestGap
@@ -148,6 +149,7 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
             gap={savedBiggestGap}
             evidence={`다음 행동 · ${savedNextAction}`}
             type="MissingLink"
+            label={REVIEW_OS_LEARNER_LANGUAGE.biggestGap}
           />
           <V3ActionLink
             href={
@@ -159,11 +161,11 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
             fullWidth
             data-session-saved-capture-action="secondary"
           >
-            가장 큰 간극 다시쓰기
+            {REVIEW_OS_LEARNER_LANGUAGE.biggestGap} 다시 고치기
           </V3ActionLink>
           <V3QuietDisclosure summary="다른 선택 보기">
             <div className="grid gap-2 sm:grid-cols-2">
-              <V3ActionLink href="/app?mode=second" tone="quiet" fullWidth>오늘 계획으로 이동</V3ActionLink>
+              <V3ActionLink href="/app?mode=second" tone="quiet" fullWidth>{REVIEW_OS_LEARNER_LANGUAGE.todayPlan}로 이동</V3ActionLink>
               <V3ActionLink href="/app/capture?mode=second" tone="quiet" fullWidth>하나 더 올리기</V3ActionLink>
               <V3ActionLink href="/app/review?mode=second" tone="quiet" fullWidth>복습 보기</V3ActionLink>
               <V3ActionLink href="/app/notes?mode=second" tone="quiet" fullWidth>노트 보기</V3ActionLink>

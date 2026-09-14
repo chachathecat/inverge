@@ -20,6 +20,7 @@ import { resolveEssentialCoreRouteRead } from "@/lib/review-os/core-route-read-o
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
 import type { LearningSignalEventRecord, WrongAnswerItemRecord } from "@/lib/review-os/types";
+import { REVIEW_OS_LEARNER_LANGUAGE } from "@/lib/review-os/learner-language";
 
 type PageProps = {
   searchParams?: Promise<{ mode?: string; saved?: string }>;
@@ -96,12 +97,12 @@ function formatCreatedDate(value?: string | null) {
   return new Intl.DateTimeFormat("ko-KR", { month: "numeric", day: "numeric" }).format(date);
 }
 
-function sourceTypeLabel(sourceType: string) {
-  if (sourceType === "problem-snap") return "Problem Snap";
+function sourceTypeLabel(sourceType: string, mode: AppraisalMode) {
+  if (sourceType === "problem-snap") return mode === "second" ? "문제 스냅" : "Problem Snap";
   if (sourceType === "answer_review") return "답안 훈련 기록";
-  if (sourceType === "review_queue") return "복습 예정";
+  if (sourceType === "review_queue") return mode === "second" ? REVIEW_OS_LEARNER_LANGUAGE.reviewQueue : "복습 예정";
   if (sourceType === "wrong_answer") return "학습 노트";
-  return "학습 기록";
+  return mode === "second" ? REVIEW_OS_LEARNER_LANGUAGE.studyLedger : "학습 기록";
 }
 
 function signalCta(signal: Pick<LearningSignalEventRecord, "sourceType" | "subject">, mode: AppraisalMode) {
@@ -144,7 +145,7 @@ function NoteBridgeFields({
         <dd className="mt-1 text-[color:var(--foreground-strong)]">{topic}</dd>
       </div>
       <div className={v3 ? "py-3" : "rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3"}>
-        <dt className="text-xs text-[color:var(--muted)]">가장 큰 약점</dt>
+        <dt className="text-xs text-[color:var(--muted)]">{v3 ? REVIEW_OS_LEARNER_LANGUAGE.biggestGap : "가장 큰 약점"}</dt>
         <dd className="mt-1 text-[color:var(--foreground-strong)]">{biggestGap}</dd>
       </div>
       <div className={v3 ? "py-3" : "rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3"}>
@@ -182,14 +183,18 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
   const learningSignals = learningSignalsRead.value;
   const hasItems = items.length > 0;
   const hasLearningSignals = learningSignals.length > 0;
-  const pageTitle = isNotesRoute ? "학습 노트" : "학습 기록";
+  const isSecondRound = mode === "second";
+  const biggestGapLabel = isSecondRound ? REVIEW_OS_LEARNER_LANGUAGE.biggestGap : "가장 큰 약점";
+  const studyLedgerLabel = isSecondRound ? REVIEW_OS_LEARNER_LANGUAGE.studyLedger : "학습 기록";
+  const todayPlanLabel = isSecondRound ? REVIEW_OS_LEARNER_LANGUAGE.todayPlan : "오늘 계획";
+  const reviewQueueLabel = isSecondRound ? REVIEW_OS_LEARNER_LANGUAGE.reviewQueue : "복습 예정";
+  const pageTitle = isNotesRoute ? "학습 노트" : studyLedgerLabel;
   const helperCopy = isNotesRoute
-    ? "오늘 한 것에서 만든 가장 큰 약점과 다음 행동을 모아봅니다."
+    ? `오늘 한 것에서 만든 ${biggestGapLabel}과 다음 행동을 모아봅니다.`
     : "학습 노트와 복습 흐름을 기록으로 확인합니다.";
   const visibleItems = isNotesRoute ? items.slice(0, 3) : items;
   const foldedItems = isNotesRoute ? items.slice(3) : [];
   const visibleLearningSignals = isNotesRoute ? learningSignals.slice(0, 3) : learningSignals.slice(0, 8);
-  const isSecondRound = mode === "second";
 
   if (!hasItems && !hasLearningSignals) {
     return (
@@ -207,7 +212,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
                 아직 쌓인 학습 노트가 없습니다.
               </p>
               <p className="text-sm text-[color:var(--muted)]">
-                오늘 한 것을 하나 올리면 가장 큰 약점과 다음 행동이 만들어집니다.
+                오늘 한 것을 하나 올리면 {biggestGapLabel}과 다음 행동이 만들어집니다.
               </p>
             </div>
             {isSecondRound ? (
@@ -251,7 +256,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
     >
       {isSecondRound ? (
         <V3RouteHeader
-          eyebrow={isNotesRoute ? "최근 기록 3개" : "학습 기록"}
+          eyebrow={isNotesRoute ? "최근 기록 3개" : studyLedgerLabel}
           title={pageTitle}
           description={helperCopy}
         />
@@ -267,7 +272,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
           <p className={isSecondRound
             ? "v3-type-caption text-[var(--color-text-secondary)]"
             : "px-6 text-xs leading-5 text-[color:var(--muted)]"} data-notes-record-context>
-            최근 3개 기록만 먼저 봅니다. 오래된 기록은 접어 두고, 가장 큰 약점과 다음 행동을 우선 확인합니다.
+            최근 3개 기록만 먼저 봅니다. 오래된 기록은 접어 두고, {biggestGapLabel}과 다음 행동을 우선 확인합니다.
           </p>
         ) : null}
         <RecordsBody className={isSecondRound ? "space-y-5" : "space-y-4"}>
@@ -277,12 +282,12 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
               : "rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3"}>
               <p className="text-sm font-medium text-[color:var(--foreground-strong)]">방금 저장한 학습 노트가 반영되었습니다.</p>
               <p className="mt-1 text-sm text-[color:var(--muted)]">
-                가장 큰 약점 1개와 다음 행동 1개를 먼저 확인하고, 오늘 계획에 반영합니다.
+                {biggestGapLabel} 하나와 다음 행동 하나를 먼저 확인하고, {todayPlanLabel}에 반영합니다.
               </p>
               <div className="mt-3 flex flex-wrap gap-3 text-xs text-[color:var(--muted)]">
                 <Link href={`/app?mode=${mode}`} className="underline-offset-4 hover:underline">오늘 할 일</Link>
                 <Link href={`/app/review?mode=${mode}`} className="underline-offset-4 hover:underline">복습</Link>
-                <Link href={`/app/agenda?mode=${mode}`} className="underline-offset-4 hover:underline">학습 기록</Link>
+                <Link href={`/app/agenda?mode=${mode}`} className="underline-offset-4 hover:underline">{studyLedgerLabel}</Link>
               </div>
             </div>
           ) : null}
@@ -324,6 +329,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
                           density="Compact"
                           showEvidence={false}
                           headingId={`notes-biggest-gap-${item.id}`}
+                          label={isSecondRound ? REVIEW_OS_LEARNER_LANGUAGE.biggestGap : undefined}
                         />
 
                         <div
@@ -352,8 +358,8 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
                           data-s232d3-secondary-connections
                         >
                           <span>논점 후보: {topic}</span>
-                          <span>복습에 남길 내용</span>
-                          <span>학습 기록에 저장</span>
+                          <span>{isSecondRound ? reviewQueueLabel : "복습"}에 남길 내용</span>
+                          <span>{studyLedgerLabel}에 저장</span>
                         </div>
                       </div>
                     </section>
@@ -375,7 +381,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
                           <span className={isSecondRound
                             ? "v3-type-caption text-[var(--color-text-secondary)]"
                             : "rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-subtle)] px-3 py-1 text-xs text-[color:var(--muted)]"}>
-                            복습 연결: 복습 예정
+                            복습 연결: {reviewQueueLabel}
                           </span>
                         </div>
                         <h2 className="text-sm font-medium text-[color:var(--foreground-strong)]">
@@ -396,9 +402,9 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
                     </div>
 
                     <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--muted)]">
-                      <span>오늘 계획 연결: 오늘 계획에 반영</span>
-                      <span>복습 연결: 복습에 남길 내용</span>
-                      <span>학습 기록 연결: 학습 기록에 저장</span>
+                      <span>{todayPlanLabel} 연결: {todayPlanLabel}에 반영</span>
+                      <span>복습 연결: {isSecondRound ? reviewQueueLabel : "복습에 남길 내용"}</span>
+                      <span>{studyLedgerLabel} 연결: {studyLedgerLabel}에 저장</span>
                     </div>
                   </section>
                 );
@@ -441,7 +447,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
                   <section key={signal.id} className={isSecondRound
                     ? "border-b border-[var(--color-border-default)] py-6 first:pt-0 last:border-b-0 last:pb-0"
                     : "review-reason-card rounded-[var(--radius-lg)] border border-[var(--border)] px-4 py-4"} data-notes-record-context>
-                    <p className="text-xs font-medium text-[color:var(--muted)]">{sourceTypeLabel(signal.sourceType)}</p>
+                    <p className="text-xs font-medium text-[color:var(--muted)]">{sourceTypeLabel(signal.sourceType, mode)}</p>
                     <h2 className="mt-1 text-sm font-medium text-[color:var(--foreground-strong)]">{signal.subject}</h2>
                     <div className="mt-3">
                       <NoteBridgeFields subject={signal.subject} topic={signal.derivedTags[1] ?? EMPTY_TOPIC_COPY} biggestGap={biggestGap} nextAction={nextAction} v3={isSecondRound} />

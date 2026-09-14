@@ -30,6 +30,7 @@ import { buildLearnerTodayPlanTasksWithGatedDurableConceptGraph } from "@/lib/re
 import { buildCalculatorRoutineRecoveryHref } from "@/lib/review-os/calculator-routine-learning-signal";
 import { buildPersonalWeaknessProfile } from "@/lib/review-os/weakness-diagnostics";
 import { isOverdueDueAt, resolveDailyStudyState } from "@/lib/review-os/daily-study-state";
+import { REVIEW_OS_LEARNER_LANGUAGE } from "@/lib/review-os/learner-language";
 
 const TASK_TYPE_LABELS: Record<TodayPlanTaskKind, string> = {
   first_ox_retry: "5분 재풀이",
@@ -319,18 +320,20 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
     ? dailyStateCopy.overdueTitle
     : homeState === "post_completion"
       ? dailyStateCopy.completionTitle
-      : missionTask?.title ?? (mode === "second" ? "답안 1개 올리고 오늘 계획 만들기" : "오늘 한 것 1개 올리고 계획 만들기");
+      : missionTask?.title ?? (mode === "second" ? `답안 1개 올리고 ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan} 만들기` : "오늘 한 것 1개 올리고 계획 만들기");
   const missionWhy = homeState === "overdue_recovery" ? dailyStateCopy.overdueReason : missionTask?.display_reason ?? missionTask?.reason ?? todayPlan.reason;
   const missionMinutes = missionTask ? `${missionTask.estimated_minutes}분` : mode === "second" ? "18분 안팎" : "12분 안팎";
   const missionAfter = missionTask
     ? "학습 노트에 저장되고 다음 복습 시점으로 돌아옵니다."
-    : "학습 노트, 오늘 할 일, 복습 대기가 함께 만들어집니다.";
+    : `학습 노트, ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}, ${REVIEW_OS_LEARNER_LANGUAGE.reviewQueue}가 함께 만들어집니다.`;
   const fallbackMissionPrimaryLabel =
     homeState === "first_capture" || homeState === "overdue_recovery" || homeState === "evening_capture"
       ? homePrimaryCta
       : "답안 1개 올리기";
   const missionPrimaryLabel = missionTask?.display_primary_cta ?? missionTask?.primary_cta.label ?? (todayPlan.hasPlan ? primaryCtaLabel : fallbackMissionPrimaryLabel);
-  const learnerLoopSummary = "오늘 한 것 올리기 → 학습 노트 → 오늘 할 일 → 복습 → 학습 기록";
+  const learnerLoopSummary = mode === "second"
+    ? `오늘 한 것 올리기 → 학습 노트 → ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan} → ${REVIEW_OS_LEARNER_LANGUAGE.reviewQueue} → ${REVIEW_OS_LEARNER_LANGUAGE.studyLedger}`
+    : "오늘 한 것 올리기 → 학습 노트 → 오늘 할 일 → 복습 → 학습 기록";
 
   const todayPage = (
     <div
@@ -365,7 +368,9 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-end">
           <div className="min-w-0">
             <header data-s232d5-today-meta>
-              <p className="v3-type-caption text-[color:var(--muted)]">오늘 할 일 · 오늘의 1개</p>
+              <p className="v3-type-caption text-[color:var(--muted)]">
+                {mode === "second" ? `${REVIEW_OS_LEARNER_LANGUAGE.todayPlan} · ${REVIEW_OS_LEARNER_LANGUAGE.primaryTask}` : "오늘 할 일 · 오늘의 1개"}
+              </p>
               <h1 id="s232d5-today-title" className="v3-type-screen hero-balance ko-keep mt-3 text-[color:var(--foreground-strong)]">
                 {missionTitle}
               </h1>
@@ -489,7 +494,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                             ? "v3-type-label-strong flex min-h-11 cursor-pointer list-none items-center px-3 py-2 text-[var(--color-text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--focus-ring)]"
                             : "cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--muted)]"}>세부 내용 보기</summary>
                           <div className="grid gap-2 border-t border-[color:var(--border-hairline)] px-3 py-3 text-xs leading-5 text-[color:var(--muted)]">
-                            <p><span className="font-medium text-[color:var(--foreground-strong)]">가장 큰 약점:</span> {task.one_biggest_gap}</p>
+                            <p><span className="font-medium text-[color:var(--foreground-strong)]">{mode === "second" ? REVIEW_OS_LEARNER_LANGUAGE.biggestGap : "가장 큰 약점"}:</span> {task.one_biggest_gap}</p>
                             <p><span className="font-medium text-[color:var(--foreground-strong)]">다음 행동:</span> {task.one_next_action}</p>
                             <p><span className="font-medium text-[color:var(--foreground-strong)]">상태:</span> {task.status === "due" ? "진행 필요" : task.status === "completed" ? "완료" : "대기"}</p>
                             <p><span className="font-medium text-[color:var(--foreground-strong)]">작업:</span> {resolveTaskTypeLabel(task.task_type)}</p>

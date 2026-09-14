@@ -22,13 +22,15 @@ test("S232E.2 exposes one truthful six-stage progress model", () => {
     ["second-outline", 2, "목차 정리"],
     ["second-answer", 3, "내 답안"],
     ["second-reference", 4, "참고 비교"],
-    ["second-gap", 5, "가장 큰 약점"],
+    ["second-gap", 5, "REVIEW_OS_LEARNER_LANGUAGE.biggestGap"],
     ["second-rewrite", 6, "문단 다시쓰기"],
   ];
 
   let previousIndex = -1;
   for (const [stage, position, label] of expected) {
-    const literal = `{ stage: "${stage}", position: ${position}, label: "${label}" }`;
+    const literal = stage === "second-gap"
+      ? `{ stage: "${stage}", position: ${position}, label: ${label} }`
+      : `{ stage: "${stage}", position: ${position}, label: "${label}" }`;
     const index = capture.indexOf(literal);
     assert.ok(index > previousIndex, `${stage} must keep the controller order`);
     previousIndex = index;
@@ -50,14 +52,18 @@ test("S232E.2 binds every controller panel to an exact x/6 label and one dominan
     ["SecondOutlinePanel", "SecondAnswerPanel", 2, "목차 정리"],
     ["SecondAnswerPanel", "SecondReferencePanel", 3, "내 답안 작성"],
     ["SecondReferencePanel", "SecondGapPanel", 4, "참고 정리 비교"],
-    ["SecondGapPanel", "SecondGapRewritePanel", 5, "가장 큰 약점"],
+    ["SecondGapPanel", "SecondGapRewritePanel", 5, "REVIEW_OS_LEARNER_LANGUAGE.biggestGap"],
     ["SecondGapRewritePanel", "RewriteContextPanel", 6, "문단 다시쓰기"],
   ];
 
   for (const [name, nextName, step, label] of panelContracts) {
     const block = functionBlock(name, nextName);
     assert.match(block, new RegExp(`data-s232e-second-write-panel="${step}"`));
-    assert.match(block, new RegExp(`다시쓰기 · ${step}/6 · ${label}`));
+    if (step === 5) {
+      assert.match(block, /다시쓰기 · 5\/6 · \{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}/);
+    } else {
+      assert.match(block, new RegExp(`다시쓰기 · ${step}/6 · ${label}`));
+    }
     assert.match(block, new RegExp(`aria-labelledby="second-write-step-${step}-title"`));
     assert.match(block, new RegExp(`id="second-write-step-${step}-title"[^>]*v3-type-section`));
     assert.match(block, /--v3-radius-panel/);

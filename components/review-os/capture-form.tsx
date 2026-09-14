@@ -62,6 +62,7 @@ import { applyDraftToConfirmedSubject, type ExtractionDraft, type ExtractionPipe
 import { extractFirstExamFiveChoicesFromText } from "@/lib/review-os/first-ox-engine";
 import { pushLocalLearnerAnalyticsEvent } from "@/lib/review-os/local-analytics";
 import { resolveReviewSchedule } from "@/lib/review-os/scheduling";
+import { REVIEW_OS_LEARNER_LANGUAGE } from "@/lib/review-os/learner-language";
 import { hasSecondWriteReferenceStep } from "@/lib/review-os/second-write-reference-step";
 import type { FailureAwarePersistenceEvidence, FailureAwareStateEvidence } from "@/lib/review-os/failure-aware-state";
 import type { TrustProvenanceEvidence, TrustProvenanceSourceKind } from "@/lib/review-os/trust-provenance";
@@ -154,7 +155,10 @@ const CAPTURE_FLOW_STEPS = [
 
 const SECOND_CAPTURE_FLOW_STEPS = [
   CAPTURE_FLOW_STEPS[0],
-  CAPTURE_FLOW_STEPS[1],
+  {
+    ...CAPTURE_FLOW_STEPS[1],
+    result: `확인한 내용에서 이번에 고칠 ${REVIEW_OS_LEARNER_LANGUAGE.biggestGap} 하나를 정합니다.`,
+  },
   {
     eyebrow: "3. 회상·비교·수정",
     label: "회상·비교·수정",
@@ -163,11 +167,11 @@ const SECOND_CAPTURE_FLOW_STEPS = [
     result: "다시 쓴 문단과 다음 행동을 저장 전에 확인합니다.",
   },
   {
-    eyebrow: "4. 저장·오늘 계획",
-    label: "저장·오늘 계획",
+    eyebrow: `4. 저장·${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}`,
+    label: `저장·${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}`,
     now: "저장할 내용과 저장 결과를 확인합니다.",
     why: "저장 상태를 확인해야 학습 흐름을 안전하게 이어갈 수 있습니다.",
-    result: "저장 상태에 따라 다시 시도하거나 오늘 계획·복습으로 이어갑니다.",
+    result: `저장 상태에 따라 다시 시도하거나 ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}·${REVIEW_OS_LEARNER_LANGUAGE.reviewQueue}로 이어갑니다.`,
   },
 ] as const;
 
@@ -205,29 +209,34 @@ const CAPTURE_STAGE_CONTEXT: Record<
     eyebrow: "세부 작업 4/6 · 참고 정리 비교",
     now: "내 답안을 작성한 뒤 참고 정리와 비교합니다.",
     why: "작성 이후의 비교는 내 답안에서 빠진 내용을 분명하게 보여 줍니다.",
-    result: "이번에 고칠 가장 큰 약점 1개를 정합니다.",
+    result: `이번에 고칠 ${REVIEW_OS_LEARNER_LANGUAGE.biggestGap} 하나를 정합니다.`,
   },
   "second-gap": {
-    eyebrow: "세부 작업 5/6 · 가장 큰 약점",
-    now: "비교 결과에서 가장 큰 약점 1개를 정합니다.",
+    eyebrow: `세부 작업 5/6 · ${REVIEW_OS_LEARNER_LANGUAGE.biggestGap}`,
+    now: `비교 결과에서 ${REVIEW_OS_LEARNER_LANGUAGE.biggestGap} 하나를 정합니다.`,
     why: "한 번에 하나를 고르면 다음 답안에서 바로 실행할 수 있습니다.",
     result: "선택한 약점을 반영해 한 문단을 다시 씁니다.",
   },
   "second-rewrite": {
     eyebrow: "세부 작업 6/6 · 문단 다시쓰기",
-    now: "가장 큰 약점 1개를 반영해 한 문단을 다시 씁니다.",
+    now: `${REVIEW_OS_LEARNER_LANGUAGE.biggestGap} 하나를 반영해 한 문단을 다시 씁니다.`,
     why: "발견한 약점을 실제 문장으로 바꿔야 다음 답안에 남습니다.",
     result: "다시 쓴 문단과 다음 행동을 저장 전에 확인합니다.",
   },
   "saved-plan": CAPTURE_FLOW_STEPS[3],
 };
 
+const SECOND_CONFIRM_STAGE_CONTEXT = {
+  ...CAPTURE_STAGE_CONTEXT.confirm,
+  result: `확인한 기록을 저장하고 ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}과 ${REVIEW_OS_LEARNER_LANGUAGE.reviewQueue}로 이어갑니다.`,
+} as const;
+
 const SECOND_WRITE_STAGE_POSITION: Partial<Record<CaptureStage, string>> = {
   "second-issue-recall": "1/6 · 쟁점 회상",
   "second-outline": "2/6 · 목차 정리",
   "second-answer": "3/6 · 내 답안 작성",
   "second-reference": "4/6 · 참고 정리 비교",
-  "second-gap": "5/6 · 가장 큰 약점",
+  "second-gap": `5/6 · ${REVIEW_OS_LEARNER_LANGUAGE.biggestGap}`,
   "second-rewrite": "6/6 · 문단 다시쓰기",
   confirm: "저장 전 확인",
   "saved-plan": "저장 결과",
@@ -238,7 +247,7 @@ const SECOND_WRITE_FLOW_STEPS = [
   { stage: "second-outline", position: 2, label: "목차 정리" },
   { stage: "second-answer", position: 3, label: "내 답안" },
   { stage: "second-reference", position: 4, label: "참고 비교" },
-  { stage: "second-gap", position: 5, label: "가장 큰 약점" },
+  { stage: "second-gap", position: 5, label: REVIEW_OS_LEARNER_LANGUAGE.biggestGap },
   { stage: "second-rewrite", position: 6, label: "문단 다시쓰기" },
 ] as const;
 
@@ -251,9 +260,9 @@ const SECOND_PREVIEW_STAGE_CONTEXT = {
 
 const REWRITE_CONTEXT_STAGE_CONTEXT = {
   eyebrow: "세부 작업 · 문단 다시쓰기",
-  now: "이전 답안의 가장 큰 약점을 반영해 한 문단을 다시 씁니다.",
+  now: `이전 답안의 ${REVIEW_OS_LEARNER_LANGUAGE.biggestGap}을 반영해 한 문단을 다시 씁니다.`,
   why: "발견한 약점을 실제 문장으로 바꿔야 다음 답안에 남습니다.",
-  result: "다시 쓴 문단을 저장하고 오늘 계획과 복습으로 이어갑니다.",
+  result: `다시 쓴 문단을 저장하고 ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}과 ${REVIEW_OS_LEARNER_LANGUAGE.reviewQueue}로 이어갑니다.`,
 } as const;
 
 type SavedCaptureConfirmation = {
@@ -499,9 +508,10 @@ function getCaptureStageContext(
   mode: AppraisalMode,
   hasRewriteContext: boolean,
 ) {
-  if (stage === "saved-plan") return CAPTURE_STAGE_CONTEXT[stage];
+  if (stage === "saved-plan") return mode === "second" ? SECOND_CAPTURE_FLOW_STEPS[3] : CAPTURE_STAGE_CONTEXT[stage];
   if (hasRewriteContext && mode === "second") return REWRITE_CONTEXT_STAGE_CONTEXT;
   if (stage === "preview" && mode === "second") return SECOND_PREVIEW_STAGE_CONTEXT;
+  if (stage === "confirm" && mode === "second") return SECOND_CONFIRM_STAGE_CONTEXT;
   return CAPTURE_STAGE_CONTEXT[stage];
 }
 
@@ -1938,7 +1948,7 @@ export function WrongAnswerCaptureForm({
             }
             data-capture-stage-flow
             data-s224v-stage-indicator="compact"
-            aria-label="Capture 4단계 흐름"
+            aria-label={mode === "second" ? "오늘 기록 4단계 흐름" : "Capture 4단계 흐름"}
           >
             {currentCaptureFlowSteps.map((item, index) => {
               const step = index + 1;
@@ -2297,7 +2307,7 @@ export function WrongAnswerCaptureForm({
               data-testid={mode === "second" && stage === "second-rewrite" && !rewriteContext ? "second-write-submit" : undefined}
               className="w-full sm:w-auto"
             >
-              {submitting ? "저장 중" : "저장하고 오늘 계획에 반영"}
+              {submitting ? "저장 중" : mode === "second" ? `저장하고 ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}에 반영` : "저장하고 오늘 계획에 반영"}
             </CaptureActionButton>
           )}
         </div>
@@ -2322,9 +2332,9 @@ function CaptureProgressPill({ current, total, mode }: { current: number; total:
       aria-valuemin={0}
       aria-valuemax={safeTotal}
       aria-valuenow={safeCurrent}
-      aria-label="Capture 진행"
+      aria-label={mode === "second" ? "오늘 기록 진행" : "Capture 진행"}
     >
-      <span>{mode === "second" ? "2차 캡처" : "1차 캡처"}</span>
+      <span>{mode === "second" ? "2차 답안 기록" : "1차 캡처"}</span>
       <span className="tabular-nums">단계 {safeCurrent}/{safeTotal}</span>
     </div>
   );
@@ -2472,7 +2482,7 @@ function SavedCaptureConfirmationPanel({
         testId="capture-persistence-completed-state"
       />
 
-      <p className="v3-type-caption mt-5 text-[var(--color-text-brand)]">4. 오늘 계획 반영 · {persistenceCopy.eyebrow}</p>
+      <p className="v3-type-caption mt-5 text-[var(--color-text-brand)]">4. {mode === "second" ? REVIEW_OS_LEARNER_LANGUAGE.todayPlan : "오늘 계획"} 반영 · {persistenceCopy.eyebrow}</p>
       <h3 className="v3-type-section ko-keep mt-2 text-[var(--color-text-primary)]">이 저장 기록에서 이어갈 내용</h3>
       {mode === "second" ? (
         <div className="mt-5 space-y-3">
@@ -2481,11 +2491,12 @@ function SavedCaptureConfirmationPanel({
             gap={confirmation.biggestGap}
             evidence={`다음 행동 · ${confirmation.nextAction}`}
             type="MissingLink"
+            label={REVIEW_OS_LEARNER_LANGUAGE.biggestGap}
           />
           <div className="grid gap-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)] p-4">
             <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
             <PreviewLine label="학습 노트 저장 상태" value={persistenceCopy.statusLabel} />
-            <PreviewLine label="오늘 계획에 반영" value={confirmation.todayPlanCandidate ?? confirmation.nextAction} />
+            <PreviewLine label={`${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}에 반영`} value={confirmation.todayPlanCandidate ?? confirmation.nextAction} />
             <PreviewLine label="복습에 남길 내용" value={confirmation.reviewQueueCandidate ?? confirmation.biggestGap} />
           </div>
         </div>
@@ -2506,7 +2517,7 @@ function SavedCaptureConfirmationPanel({
         />
       </div>
       <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">
-        학습 노트에 저장되고 오늘 계획과 복습으로 이어집니다.
+        학습 노트에 저장되고 {mode === "second" ? REVIEW_OS_LEARNER_LANGUAGE.todayPlan : "오늘 계획"}과 {mode === "second" ? REVIEW_OS_LEARNER_LANGUAGE.reviewQueue : "복습"}으로 이어집니다.
       </p>
       <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">{persistenceCopy.description}</p>
 
@@ -3018,7 +3029,11 @@ function IntakePanel({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className={mode === "second" ? "v3-type-label-strong ko-keep text-[var(--color-text-primary)]" : "ko-keep text-sm font-medium text-[color:var(--foreground-strong)]"}>입력 내용을 먼저 확인합니다.</p>
-            <p className={mode === "second" ? "v3-type-caption ko-keep mt-1 text-[var(--color-text-secondary)]" : "ko-keep mt-1 text-xs leading-5 text-[color:var(--muted)]"}>다음 단계에서 OCR/텍스트 초안을 보고 수정한 뒤 가장 큰 약점 1개를 정리합니다.</p>
+            <p className={mode === "second" ? "v3-type-caption ko-keep mt-1 text-[var(--color-text-secondary)]" : "ko-keep mt-1 text-xs leading-5 text-[color:var(--muted)]"}>
+              {mode === "second"
+                ? `다음 단계에서 OCR/텍스트 초안을 보고 수정한 뒤 ${REVIEW_OS_LEARNER_LANGUAGE.biggestGap} 하나를 정리합니다.`
+                : "다음 단계에서 OCR/텍스트 초안을 보고 수정한 뒤 가장 큰 약점 1개를 정리합니다."}
+            </p>
             <button
               type="button"
               onClick={onQuickSave}
@@ -3205,7 +3220,7 @@ function ExtractionPreview({
           <div>
             <p className="v3-type-caption text-[var(--color-text-secondary)]">2. 근거 확인</p>
             <h3 className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">추출된 원문을 먼저 확인합니다.</h3>
-            <p className="v3-type-body ko-keep mt-2 text-[var(--color-text-secondary)]">틀린 글자만 바로잡으면 다음 단계에서 가장 큰 약점 하나를 정리합니다.</p>
+            <p className="v3-type-body ko-keep mt-2 text-[var(--color-text-secondary)]">틀린 글자만 바로잡으면 다음 단계에서 {REVIEW_OS_LEARNER_LANGUAGE.biggestGap} 하나를 정리합니다.</p>
           </div>
           <V3ActionButton type="button" tone="secondary" onClick={onRegenerate}>
             다시 만들기
@@ -3260,9 +3275,10 @@ function ExtractionPreview({
 
         <div className="mt-5 space-y-3">
           <BiggestGap
-            gap={form.biggestGap || form.missingIssue || "가장 큰 약점 1개를 확인해 주세요."}
+            gap={form.biggestGap || form.missingIssue || `${REVIEW_OS_LEARNER_LANGUAGE.biggestGap} 하나를 확인해 주세요.`}
             evidence={`다음 행동 · ${form.rewriteInstruction || "확인 필요"}`}
             type="MissingLink"
+            label={REVIEW_OS_LEARNER_LANGUAGE.biggestGap}
           />
           <V3QuietDisclosure summary="추출된 세부 정보" helper="저장 전 직접 확인하고 수정할 수 있습니다.">
             <div className="divide-y divide-[var(--color-border-default)] border-y border-[var(--color-border-default)]">
@@ -3362,7 +3378,7 @@ function ConfirmPanel({
 
   return (
     <section className={mode === "second" ? "rounded-[var(--v3-radius-panel)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-4 sm:p-5" : "rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5"}>
-      <p className={mode === "second" ? "v3-type-caption text-[var(--color-text-secondary)]" : "text-caption text-[color:var(--muted)]"}>Step 3. 저장하고 오늘 계획에 반영</p>
+      <p className={mode === "second" ? "v3-type-caption text-[var(--color-text-secondary)]" : "text-caption text-[color:var(--muted)]"}>{mode === "second" ? `3. 저장하고 ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}에 반영` : "Step 3. 저장하고 오늘 계획에 반영"}</p>
       <h3 className={mode === "second" ? "v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]" : "mt-1 text-title text-[color:var(--foreground-strong)]"}>AI가 이렇게 읽었습니다. 틀린 부분만 고쳐 주세요.</h3>
       <p className={mode === "second" ? "v3-type-body ko-keep mt-2 text-[var(--color-text-secondary)]" : "mt-2 text-sm leading-6 text-[color:var(--muted)]"}>이미 읽은 값은 다시 입력하지 않아도 됩니다. 부족한 항목이 있으면 그 항목만 정확히 알려드립니다.</p>
       {mode === "second" ? (
@@ -3371,6 +3387,7 @@ function ConfirmPanel({
             gap={captureCopy.gapLabel.replace("가장 큰 약점: ", "")}
             evidence={`다음 행동 · ${captureCopy.nextActionLabel.replace("다음 행동: ", "")}`}
             type="MissingLink"
+            label={REVIEW_OS_LEARNER_LANGUAGE.biggestGap}
           />
           <div className="divide-y divide-[var(--color-border-default)] border-y border-[var(--color-border-default)] py-1">
             <PreviewLine label="상태" value={`${captureSummary.capturedTextStatus === "draft" ? "OCR 초안" : "직접 확인됨"} · 아직 저장 전`} />
@@ -3392,10 +3409,10 @@ function ConfirmPanel({
       <div className="mt-3">
         {mode === "second" ? (
           <details className="quiet-disclosure rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)] p-4" data-s224v-secondary-diagnostics>
-            <summary className="v3-type-label-strong inline-flex min-h-11 cursor-pointer items-center text-[var(--color-text-primary)]">복습·오늘 계획 단서 보기</summary>
+            <summary className="v3-type-label-strong inline-flex min-h-11 cursor-pointer items-center text-[var(--color-text-primary)]">{REVIEW_OS_LEARNER_LANGUAGE.reviewQueue}·{REVIEW_OS_LEARNER_LANGUAGE.todayPlan} 단서 보기</summary>
             <dl className="mt-3 divide-y divide-[var(--color-border-default)] border-y border-[var(--color-border-default)]">
               <div className="py-3"><dt className="v3-type-caption text-[var(--color-text-secondary)]">인출 확인</dt><dd className="v3-type-compact ko-keep mt-1 text-[var(--color-text-primary)]">{cognitiveLearningPreview.retrievalCheck.prompt}</dd></div>
-              <div className="py-3"><dt className="v3-type-caption text-[var(--color-text-secondary)]">내일 복습</dt><dd className="v3-type-compact ko-keep mt-1 text-[var(--color-text-primary)]">{cognitiveLearningPreview.continuation.reviewQueueCandidate}</dd></div>
+              <div className="py-3"><dt className="v3-type-caption text-[var(--color-text-secondary)]">{REVIEW_OS_LEARNER_LANGUAGE.d1}</dt><dd className="v3-type-compact ko-keep mt-1 text-[var(--color-text-primary)]">{cognitiveLearningPreview.continuation.reviewQueueCandidate}</dd></div>
             </dl>
           </details>
         ) : (
@@ -3758,7 +3775,7 @@ function SecondReferencePanel({
       </label>
       <div className="mt-4 flex flex-col gap-2 sm:flex-row">
         <V3ActionButton type="button" disabled={reference.trim().length < 4} onClick={onNext} data-s232e-second-write-primary-action="4">
-          다음: 가장 큰 약점 1개
+          다음: {REVIEW_OS_LEARNER_LANGUAGE.biggestGap}
         </V3ActionButton>
         <V3ActionButton type="button" tone="quiet" onClick={onNext} data-s232e-second-write-secondary-action="defer-reference">
           강의/교재 정리는 나중에 확인
@@ -3786,8 +3803,8 @@ function SecondGapPanel({
       aria-labelledby="second-write-step-5-title"
       data-s232e-second-write-panel="5"
     >
-      <p className="v3-type-caption text-[var(--color-text-brand)]" data-controller-label="Step 5. 가장 큰 약점 1개">다시쓰기 · 5/6 · 가장 큰 약점</p>
-      <h3 id="second-write-step-5-title" className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">오늘은 가장 큰 약점 1개만 고칩니다.</h3>
+      <p className="v3-type-caption text-[var(--color-text-brand)]" data-controller-label={`Step 5. ${REVIEW_OS_LEARNER_LANGUAGE.biggestGap}`}>다시쓰기 · 5/6 · {REVIEW_OS_LEARNER_LANGUAGE.biggestGap}</p>
+      <h3 id="second-write-step-5-title" className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">오늘은 {REVIEW_OS_LEARNER_LANGUAGE.biggestGap} 하나만 고칩니다.</h3>
       <details className="quiet-disclosure mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-3" data-s224v-secondary-diagnostics><summary className="v3-type-caption inline-flex min-h-11 cursor-pointer items-center text-[var(--color-text-secondary)]">왜 이 순서인가요?</summary><p className="v3-type-label ko-keep mt-2 text-[var(--color-text-secondary)]">{template.biggestGapGuidance}</p></details>
       <div className="mt-4">
         <BiggestGap
@@ -3795,6 +3812,7 @@ function SecondGapPanel({
           evidence="비교 결과에서 다음 문단을 바꿀 약점 하나만 남깁니다."
           type="MissingLink"
           density="Compact"
+          label={REVIEW_OS_LEARNER_LANGUAGE.biggestGap}
         />
       </div>
       <label className="mt-4 block space-y-2">
@@ -3901,7 +3919,7 @@ function RewriteContextPanel({
       <p className="v3-type-caption text-[var(--color-text-attention)]">문단 다시쓰기 컨텍스트</p>
       <h3 className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">{title}</h3>
       <div className="mt-4 space-y-3">
-        <BiggestGap gap={biggestGap} evidence={`다시쓰기 지시 · ${rewriteInstruction}`} type="MissingLink" />
+        <BiggestGap gap={biggestGap} evidence={`다시쓰기 지시 · ${rewriteInstruction}`} type="MissingLink" label={REVIEW_OS_LEARNER_LANGUAGE.biggestGap} />
       </div>
       <V3QuietDisclosure summary="비교 요약 펼쳐서 보기" className="mt-3">
         <div className="grid gap-3 lg:grid-cols-2">

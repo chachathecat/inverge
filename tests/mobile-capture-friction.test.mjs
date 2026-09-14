@@ -68,13 +68,13 @@ test("second-mode retrieval-before-explanation guard remains documented in the f
 
 test("after-save acknowledgement names Today plan, review, note location, and safe CTAs", () => {
   const session = sessionPage();
-  assert.match(session, /오늘 계획에 반영했습니다\./);
-  assert.match(session, /오늘 계획에 반영/);
+  assert.match(session, /REVIEW_OS_LEARNER_LANGUAGE\.todayPlan\}에 반영했습니다\./);
+  assert.match(session, /REVIEW_OS_LEARNER_LANGUAGE\.todayPlan/);
   assert.match(session, /복습에 남길 내용/);
   assert.match(session, /학습 노트 상세/);
-  assert.match(session, /가장 큰 간극/);
+  assert.match(session, /REVIEW_OS_LEARNER_LANGUAGE\.biggestGap/);
   assert.match(session, /다음 행동/);
-  assert.match(session, /오늘 계획으로 이동/);
+  assert.match(session, /REVIEW_OS_LEARNER_LANGUAGE\.todayPlan\}로 이동/);
   assert.match(session, /하나 더 올리기/);
   assert.match(session, /노트 보기/);
   assert.doesNotMatch(session, forbiddenClaimPattern);

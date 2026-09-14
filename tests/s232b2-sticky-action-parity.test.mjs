@@ -101,7 +101,7 @@ test("S232B.2 production keeps the rewrite URL and adopts Ready in the reading c
   assert.match(detail.slice(actionIndex, railIndex), /responsive[\s\S]*state="Ready"[\s\S]*href=\{actionHref\}/);
   assert.doesNotMatch(detail.slice(actionIndex, railIndex), /state=\{completed/);
   assert.match(detail, /completed \? "문단 한 번 더 다듬기" : "10분 문단 다시쓰기"/);
-  assert.match(detail, /completed \? "남은 간극 1개만 다시 확인합니다\." : "가장 큰 간극 1개만 보강합니다\."/);
+  assert.match(detail, /biggestGapLabel[\s\S]*남은 감점 원인 하나만 다시 확인합니다\.[\s\S]*\$\{biggestGapLabel\} 하나만 보강합니다\.[\s\S]*남은 간극 1개만 다시 확인합니다\.[\s\S]*가장 큰 간극 1개만 보강합니다\./);
   assert.match(detail, /max-lg:pb-\[calc\(136px\+env\(safe-area-inset-bottom\)\)\]/);
 });
 

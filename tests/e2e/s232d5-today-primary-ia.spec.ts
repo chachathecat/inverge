@@ -226,7 +226,7 @@ test("S232D.5 exact-head Today IA is responsive, accessible, and interaction-saf
     await expect(primary).toHaveCount(1);
     await expect(primary).toHaveAttribute("aria-labelledby", "s232d5-today-title");
     await expect(meta).toHaveCount(1);
-    await expect(meta.getByText("오늘 할 일 · 오늘의 1개", { exact: true })).toHaveCount(1);
+    await expect(meta.getByText("오늘 할 일 · 오늘의 한 가지", { exact: true })).toHaveCount(1);
     await expect(heading).toHaveCount(1);
     await expect(pageRoot.locator("h1")).toHaveCount(1);
     expect(await heading.evaluate((element) => Boolean(element.textContent?.trim()))).toBe(true);

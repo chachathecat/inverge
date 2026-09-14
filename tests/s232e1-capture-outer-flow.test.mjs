@@ -27,11 +27,11 @@ test("S232E.1 exposes one semantic four-stage Capture shell", () => {
   assert.match(capture, /data-capture-stage-flow/);
   assert.match(capture, /v3-type-caption sr-only[^\"]*sm:not-sr-only sm:grid/);
   assert.match(capture, /"sr-only[^\"]*sm:not-sr-only sm:grid/);
-  assert.match(capture, /aria-label="Capture 4단계 흐름"/);
+  assert.match(capture, /mode === "second" \? "오늘 기록 4단계 흐름" : "Capture 4단계 흐름"/);
   assert.match(capture, /aria-current=\{currentCaptureStep === step \? "step" : undefined\}/);
   assert.match(capture, /const SECOND_CAPTURE_FLOW_STEPS = \[/);
   assert.match(capture, /3\. 회상·비교·수정/);
-  assert.match(capture, /4\. 저장·오늘 계획/);
+  assert.match(capture, /4\. 저장·\$\{REVIEW_OS_LEARNER_LANGUAGE\.todayPlan\}/);
   assert.match(capture, /data-capture-stage-context/);
   assert.match(capture, /aria-labelledby="capture-stage-current-title"/);
   assert.match(capture, /<dl[^>]*data-capture-stage-explanation>/);
@@ -73,21 +73,20 @@ test("S232E.1 locks the controller-stage and current-work copy inventory without
     ["second-outline", "세부 작업 2/6 · 목차 정리"],
     ["second-answer", "세부 작업 3/6 · 내 답안 작성"],
     ["second-reference", "세부 작업 4/6 · 참고 정리 비교"],
-    ["second-gap", "세부 작업 5/6 · 가장 큰 약점"],
+    ["second-gap", "REVIEW_OS_LEARNER_LANGUAGE.biggestGap"],
     ["second-rewrite", "세부 작업 6/6 · 문단 다시쓰기"],
   ];
   for (const [stage, eyebrow] of literalStageContexts) {
     const key = stage === "confirm" ? "confirm" : `"${stage}"`;
-    assert.match(
-      capture,
-      new RegExp(`${key}: \\{[\\s\\S]{0,120}?eyebrow: "${eyebrow}"`),
-      `missing bound current-work context for ${stage}`,
-    );
+    const expected = stage === "second-gap"
+      ? /"second-gap": \{[\s\S]{0,120}?eyebrow: `세부 작업 5\/6 · \$\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}`/
+      : new RegExp(`${key}: \\{[\\s\\S]{0,120}?eyebrow: "${eyebrow}"`);
+    assert.match(capture, expected, `missing bound current-work context for ${stage}`);
   }
   assert.match(capture, /stage === "preview" && mode === "second"/);
   assert.match(capture, /확인한 내용을 닫고, 참고자료 없이 쟁점 회상부터 시작합니다\./);
   assert.match(capture, /hasRewriteContext && mode === "second"/);
-  assert.match(capture, /이전 답안의 가장 큰 약점을 반영해 한 문단을 다시 씁니다\./);
+  assert.match(capture, /이전 답안의 \$\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}을 반영해 한 문단을 다시 씁니다\./);
 
   for (const preserved of [
     "saveQuickCaptureFromIntake",

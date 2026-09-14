@@ -105,7 +105,7 @@ test("S232B exact-head persisted Study Ledger passive component contract", async
     await expect(detail.locator('[data-v3-component="BiggestGap"]')).toHaveCount(1);
     await expect(detail.locator('[data-v3-component="EvidenceExcerpt"]')).toHaveCount(1);
     await expect(detail.locator('[data-v3-component="StateChip"]')).toContainText(/미확인|회복 중/);
-    await expect(detail.locator('[data-v3-component="BiggestGap"]')).toContainText("가장 큰 간극 1개");
+    await expect(detail.locator('[data-v3-component="BiggestGap"]')).toContainText("가장 큰 감점 원인");
     await expect(detail.locator('[data-v3-component="EvidenceExcerpt"]')).toContainText("학습자 근거");
     await expect(detail.locator('[data-v3-component="EvidenceExcerpt"]')).toContainText("확인 필요");
 

@@ -31,6 +31,7 @@ type StudyLedgerDetailProps = {
   createdAt: string;
   savedAt: string;
   biggestGap: string;
+  biggestGapLabel?: string;
   nextAction: string;
   coreLine: string;
   keyTerms: string[];
@@ -358,6 +359,7 @@ export function BiggestGap({
   density = "Default",
   showEvidence = true,
   headingId = "study-ledger-biggest-gap",
+  label,
 }: {
   gap: string;
   evidence?: string;
@@ -365,10 +367,12 @@ export function BiggestGap({
   density?: BiggestGapDensity;
   showEvidence?: boolean;
   headingId?: string;
+  label?: string;
 }) {
   const presentation = BIGGEST_GAP_PRESENTATION[type];
   const compact = density === "Compact";
   const normalizedEvidence = evidence?.trim() || null;
+  const normalizedLabel = label?.trim() || presentation.label;
 
   return (
     <section
@@ -386,7 +390,7 @@ export function BiggestGap({
       />
       <div className={`min-w-0 flex-1 ${compact ? "space-y-1" : "space-y-2"}`}>
         <h2 id={headingId} className={`v3-type-label-strong ${presentation.labelClassName}`}>
-          {presentation.label}
+          {normalizedLabel}
         </h2>
         <p className={`${compact ? "v3-type-body-strong" : "v3-type-item"} ko-keep text-[var(--color-text-primary)]`}>
           {gap}
@@ -700,6 +704,7 @@ export function StudyLedgerDetail({
   createdAt,
   savedAt,
   biggestGap,
+  biggestGapLabel,
   nextAction,
   coreLine,
   keyTerms,
@@ -812,7 +817,7 @@ export function StudyLedgerDetail({
                 announceChange={evidenceConflict}
               />
 
-              <BiggestGap gap={biggestGap} evidence={stateEvidence} />
+              <BiggestGap gap={biggestGap} evidence={stateEvidence} label={biggestGapLabel} />
             </div>
 
             <section
@@ -861,7 +866,13 @@ export function StudyLedgerDetail({
               state="Ready"
               href={actionHref}
               label={completed ? "문단 한 번 더 다듬기" : "10분 문단 다시쓰기"}
-              status={completed ? "남은 간극 1개만 다시 확인합니다." : "가장 큰 간극 1개만 보강합니다."}
+              status={biggestGapLabel
+                ? completed
+                  ? "남은 감점 원인 하나만 다시 확인합니다."
+                  : `${biggestGapLabel} 하나만 보강합니다.`
+                : completed
+                  ? "남은 간극 1개만 다시 확인합니다."
+                  : "가장 큰 간극 1개만 보강합니다."}
             />
 
             {supportHref ? (
