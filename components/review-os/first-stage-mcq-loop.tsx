@@ -28,6 +28,7 @@ type AvailabilityPayload = Readonly<{
       sessionId: string;
       reviewTaskId: string | null;
       actionAt: string | null;
+      priority: "critical" | "high" | "normal" | null;
     }> | null;
   }>;
 }>;
@@ -224,6 +225,7 @@ export function FirstStageMcqLoop({
   );
   const continuationSubject = useMemo(() => {
     const rank = { resume_attempt: 0, resume_ready: 1, review_due: 2, review_blocked: 3, review_scheduled: 4 } as const;
+    const reviewRank = { critical: 0, high: 1, normal: 2 } as const;
     return REVIEWED_SUBJECTS
       .map((subject) => {
         const status = subjects[subject.id];
@@ -240,6 +242,9 @@ export function FirstStageMcqLoop({
       } => Boolean(entry.action))
       .sort((left, right) =>
         rank[left.action.kind] - rank[right.action.kind] ||
+        (left.action.kind === "review_due" && right.action.kind === "review_due"
+          ? reviewRank[left.action.priority ?? "normal"] - reviewRank[right.action.priority ?? "normal"]
+          : 0) ||
         String(left.action.actionAt ?? "").localeCompare(String(right.action.actionAt ?? "")) ||
         left.subject.id.localeCompare(right.subject.id))[0] ?? null;
   }, [subjects]);

@@ -39,7 +39,7 @@ function availability(state, count = 0, blocker = null, bankPractice = false, ac
     },
     continuation: {
       state: "ready",
-      action,
+      action: action ? { priority: null, ...action } : null,
     },
   });
 }
@@ -68,6 +68,7 @@ test("Owner home keeps all five subject routes bodyless and one primary fallback
   assert.match(componentSource, /data-first-stage-continuation/u);
   assert.match(componentSource, /sessionId=\$\{encodeURIComponent/u);
   assert.match(componentSource, /D\+1 복습 시작/u);
+  assert.match(componentSource, /reviewRank/u);
   assert.match(componentSource, /primaryAction\.kind === "link"/u);
   assert.match(componentSource, /capacityEnabled &&/u);
   assert.match(componentSource, /legalEvidenceEnabled &&/u);
@@ -159,6 +160,22 @@ test("real browser selects reviewed stock, then local trial, then second-stage h
             reviewTaskId: null,
             actionAt: "2026-09-14T01:00:00.000Z",
           }));
+        } else if (scenario === "priority" && url.pathname === reviewedEndpoints[0]) {
+          response.end(availability("available", 2, null, false, {
+            kind: "review_due",
+            sessionId: "economics-normal-review",
+            reviewTaskId: "economics-normal-task",
+            actionAt: "2026-09-13T00:00:00.000Z",
+            priority: "normal",
+          }));
+        } else if (scenario === "priority" && url.pathname === reviewedEndpoints[1]) {
+          response.end(availability("available", 2, null, false, {
+            kind: "review_due",
+            sessionId: "accounting-high-review",
+            reviewTaskId: "accounting-high-task",
+            actionAt: "2026-09-13T01:00:00.000Z",
+            priority: "high",
+          }));
         } else if (scenario === "due" && url.pathname === reviewedEndpoints[0]) {
           response.end(availability("available", 2, null, false, {
             kind: "review_due",
@@ -223,6 +240,8 @@ test("real browser selects reviewed stock, then local trial, then second-stage h
 
     scenario = "resume";
     await verify("학습 가능 2/5과목", "회계학 진행 중인 문제 이어가기", "/app/first-stage/accounting?sessionId=accounting-session-1");
+    scenario = "priority";
+    await verify("학습 가능 2/5과목", "회계학 D+1 복습 시작", "/app/first-stage/accounting?sessionId=accounting-high-review");
     scenario = "due";
     await verify("학습 가능 1/5과목", "경제학 D+1 복습 시작", "/app/first-stage/practice?sessionId=economics-session-1");
     scenario = "reviewed";

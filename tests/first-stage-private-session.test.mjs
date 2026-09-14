@@ -48,6 +48,7 @@ test("durable first-stage session drives Today continuation through resume, save
       sessionId: created.sessionId,
       reviewTaskId: null,
       actionAt: null,
+      priority: null,
     },
   });
 
@@ -74,6 +75,38 @@ test("durable first-stage session drives Today continuation through resume, save
 
   reopened.setClock(saved.state.reviewTasks[0].dueAt);
   assert.equal((await reopened.service.getTodayContinuation(OWNER)).action.kind, "review_due");
+});
+
+test("Today continuation preserves durable high-priority review ordering", async () => {
+  const h = harness();
+  async function answer(prefix, choice, submittedAt) {
+    const created = await h.service.create(OWNER, {
+      requestId: `${prefix}-create`,
+      questionId: reference().questionId,
+    });
+    const begun = await h.service.execute(OWNER, created.sessionId, {
+      action: "begin",
+      requestId: `${prefix}-begin`,
+      expectedRevision: 1,
+      questionId: reference().questionId,
+    });
+    h.setClock(submittedAt);
+    return h.service.execute(OWNER, created.sessionId, {
+      ...submission(begun.state.attempts[0].attemptId, choice),
+      requestId: `${prefix}-submit`,
+    });
+  }
+
+  const normal = await answer("normal", 2, "2026-09-06T10:01:00.000Z");
+  const high = await answer("high", 1, "2026-09-06T10:02:00.000Z");
+  assert.equal(normal.state.reviewTasks[0].priority, "normal");
+  assert.equal(high.state.reviewTasks[0].priority, "high");
+
+  h.setClock("2026-09-08T10:00:00.000Z");
+  const continuation = await h.service.getTodayContinuation(OWNER);
+  assert.equal(continuation.action.kind, "review_due");
+  assert.equal(continuation.action.sessionId, high.sessionId);
+  assert.equal(continuation.action.priority, "high");
 });
 
 test("Today continuation fails closed on incomplete or same-subject drifted history", async () => {

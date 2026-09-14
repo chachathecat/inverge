@@ -74,6 +74,31 @@ test("actual route availability reads bodyless durable continuation while absent
   assert.equal(await installed.loadApprovedPrivateFirstStageCatalog(), null);
 });
 
+test("subject availability ignores only history validated by another server-loaded catalog", async () => {
+  const h = harness();
+  const economics = privateRoute(h);
+  const created = await economics.POST(post({
+    action: "create",
+    requestId: "peer-economics-create",
+    questionId: reference().questionId,
+  }));
+  assert.equal(created.status, 200);
+
+  const accounting = privateRoute(h, { subject: "accounting" });
+  const accountingUrl = "http://127.0.0.1/api/review-os/first-stage/accounting/sessions";
+  const isolated = await accounting.GET(new Request(accountingUrl));
+  assert.equal(isolated.status, 200);
+  assert.equal((await isolated.json()).continuation.action, null);
+
+  const [key, stored] = [...h.rows.entries()][0];
+  const corrupt = structuredClone(stored);
+  corrupt.state.examCycle.questionReferences[0].subjectId = "accounting";
+  h.rows.set(key, corrupt);
+  const failedClosed = await accounting.GET(new Request(accountingUrl));
+  assert.equal(failedClosed.status, 503);
+  assert.deepEqual(await failedClosed.json(), { ok: false, error: "temporarily_unavailable" });
+});
+
 test("actual route preserves durable-only disclosure, deterministic replay and bounded input", async () => {
   const h = harness(); const route = privateRoute(h);
   const create = { action: "create", requestId: "request-1", questionId: reference().questionId };

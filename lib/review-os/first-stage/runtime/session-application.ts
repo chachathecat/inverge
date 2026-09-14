@@ -15,6 +15,9 @@ export interface PrivateSessionApplicationDependencies {
   environment(): Environment;
   session(): Promise<Session>;
   catalog(): Promise<PrivateFirstStageCatalog | null>;
+  /** Other server-loaded reviewed subject catalogs used only to validate and
+   * exclude their complete durable rows from this subject's Today projection. */
+  peerCatalogs?(): Promise<readonly PrivateFirstStageCatalog[]>;
   repository(): PrivateFirstStageSessionStore;
   planningRepository?(): TrialPlanningStore;
   bankRepository?(): ReviewedBankStore;
@@ -62,7 +65,7 @@ export function createPrivateSessionApplication(dependencies: PrivateSessionAppl
               dependencies.repository(),
               catalog,
               dependencies.now,
-            ).getTodayContinuation(owner.ownerId)
+            ).getTodayContinuation(owner.ownerId, dependencies.peerCatalogs)
           : {
               schemaVersion: "first_stage.private_today_continuation.v1" as const,
               state: "ready" as const,

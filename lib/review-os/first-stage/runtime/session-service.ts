@@ -62,16 +62,9 @@ export type PrivateFirstStageTodayContinuation = Readonly<{
     sessionId: string;
     reviewTaskId: string | null;
     actionAt: string | null;
+    priority: "critical" | "high" | "normal" | null;
   }> | null;
 }>;
-
-const KNOWN_FIRST_STAGE_SUBJECTS = new Set([
-  "economics_principles",
-  "accounting",
-  "civil_law",
-  "real_estate_principles",
-  "appraiser_related_law",
-]);
 
 /** Supplied only by the server's reviewed-content loader, never HTTP input. */
 export interface PrivateFirstStageCatalog {
@@ -348,14 +341,17 @@ export function createPrivateFirstStageSessionService(
           assistanceLevel:item.assistanceLevel,
           practiceDecision: item.evaluation?.decision })),
       reviews: saved.state.reviewTasks.map(task => ({ reviewTaskId: task.reviewTaskId,
-        dueAt: task.dueAt, status: task.status, completedAt: task.completedAt,
+        dueAt: task.dueAt, status: task.status, completedAt: task.completedAt, priority: task.priority,
         stock: catalog.retryAvailability(task.questionReference, saved.state.independentRetries
           .filter(retry => retry.reviewTaskId === task.reviewTaskId).map(retry => retry.questionReference.questionId)) })),
       masteryClaim: false as const, transferEvidence: false as const, measurementEvidence: false as const,
     };
   }
 
-  async function getTodayContinuation(ownerId: string): Promise<PrivateFirstStageTodayContinuation> {
+  async function getTodayContinuation(
+    ownerId: string,
+    loadPeerCatalogs?: () => Promise<readonly PrivateFirstStageCatalog[]>,
+  ): Promise<PrivateFirstStageTodayContinuation> {
     requiredIdentifier(ownerId);
     if (!store.listOwnerSnapshot) {
       return {
@@ -378,28 +374,35 @@ export function createPrivateFirstStageSessionService(
     if (subjectIds.size !== 1) fail("adapter_mismatch");
     const [subjectId] = subjectIds;
     const histories: ReturnType<typeof projectHistory>[] = [];
+    let peerValidators: ReturnType<typeof createPrivateFirstStageSessionService>[] | null = null;
+
+    async function validatesAsAnotherSubject(candidate: PrivateFirstStageSession) {
+      if (!loadPeerCatalogs) return false;
+      if (!peerValidators) {
+        const peers = await loadPeerCatalogs();
+        peerValidators = peers.flatMap((peer) => {
+          const peerSubjectIds = new Set(peer.initialReferences.map((item) => item.subjectId));
+          if (peerSubjectIds.size !== 1 || peerSubjectIds.has(subjectId)) return [];
+          return [createPrivateFirstStageSessionService(store, peer, now)];
+        });
+      }
+      for (const peer of peerValidators) {
+        try {
+          peer.projectHistory(candidate, ownerId);
+          return true;
+        } catch {
+          // A row may be ignored only after another server-loaded subject catalog
+          // validates the complete persisted aggregate.
+        }
+      }
+      return false;
+    }
 
     for (const candidate of observed.sessions) {
-      const reference = candidate.state?.examCycle?.questionReferences?.[0];
-      const candidateSubject = reference?.subjectId;
-      if (candidateSubject !== subjectId) {
-        if (typeof candidateSubject === "string" && KNOWN_FIRST_STAGE_SUBJECTS.has(candidateSubject)) continue;
-        return {
-          schemaVersion: "first_stage.private_today_continuation.v1",
-          state: "history_incomplete",
-          action: null,
-        };
-      }
-      if (candidate.catalogDigest !== catalog.digest) {
-        return {
-          schemaVersion: "first_stage.private_today_continuation.v1",
-          state: "history_incomplete",
-          action: null,
-        };
-      }
       try {
         histories.push(projectHistory(candidate, ownerId));
       } catch {
+        if (await validatesAsAnotherSubject(candidate)) continue;
         return {
           schemaVersion: "first_stage.private_today_continuation.v1",
           state: "history_incomplete",
@@ -418,6 +421,7 @@ export function createPrivateFirstStageSessionService(
           sessionId: history.sessionId,
           reviewTaskId: null,
           actionAt: history.active.startedAt,
+          priority: null,
         });
         continue;
       }
@@ -427,6 +431,7 @@ export function createPrivateFirstStageSessionService(
           sessionId: history.sessionId,
           reviewTaskId: null,
           actionAt: null,
+          priority: null,
         });
         continue;
       }
@@ -441,6 +446,7 @@ export function createPrivateFirstStageSessionService(
           sessionId: history.sessionId,
           reviewTaskId: review.reviewTaskId,
           actionAt: review.dueAt,
+          priority: review.priority,
         });
       }
     }
@@ -451,8 +457,12 @@ export function createPrivateFirstStageSessionService(
       review_blocked: 3,
       review_scheduled: 4,
     } as const;
+    const reviewPriority = { critical: 0, high: 1, normal: 2 } as const;
     actions.sort((left, right) =>
       rank[left.kind] - rank[right.kind] ||
+      (left.kind === "review_due" && right.kind === "review_due"
+        ? reviewPriority[left.priority!] - reviewPriority[right.priority!]
+        : 0) ||
       String(left.actionAt ?? "").localeCompare(String(right.actionAt ?? "")) ||
       left.sessionId.localeCompare(right.sessionId));
 
