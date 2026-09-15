@@ -4,5 +4,6 @@ export const THEORY_POLICY: Readonly<{version: string; model: string; budgetMicr
 export class OwnerTheoryError extends Error { code: string; constructor(code: string); }
 export function validateTheorySettings(settings: unknown, now?: number): OwnerTheorySettings;
 export function initializeTheoryBudget(root: string, settings: OwnerTheorySettings): Promise<void>;
-export function readTheoryBudget(root: string, settings: OwnerTheorySettings): Promise<{usedReservations: number; reservedMicros: number; remainingMicros: number; remainingCalls: number; caseId: string | null}>;
+export function readTheoryBudget(root: string, settings: OwnerTheorySettings): Promise<{connectionPending: boolean; usedReservations: number; reservedMicros: number; remainingMicros: number; remainingCalls: number; caseId: string | null}>;
 export function generateOwnerTheory(root: string, settings: OwnerTheorySettings, authority: OwnerTheoryAuthority, request: unknown): Promise<{response: {text(): string}}>;
+export function testOwnerTheoryConnection(root: string, settings: OwnerTheorySettings): Promise<{ok: true; modelVersion: string; usage: {promptTokenCount: number | null; candidatesTokenCount: number | null; thoughtsTokenCount: number | null; totalTokenCount: number | null}; estimatedCostMicros: number | null}>;

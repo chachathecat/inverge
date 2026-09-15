@@ -1,5 +1,20 @@
 # Inverge Owner Study OS
 
+## PC Theory connection probe after #938 / #939
+
+Continue the existing Goal and single PC writer from merged #938. The Owner
+allows one small synthetic provider connection test before submitting the real
+Theory case. Reserve it from the existing permanent USD 5 budget, never create
+or bind a learner case, and prohibit concurrent/restarted probe retries. Reuse
+the existing paid-project/private-key checks; no Vercel setting, database,
+public endpoint or billing-setting change belongs to this patch. Final native
+checks and independent exact-head review remain required. The synthetic result
+is connectivity evidence only, not Owner learning or next-day review evidence.
+The first exact-head review identified a probe/learner reservation race. A
+permanent atomic first-operation selector now excludes concurrent learner
+transports until the probe succeeds; failed/crashed probes remain blocked.
+The nine budget tests and isolated PostgreSQL/PostgREST/browser regression pass.
+
 ## PC Theory continuation after #936 / #937
 
 The existing Goal and PC writer continue from merged #936 (`4d1cb03`). Its
