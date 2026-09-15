@@ -36,6 +36,9 @@ jobs:
       - name: Verify second-stage Capture repair and reconnect with isolated PostgreSQL
         timeout-minutes: 20
         run: node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/app1-c3r-authenticated-persistence-acceptance.test.mjs
+      - name: Verify Owner Theory SQL and PostgREST browser flow
+        timeout-minutes: 6
+        run: node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/owner-pc-theory-postgrest.test.mjs
       - name: Verify learner loop
         run: npm run verify:learner-loop:ci
       - name: Build

@@ -122,6 +122,7 @@ async function requestStructure(
     | "app1_initial_analysis"
     | "repair_verification",
   failureMessage: string,
+  ownerTheoryMode: boolean,
   authority?: Readonly<{
     primaryGap: App1PrimaryGap;
     analysisBinding: string;
@@ -138,6 +139,7 @@ async function requestStructure(
   formData.set("subject", detail.item.subjectLabel);
   formData.set("explanationLevel", "standard");
   formData.set("requestPurpose", requestPurpose);
+  if (ownerTheoryMode) formData.set("ownerTheoryConsent", "selected_text_only_v1");
   formData.set("sourceItemId", detail.item.id);
   if (requestPurpose === "repair_verification" && authority) {
     formData.set("primaryGap", JSON.stringify(authority.primaryGap));
@@ -168,7 +170,9 @@ async function requestStructure(
     | null;
   if (!response.ok || !payload?.ok) {
     throw new App1StructureRequestError(
-      failureMessage,
+      payload && !payload.ok && payload.errorCode?.startsWith("OWNER_THEORY_")
+        ? "이론 AI 요청이 보류되었습니다. 입력은 보존됩니다. 위 설정·누적 예산 확인에서 상태를 확인해 주세요."
+        : failureMessage,
       payload && !payload.ok && typeof payload.errorCode === "string"
         ? payload.errorCode
         : null,
@@ -187,7 +191,9 @@ export function App1CaptureRepairLoop({
   ownerScope,
   itemId,
   availableSubjects,
+  ownerTheoryMode = false,
 }: {
+  ownerTheoryMode?: boolean;
   ownerScope: string;
   itemId: string;
   availableSubjects: readonly TrustedRepairSubject[];
@@ -296,6 +302,7 @@ export function App1CaptureRepairLoop({
         getApp1LearnerAnswer(detail),
         "app1_initial_analysis",
         ANALYSIS_FAILURE_MESSAGE,
+        ownerTheoryMode,
       );
       if (
         !result.primaryGap ||
@@ -375,6 +382,7 @@ export function App1CaptureRepairLoop({
         canonicalRepair,
         "repair_verification",
         VERIFICATION_FAILURE_MESSAGE,
+        ownerTheoryMode,
         {
           primaryGap: gap,
           analysisBinding,
@@ -625,6 +633,12 @@ export function App1CaptureRepairLoop({
 
   return (
     <V3RouteFrame width="reading" className="space-y-6" data-app1-owner-capture-repair>
+      {ownerTheoryMode ? <aside className="rounded-lg border p-4 text-sm" data-owner-theory-disclosure>
+        <p>이론 1건 · AI 미검토 학습보조. 사람 검토나 공식 채점이 아닙니다.</p>
+        <p>분석·교정 확인을 누를 때 선택한 문제·답안과 직접 쓴 교정문만 Gemini 유료 API로 전송합니다. 저장된 다른 자료는 전송하지 않습니다.</p>
+        <p>누적 US$5 이내에서 호출 전 최대비용을 예약합니다. 실패·재시도도 포함되며 날짜 변경이나 재시작으로 초기화되지 않습니다.</p>
+        <a href="/app/owner-theory">설정·누적 예산 확인</a>
+      </aside> : null}
       <header className="space-y-2">
         <p className="v3-type-caption text-[var(--color-text-brand)]">
           Owner 전용 · 기본 비활성 · {phaseLabel}
@@ -707,7 +721,7 @@ export function App1CaptureRepairLoop({
             disabled={!summary.ocrConfirmed || !getApp1LearnerAnswer(detail)}
             data-app1-analyze
           >
-            이 내용으로 분석
+            {ownerTheoryMode ? "선택한 문제·답안을 Gemini로 보내 분석" : "이 내용으로 분석"}
           </V3ActionButton>
         </V3Surface>
       ) : null}

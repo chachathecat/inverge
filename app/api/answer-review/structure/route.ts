@@ -1,3 +1,4 @@
+import { isOwnerPcTheoryEnabled, OwnerTheoryError, type OwnerTheoryAuthority } from "@/lib/owner-study/owner-pc-theory";
 import { NextResponse } from "next/server";
 import { getServerSessionUser } from "@/lib/auth/session";
 import { normalizeAnswerReviewStructureDraft, type AnswerReviewExplanationLevel } from "@/lib/evaluate/answer-review-structure";
@@ -188,10 +189,25 @@ export async function POST(request: Request) {
     const inputQualityIssue = getAnswerReviewInputQualityIssue({ questionText, answerText, referenceText, questionFileCount: questionFiles.length, answerFileCount: answerFiles.length, referenceFileCount: referenceFiles.length });
     if (inputQualityIssue) return NextResponse.json({ ok: false, errorCode: "INSUFFICIENT_INPUT", error: INPUT_QUALITY_MESSAGE }, { status: 400 });
     if (!isGeminiConfigured()) return NextResponse.json({ ok: false, errorCode: "AI_UNAVAILABLE", error: GEMINI_MISSING_MESSAGE, recovery: "retry" }, { status: 503 });
-    if (session.userId) await assertCanRunAnswerReview(session.userId);
-    const initialDraft = await structureAnswerReviewWithGemini({ questionFiles, answerFiles, referenceFiles, questionText, answerText, referenceText, explanationLevel });
-    const referenceGrounding = buildAnswerReviewReferenceGrounding({ examMode: mode, subject, questionText, answerText, referenceText, normalizedDraft: normalizeAnswerReviewStructureDraft(initialDraft) });
-    const draft = referenceGrounding.references.length > 0 ? await structureAnswerReviewWithGemini({ questionFiles, answerFiles, referenceFiles, questionText, answerText, referenceText, referenceGroundingContext: referenceGrounding.promptContext, explanationLevel }) : initialDraft;
+    let ownerTheoryAuthority: OwnerTheoryAuthority | undefined;
+    if (isOwnerPcTheoryEnabled()) {
+      if (!session.isAuthenticated || session.email !== "owner@localhost.test" || !session.userId ||
+          !app1Detail || subject !== "감정평가이론" || requestPurpose === "learning_analysis" ||
+          singleFormString(formData, "ownerTheoryConsent") !== "selected_text_only_v1" ||
+          questionFiles.length || answerFiles.length || referenceFiles.length) {
+        throw new OwnerTheoryError("OWNER_THEORY_SUBMISSION_REQUIRED");
+      }
+      // Only the Owner-selected saved problem/answer and current manual correction.
+      // Stored reference material and automatic reference enrichment stay private.
+      referenceText = "";
+      ownerTheoryAuthority = { userId: session.userId, sourceItemId: app1Detail.item.id, purpose: requestPurpose };
+    }
+    // This exact approved Owner-PC request uses the permanent one-case budget,
+    // not the commercial daily quota. No global admin override or tier mutation.
+    if (session.userId && !ownerTheoryAuthority) await assertCanRunAnswerReview(session.userId);
+    const initialDraft = await structureAnswerReviewWithGemini({ ownerTheoryAuthority, questionFiles, answerFiles, referenceFiles, questionText, answerText, referenceText, explanationLevel });
+    const referenceGrounding = ownerTheoryAuthority ? { references: [], displayLabel: "선택한 이론 입력만 검토", promptContext: "" } : buildAnswerReviewReferenceGrounding({ examMode: mode, subject, questionText, answerText, referenceText, normalizedDraft: normalizeAnswerReviewStructureDraft(initialDraft) });
+    const draft = referenceGrounding.references.length > 0 ? await structureAnswerReviewWithGemini({ ownerTheoryAuthority, questionFiles, answerFiles, referenceFiles, questionText, answerText, referenceText, referenceGroundingContext: referenceGrounding.promptContext, explanationLevel }) : initialDraft;
     const normalized = normalizeAnswerReviewStructureDraft(draft);
     const analysisAuthority =
       requestPurpose === "app1_initial_analysis" &&
@@ -242,6 +258,9 @@ export async function POST(request: Request) {
       referenceGrounding: { used: referenceGrounding.references.length > 0, displayLabel: referenceGrounding.displayLabel, references: referenceGrounding.references.map((x) => ({ id: x.id, exam_year: x.exam_year, subject: x.subject, reason: x.reason })) },
     });
   } catch (error) {
+    if (error instanceof OwnerTheoryError) return NextResponse.json({ ok: false, errorCode: error.code,
+      error: "이론 AI 요청이 보류되었습니다. 입력은 보존됩니다. 이론 시작 화면에서 유료 설정과 누적 예산을 확인해 주세요.",
+      recovery: "owner_theory_status" }, { status: error.code === "OWNER_THEORY_SUBMISSION_REQUIRED" ? 403 : 503 });
     const authorityResponse = app1AuthorityError(error);
     if (authorityResponse) return authorityResponse;
     const errorCode = error instanceof EntitlementBlockedError ? error.code : error instanceof GeminiStructureParseError ? "AI_UNAVAILABLE" : error instanceof GeminiEnvError ? "AI_UNAVAILABLE" : isGeminiQuotaExceededError(error) ? "AI_COST_CAP_BLOCKED" : "NETWORK_RETRY";

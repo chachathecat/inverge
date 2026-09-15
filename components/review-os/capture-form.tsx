@@ -281,6 +281,7 @@ type SavedCaptureConfirmation = {
 };
 
 type CaptureFormProps = {
+  textOnly?: boolean;
   userId: string;
   mode: AppraisalMode;
   ownerCaptureRepairEnabled?: boolean;
@@ -573,6 +574,7 @@ function stripPreviewUrls(pages: UploadedPage[]): PersistedCapturePage[] {
 }
 
 export function WrongAnswerCaptureForm({
+  textOnly = false,
   userId,
   mode,
   ownerCaptureRepairEnabled = false,
@@ -2134,6 +2136,7 @@ export function WrongAnswerCaptureForm({
           <>
           {mode === "first" || stage === "intake" ? (
           <IntakePanel
+            textOnly={textOnly}
             form={form}
             mode={mode}
             config={config}
@@ -2621,6 +2624,7 @@ function SubjectSelect({
 }
 
 function IntakePanel({
+  textOnly = false,
   form,
   mode,
   config,
@@ -2647,6 +2651,7 @@ function IntakePanel({
   pdfInputRef,
   textAreaRef,
 }: FieldProps & {
+  textOnly?: boolean;
   config: ReturnType<typeof getModeConfig>;
   extracting: boolean;
   extractError: string;
@@ -2679,7 +2684,7 @@ function IntakePanel({
   const app1InputChooserId = "app1-capture-input-chooser";
   const app1PhotoChoiceId = "app1-capture-photo-choice";
   const hasActiveInput =
-    Boolean(selectedInputMethod) ||
+    textOnly || Boolean(selectedInputMethod) ||
     form.rawQuestionText.trim().length > 0 ||
     uploadedPages.length > 0 ||
     extractionState !== "idle";
@@ -2713,9 +2718,10 @@ function IntakePanel({
       <div className="space-y-1 sm:space-y-2">
         <p className={mode === "second" ? "v3-type-caption text-[var(--color-text-secondary)]" : "text-caption font-medium text-[color:var(--muted)]"}>1. 입력</p>
         <h2 className={mode === "second" ? "v3-type-section ko-keep text-[var(--color-text-primary)]" : "v3-type-section ko-keep text-[color:var(--foreground-strong)]"}>입력 방식 선택</h2>
-        <p className={mode === "second" ? "v3-type-body ko-keep text-[var(--color-text-secondary)]" : "ko-keep text-body text-[color:var(--muted)]"}>사진, PDF, 텍스트 중 하나로 시작하세요.</p>
+        <p className={mode === "second" ? "v3-type-body ko-keep text-[var(--color-text-secondary)]" : "ko-keep text-body text-[color:var(--muted)]"}>{textOnly ? "직접 선택한 이론 문제·내 답안을 텍스트로 입력하세요." : "사진, PDF, 텍스트 중 하나로 시작하세요."}</p>
       </div>
 
+      {textOnly ? <p className="mt-4 rounded-lg border p-4" data-owner-theory-text-only>이론 문제와 내 답안을 아래에 텍스트로 입력하세요. 사진·PDF 분석은 이 모드에서 미지원입니다. 이 단계는 로컬 저장만 하며 Gemini로 전송하지 않습니다.</p> : <>
       {mode === "second" ? (
         <div className="mt-4 space-y-3" data-capture-input-options data-s224v-secondary-input-options="quiet">
           <CaptureActionButton
@@ -2905,9 +2911,11 @@ function IntakePanel({
           </ul>
         </div>
       </details>
+      </>}
       <div className="mt-3">
         <input
           ref={cameraInputRef}
+          disabled={textOnly}
           type="file"
           accept="image/*"
           capture="environment"
@@ -2919,6 +2927,7 @@ function IntakePanel({
         />
         <input
           ref={galleryInputRef}
+          disabled={textOnly}
           type="file"
           accept="image/*"
           multiple
@@ -2927,6 +2936,7 @@ function IntakePanel({
         />
         <input
           ref={pdfInputRef}
+          disabled={textOnly}
           type="file"
           accept="application/pdf"
           className="hidden"

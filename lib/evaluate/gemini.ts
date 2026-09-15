@@ -1,4 +1,5 @@
-﻿import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+﻿import { generateOwnerTheoryStructure, isOwnerPcTheoryEnabled, OwnerTheoryError, type OwnerTheoryAuthority } from "@/lib/owner-study/owner-pc-theory";
+import { GoogleGenerativeAI, SchemaType, type GenerateContentRequest } from "@google/generative-ai";
 
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
 import { buildExtractionPrompt } from "@/lib/review-os/extraction";
@@ -40,10 +41,11 @@ export class GeminiSecondGradingParseError extends Error {
 
 
 export function isGeminiConfigured() {
-  return Boolean(process.env.GEMINI_API_KEY);
+  return isOwnerPcTheoryEnabled() || Boolean(process.env.GEMINI_API_KEY);
 }
 
 function createModel() {
+  if (isOwnerPcTheoryEnabled()) throw new OwnerTheoryError("OWNER_THEORY_SUBMISSION_REQUIRED");
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
@@ -100,6 +102,7 @@ function fileToPart(file: File): Promise<{ inlineData: { data: string; mimeType:
 }
 
 type AnswerReviewStructureInput = {
+  ownerTheoryAuthority?: OwnerTheoryAuthority;
   questionFiles: File[];
   answerFiles: File[];
   referenceFiles: File[];
@@ -157,6 +160,7 @@ export async function gradeSecondRoundWithGemini(input: SecondGradingInput): Pro
 }
 
 export async function structureAnswerReviewWithGemini({
+  ownerTheoryAuthority,
   questionFiles,
   answerFiles,
   referenceFiles,
@@ -166,12 +170,12 @@ export async function structureAnswerReviewWithGemini({
   referenceGroundingContext,
   explanationLevel = "standard",
 }: AnswerReviewStructureInput): Promise<AnswerReviewStructureDraft> {
-  const model = createModel();
+  if (isOwnerPcTheoryEnabled() && !ownerTheoryAuthority) throw new OwnerTheoryError("OWNER_THEORY_SUBMISSION_REQUIRED");
   const questionParts = await Promise.all(questionFiles.map((file) => fileToPart(file)));
   const answerParts = await Promise.all(answerFiles.map((file) => fileToPart(file)));
   const referenceParts = await Promise.all(referenceFiles.map((file) => fileToPart(file)));
 
-  const result = await model.generateContent({
+  const request: GenerateContentRequest = {
     contents: [
       {
         role: "user",
@@ -230,7 +234,10 @@ ${referenceGroundingContext?.trim() || "유사 기출 reference 없음. 입력 �
       responseMimeType: "application/json",
       responseSchema: answerReviewStructureSchema(),
     },
-  });
+  };
+  const result = isOwnerPcTheoryEnabled() && ownerTheoryAuthority
+    ? await generateOwnerTheoryStructure(ownerTheoryAuthority, request)
+    : await createModel().generateContent(request);
 
   const text = result.response.text();
 

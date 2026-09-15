@@ -38,6 +38,13 @@ export function ownerLocalLegalEnvironment(base,keys,settings,privateRoot=PRIVAT
   const selected=Object.fromEntries([...names,"INVERGE_OWNER_LEGAL_CATALOG_SHA256"].map(name=>[name,settings[name]]));
   return {...ownerLocalAppEnvironment(base,keys,privateRoot),...selected,INVERGE_OWNER_LEGAL_EVIDENCE_ENABLED:"true"};
 }
+/** Explicit Theory mode preserves economics and never inherits any provider key. */
+export function ownerLocalTheoryEnvironment(base,keys,signingSecret,privateRoot=PRIVATE_ROOT){
+  if(typeof signingSecret!=="string"||!/^[A-Za-z0-9_-]{43}$/.test(signingSecret))fail("local_theory_signing_secret_required");
+  return {...ownerLocalAppEnvironment(base,keys,privateRoot),
+    INVERGE_OWNER_PC_THEORY_ENABLED:"true",WCV_C2R_C_T_THEORY_ENABLED:"true",
+    WCV_C2R_C_T_OWNER_EMAILS:OWNER_LOCAL_EMAIL,APP1_VERIFICATION_SIGNING_SECRET:signingSecret};
+}
 async function guardedEnvironment(){
   if(process.platform!=="win32"||process.env.VERCEL!==undefined||process.env.VERCEL_ENV!==undefined||process.env.CI==="true")fail("local_pc_required");
   const rows=await runLocalLoopback("inspect");if(rows.some(row=>!row.running||(row.health&&row.health!=="healthy")))fail("local_stack_not_healthy");
@@ -68,11 +75,21 @@ export async function prepareOwnerLocalApp(){
   return {personalLocalSchema:"prepared",installationPath:target,boundArtifacts:9,
     supportedQuestions:"determined_by_server_pair_evidence_checks",humanApprovedQuestions:0,recordsReset:false};
 }
-export async function startOwnerLocalApp({legalEvidence=false}={}){
+export async function startOwnerLocalApp({legalEvidence=false,theory=false}={}){
   const keys=await guardedEnvironment();
   for(const file of [".env",".env.local",".env.development",".env.development.local"]){if(await access(file).then(()=>true,()=>false))fail("existing_env_file_must_be_preserved");}
   await access(path.join(LOCAL_ROOT,"trial-installation.json"));
-  const env=legalEvidence?ownerLocalLegalEnvironment(process.env,keys,process.env):ownerLocalAppEnvironment(process.env,keys);
+  if(legalEvidence&&theory)fail("local_modes_must_be_explicit");
+  let env=legalEvidence?ownerLocalLegalEnvironment(process.env,keys,process.env):ownerLocalAppEnvironment(process.env,keys);
+  if(theory){
+    const root=path.join(LOCAL_ROOT,"theory-one-case-20260915");
+    // These files are installed only AFTER exact SQL review and restorable backup.
+    // Startup cannot apply a schema, create a budget or regrant a missing budget.
+    const installation=JSON.parse(await readFile(path.join(root,"schema-installation.json"),"utf8"));
+    const sql=await readFile(new URL("../../supabase/local-designs/owner-pc-theory-one-case.sql",import.meta.url));
+    if(installation.sqlSha256!==createHash("sha256").update(sql).digest("hex")||installation.database!=="inverge_owner_economics_db_loopback/postgres"||installation.backupRestoreVerified!==true)fail("local_theory_schema_installation_required");
+    env=ownerLocalTheoryEnvironment(process.env,keys,(await readFile(path.join(root,"signing-secret"),"utf8")).trim());
+  }
   // No secret argument, env file, remote fetch, smoke account or global TLS change.
   const child=spawn(process.execPath,["node_modules/next/dist/bin/next","dev","--hostname","127.0.0.1","--port","3883"],{env,stdio:"inherit",windowsHide:true});
   for(const signal of ["SIGINT","SIGTERM"])process.on(signal,()=>child.kill(signal));
@@ -105,6 +122,6 @@ export async function prepareOwnerLocalCurriculum(){
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href){
   const command=process.argv[2];
-  (command==="prepare"?prepareOwnerLocalApp().then(result=>console.log(JSON.stringify(result))):command==="prepare-planning"?prepareOwnerLocalPlanning().then(result=>console.log(JSON.stringify(result))):command==="prepare-curriculum"?prepareOwnerLocalCurriculum().then(result=>console.log(JSON.stringify(result))):command==="start"?startOwnerLocalApp():command==="start-legal-evidence"?startOwnerLocalApp({legalEvidence:true}):Promise.reject(new Error("invalid_local_command")))
+  (command==="prepare"?prepareOwnerLocalApp().then(result=>console.log(JSON.stringify(result))):command==="prepare-planning"?prepareOwnerLocalPlanning().then(result=>console.log(JSON.stringify(result))):command==="prepare-curriculum"?prepareOwnerLocalCurriculum().then(result=>console.log(JSON.stringify(result))):command==="start"?startOwnerLocalApp():command==="start-theory"?startOwnerLocalApp({theory:true}):command==="start-legal-evidence"?startOwnerLocalApp({legalEvidence:true}):Promise.reject(new Error("invalid_local_command")))
     .catch(error=>{const message=String(error.message);console.error(/^[a-z_]+$/.test(message)?message:"local_trial_setup_failed");process.exitCode=1;});
 }

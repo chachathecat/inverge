@@ -175,6 +175,7 @@ test("S232F.2 shell and route-level guards never present access unavailability a
 
 test("S232F.2 every data-bearing app page gates a fresh access result before downstream work", () => {
   const guardedPages = [
+    "app/app/owner-theory/page.tsx",
     "app/app/agenda/page.tsx",
     "app/app/calculator/page.tsx",
     "app/app/capture/page.tsx",

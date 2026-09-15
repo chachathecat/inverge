@@ -26,6 +26,7 @@ export function productionHarness(executeQuery, options = {}) {
     ALPHA_ADMIN_EMAILS: "synthetic-owner@example.invalid",
     WCV_C2R_C_T_OWNER_EMAILS: "synthetic-owner@example.invalid",
     WCV_C2R_C_T_THEORY_ENABLED: "true",
+    ...options.env,
   };
   const session = { userId: OWNER_ID, email: env.ALPHA_ADMIN_EMAILS, isAuthenticated: true, authEnabled: true, isDemo: false };
   class Clock extends Date {
@@ -37,6 +38,7 @@ export function productionHarness(executeQuery, options = {}) {
     const q = { table, operation: "select", columns: "*", filters: [] };
     return {
       select(columns = "*", settings = {}) { Object.assign(q, { columns, ...settings }); return this; },
+      upsert(values, settings = {}) { Object.assign(q, { operation: "upsert", values, ...settings }); return this; },
       insert(values) { Object.assign(q, { operation: "insert", values }); return this; },
       update(values) { Object.assign(q, { operation: "update", values }); return this; },
       eq(field, value) { q.filters.push([field, "eq", value]); return this; },
@@ -84,7 +86,7 @@ export function productionHarness(executeQuery, options = {}) {
     if (filename.endsWith(".json")) return JSON.parse(readFileSync(filename, "utf8"));
     const loadedModule = { exports: {} };
     modules.set(filename, loadedModule);
-    const compiled = ts.transpileModule(readFileSync(filename, "utf8"), { fileName: filename, compilerOptions: {
+    const compiled = ts.transpileModule(readFileSync(filename, "utf8"), { fileName: filename.replace(/\.mjs$/, ".ts"), compilerOptions: {
       target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, esModuleInterop: true, jsx: ts.JsxEmit.ReactJSX,
     } }).outputText;
     const require = (specifier) => {
