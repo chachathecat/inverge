@@ -4,6 +4,7 @@
   "phase": "D",
   "issue": 732,
   "evaluated_at": "2026-08-16T07:45:40Z",
+  "revalidated_at": "2026-09-15T05:14:30Z",
   "initial_audit_counts": {
     "critical": 1,
     "high": 4,
@@ -15,19 +16,20 @@
     "critical": 0,
     "high": 0,
     "moderate": 0,
-    "low": 1,
-    "total": 1
+    "low": 0,
+    "total": 0
   },
   "resolved_toolchain": {
     "supabase": "2.114.0",
     "playwright": "1.62.1",
     "eslint": "9.39.5",
-    "eslint_config_next": "16.2.12",
+    "eslint_config_next": "16.3.3",
     "typescript": "5.9.3",
     "typescript_eslint": "8.67.0",
     "brace_expansion_v1": "1.1.18",
     "brace_expansion_v5": "5.0.9",
-    "js_yaml": "4.3.1",
+    "js_yaml": "4.3.2",
+    "babel_core": "7.29.7",
     "tar": "not_installed"
   },
   "supabase_tar_requirement": {
@@ -227,9 +229,7 @@
       "attacker_controlled_input_path": "explicit local CLI archive operation with a crafted archive",
       "patched_version": "7.5.21",
       "resolution": "supabase 2.114.0 no longer depends on tar"
-    }
-  ],
-  "residual_exceptions": [
+    },
     {
       "ghsa": "GHSA-4x5r-pxfx-6jf8",
       "cve": "CVE-2026-49356",
@@ -237,22 +237,20 @@
       "classification": "development",
       "severity": "low",
       "directness": "transitive",
-      "dependency_paths": ["root > eslint-config-next@16.2.12 > eslint-plugin-react-hooks@7.1.1 > @babel/core@7.29.0"],
+      "dependency_paths": ["root > eslint-config-next@16.3.3 > eslint-plugin-react-hooks@7.1.1 > @babel/core@7.29.7"],
       "runtime_reachability": "development-only lint loading; not imported by the application runtime",
       "attacker_controlled_input_path": "local or CI lint of repository-controlled source containing a malicious sourceMappingURL",
-      "patched_version": "8.0.0 breaking major; no patched 7.x release exists at evaluation",
-      "resolution": "time-bounded exception pending upstream compatible Babel 7 fix or validated Babel 8 migration",
-      "rationale": "Babel 8 is a breaking major outside this non-breaking toolchain patch phase",
-      "compensating_control": "lint only reviewed repository source in isolated local and GitHub Actions workspaces; do not lint untrusted external source trees",
-      "owner": "repository_owner",
-      "expires_at": "2026-09-14T23:59:59Z"
+      "patched_version": "7.29.6",
+      "resolution": "Compatible Babel 7.29.7 and its development-only dependency graph replace the expired exception; no audit exception remains.",
+      "source": "https://github.com/babel/babel/security/advisories/GHSA-4x5r-pxfx-6jf8"
     }
   ],
+  "residual_exceptions": [],
   "acceptance": {
     "development_critical": 0,
     "development_high": 0,
     "development_moderate": 0,
-    "development_low": 1,
+    "development_low": 0,
     "production_runtime_behavior_changed": false,
     "production_migration_run": false,
     "live_supabase_command_run": false,

@@ -50,11 +50,20 @@ test("all five browser routes consume their server blocker on POST, reload and r
     for (const subject of ["economics_principles", "accounting", ...SUBJECT_CASES.map(spec => spec.id)]) {
       const h = kernelHarness();
       let unavailable = false;
+      let repositoryReadsBeforeBlock;
       const route = privateRoute(h, { subject, get noCatalog() { return unavailable; } });
-      const result = await verifyPrivateBrowser({ route, subject, blockCatalog() { unavailable = true; },
+      const result = await verifyPrivateBrowser({ route, subject, blockCatalog() {
+        // Approved availability now reads the durable Today snapshot. Revocation
+        // must still prevent every subsequent storage access, including reconnect.
+        repositoryReadsBeforeBlock = route.counts.repository;
+        assert.equal(repositoryReadsBeforeBlock, 1);
+        assert.equal(h.rows.size, 0);
+        unavailable = true;
+      },
         blockedMessage: "사용 불가 — 권리·정답·인적 검토가 승인된 콘텐츠가 아직 없습니다. 개발 후보나 합성 자료는 학습 재고가 아닙니다." });
       assert.equal(result.blocked, true); assert.equal(result.externalRequests, 0); assert.equal(result.browserErrors, 0);
-      assert.equal(route.counts.repository, 0); assert.equal(h.rows.size, 0);
+      assert.equal(route.counts.repository, repositoryReadsBeforeBlock); assert.equal(h.rows.size, 0);
+      assert.equal(h.counts.creates, 0); assert.equal(h.counts.replaces, 0); assert.equal(h.counts.explanations, 0);
     }
   });
 

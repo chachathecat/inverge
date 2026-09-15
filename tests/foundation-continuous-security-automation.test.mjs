@@ -91,12 +91,21 @@ function activeException(finding, overrides = {}) {
   };
 }
 
-test("accepts the current low development advisory through its active bounded exception", async () => {
+test("accepts the current patched audit without any exception", async () => {
+  const policy = await readJson(POLICY_PATH);
+  assert.deepEqual(policy.exceptions, []);
+  const summary = validateSecurityAudits({ productionReport: auditReport(), fullReport: auditReport(), policy });
+  assert.equal(summary.blocking_finding_count, 0);
+  assert.deepEqual(summary.decisions, []);
+});
+
+test("accepts a synthetic low advisory through its active bounded exception", async () => {
   const policy = await readJson(POLICY_PATH);
   const finding = advisory({
     id: "GHSA-4X5R-PXFX-6JF8",
     package: "@babel/core",
   });
+  policy.exceptions = [activeException(finding)];
   const summary = validateSecurityAudits({
     productionReport: auditReport(),
     fullReport: auditReport([finding]),
@@ -112,7 +121,7 @@ test("accepts the current low development advisory through its active bounded ex
       detected_environment: "development",
       approved_environment: "development",
       runtime_reachability: "unreachable",
-      exception_expires_at: "2026-09-14T23:59:59Z",
+      exception_expires_at: "2026-08-30T08:00:00Z",
       outcome: "reported_active_exception",
     },
   ]);
@@ -137,6 +146,7 @@ test("reports new low and moderate advisories without universally blocking warni
 
 test("fails every expired or overlong advisory exception", async () => {
   const policy = structuredClone(await readJson(POLICY_PATH));
+  policy.exceptions = [activeException(advisory())];
   policy.exceptions[0].expires_at = "2026-08-16T08:44:59Z";
   assert.throws(
     () =>

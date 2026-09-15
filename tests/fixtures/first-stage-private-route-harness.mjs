@@ -36,9 +36,11 @@ export function compilePrivateSource(relative, dependencies, environment = {}) {
 export function privateRoute(harness, options = {}) {
   const counts = { auth: 0, catalog: 0, repository: 0 };
   const ownerId = options.ownerId ?? "synthetic-owner-a";
+  const selectedSubject = options.subject ?? "economics_principles";
   const extraCatalogs = Object.fromEntries(SUBJECT_CASES.map(spec => [`loadApprovedPrivate${spec.name}Catalog`, async () => {
     counts.catalog++;
-    return options.noCatalog ? null : spec.load(options.contentInput ?? remainingInput(spec.id));
+    const contentInput = selectedSubject === spec.id ? options.contentInput : undefined;
+    return options.noCatalog ? null : spec.load(contentInput ?? remainingInput(spec.id));
   }]));
   const server = compilePrivateSource("lib/review-os/first-stage/runtime/session-server.ts", {
     "server-only": {},
@@ -51,10 +53,12 @@ export function privateRoute(harness, options = {}) {
     } },
     "./approved-catalog": { ...extraCatalogs, loadApprovedPrivateFirstStageCatalog: async () => {
       counts.catalog++;
-      return options.noCatalog ? null : loadEconomicsContent(options.contentInput ?? syntheticContentInput());
+      const contentInput = selectedSubject === "economics_principles" ? options.contentInput : undefined;
+      return options.noCatalog ? null : loadEconomicsContent(contentInput ?? syntheticContentInput());
     }, loadApprovedPrivateAccountingCatalog: async () => {
       counts.catalog++;
-      return options.noCatalog ? null : loadAccountingContent(options.contentInput ?? syntheticAccountingInput());
+      const contentInput = selectedSubject === "accounting" ? options.contentInput : undefined;
+      return options.noCatalog ? null : loadAccountingContent(contentInput ?? syntheticAccountingInput());
     } },
     "./session-application": { ...application, createPrivateSessionApplication: dependencies =>
       application.createPrivateSessionApplication({ ...dependencies, now: harness.getClock }) },

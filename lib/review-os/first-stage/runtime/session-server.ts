@@ -12,12 +12,26 @@ import { createReviewedBankRepository } from "./reviewed-bank-repository";
 export const requirePrivateFirstStageOwner = () =>
   privateFirstStageOwner(process.env, getServerSessionUser);
 
-function privateSubjectSession(catalog: () => Promise<PrivateFirstStageCatalog | null>,
+const REVIEWED_CATALOG_LOADERS = {
+  economics_principles: loadApprovedPrivateFirstStageCatalog,
+  accounting: loadApprovedPrivateAccountingCatalog,
+  civil_law: loadApprovedPrivateCivilLawCatalog,
+  real_estate_principles: loadApprovedPrivateRealEstatePrinciplesCatalog,
+  appraiser_related_law: loadApprovedPrivateAppraiserRelatedLawCatalog,
+} as const;
+
+function privateSubjectSession(subjectId: keyof typeof REVIEWED_CATALOG_LOADERS,
   unavailableBlocker: PrivateContentBlocker = "approved_content_required") {
+  const catalog = REVIEWED_CATALOG_LOADERS[subjectId];
   return createPrivateSessionApplication({
     environment: () => process.env,
     session: getServerSessionUser,
     catalog,
+    peerCatalogs: async () => (await Promise.all(
+      Object.entries(REVIEWED_CATALOG_LOADERS)
+        .filter(([candidate]) => candidate !== subjectId)
+        .map(([, load]) => load()),
+    )).filter((candidate): candidate is PrivateFirstStageCatalog => candidate !== null),
     unavailableBlocker,
     repository: () => {
       const client = getSupabasePersistenceClient();
@@ -33,8 +47,8 @@ function privateSubjectSession(catalog: () => Promise<PrivateFirstStageCatalog |
 }
 
 // Same gate and durable store; subject authority comes only from this server binding.
-export const handlePrivateFirstStageSession = privateSubjectSession(loadApprovedPrivateFirstStageCatalog);
-export const handlePrivateAccountingSession = privateSubjectSession(loadApprovedPrivateAccountingCatalog);
-export const handlePrivateCivilLawSession = privateSubjectSession(loadApprovedPrivateCivilLawCatalog);
-export const handlePrivateRealEstatePrinciplesSession = privateSubjectSession(loadApprovedPrivateRealEstatePrinciplesCatalog);
-export const handlePrivateAppraiserRelatedLawSession = privateSubjectSession(loadApprovedPrivateAppraiserRelatedLawCatalog);
+export const handlePrivateFirstStageSession = privateSubjectSession("economics_principles");
+export const handlePrivateAccountingSession = privateSubjectSession("accounting");
+export const handlePrivateCivilLawSession = privateSubjectSession("civil_law");
+export const handlePrivateRealEstatePrinciplesSession = privateSubjectSession("real_estate_principles");
+export const handlePrivateAppraiserRelatedLawSession = privateSubjectSession("appraiser_related_law");

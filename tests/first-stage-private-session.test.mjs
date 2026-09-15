@@ -34,6 +34,145 @@ test("durable submission survives a new service instance and preserves the exact
   assert.equal(persisted.includes(EXPLANATION), false);
 });
 
+test("durable first-stage session drives Today continuation through resume, saved D+1 and due review", async () => {
+  const h = harness();
+  const created = await h.service.create(OWNER, {
+    requestId: "today-create",
+    questionId: reference().questionId,
+  });
+  assert.deepEqual(await h.service.getTodayContinuation(OWNER), {
+    schemaVersion: "first_stage.private_today_continuation.v1",
+    state: "ready",
+    action: {
+      kind: "resume_ready",
+      sessionId: created.sessionId,
+      reviewTaskId: null,
+      actionAt: null,
+      priority: null,
+    },
+  });
+
+  const begun = await h.service.execute(OWNER, created.sessionId, {
+    action: "begin",
+    requestId: "today-begin",
+    expectedRevision: 1,
+    questionId: reference().questionId,
+  });
+  assert.equal((await h.service.getTodayContinuation(OWNER)).action.kind, "resume_attempt");
+
+  h.setClock(SUBMIT);
+  const saved = await h.service.execute(
+    OWNER,
+    created.sessionId,
+    { ...submission(begun.state.attempts[0].attemptId), requestId: "today-submit" },
+  );
+  const reopened = harness({ rows: h.rows });
+  const scheduled = await reopened.service.getTodayContinuation(OWNER);
+  assert.equal(scheduled.action.kind, "review_scheduled");
+  assert.equal(scheduled.action.sessionId, created.sessionId);
+  assert.equal(scheduled.action.reviewTaskId, saved.state.reviewTasks[0].reviewTaskId);
+  assert.equal(scheduled.action.actionAt, saved.state.reviewTasks[0].dueAt);
+
+  reopened.setClock(saved.state.reviewTasks[0].dueAt);
+  assert.equal((await reopened.service.getTodayContinuation(OWNER)).action.kind, "review_due");
+});
+
+test("Today continuation preserves durable high-priority review ordering", async () => {
+  const h = harness();
+  async function answer(prefix, choice, submittedAt) {
+    const created = await h.service.create(OWNER, {
+      requestId: `${prefix}-create`,
+      questionId: reference().questionId,
+    });
+    const begun = await h.service.execute(OWNER, created.sessionId, {
+      action: "begin",
+      requestId: `${prefix}-begin`,
+      expectedRevision: 1,
+      questionId: reference().questionId,
+    });
+    h.setClock(submittedAt);
+    return h.service.execute(OWNER, created.sessionId, {
+      ...submission(begun.state.attempts[0].attemptId, choice),
+      requestId: `${prefix}-submit`,
+    });
+  }
+
+  const normal = await answer("normal", 2, "2026-09-06T10:01:00.000Z");
+  const high = await answer("high", 1, "2026-09-06T10:02:00.000Z");
+  assert.equal(normal.state.reviewTasks[0].priority, "normal");
+  assert.equal(high.state.reviewTasks[0].priority, "high");
+
+  h.setClock("2026-09-08T10:00:00.000Z");
+  const continuation = await h.service.getTodayContinuation(OWNER);
+  assert.equal(continuation.action.kind, "review_due");
+  assert.equal(continuation.action.sessionId, high.sessionId);
+  assert.equal(continuation.action.priority, "high");
+});
+
+test("Today continuation fails closed on incomplete or same-subject drifted history", async () => {
+  const incomplete = harness({ store: {
+    async listOwnerSnapshot() { return { sessions: [], complete: false }; },
+  } });
+  assert.equal((await incomplete.service.getTodayContinuation(OWNER)).state, "history_incomplete");
+
+  const h = harness();
+  await h.service.create(OWNER, { requestId: "drift-create", questionId: reference().questionId });
+  const row = [...h.rows.values()][0];
+  row.catalogDigest = digest("stale-same-subject-catalog");
+  h.rows.set(`${row.ownerId}/${row.sessionId}`, row);
+  const drifted = await h.service.getTodayContinuation(OWNER);
+  assert.equal(drifted.state, "history_incomplete");
+  assert.equal(drifted.action, null);
+});
+
+test("due review precedes an unopened session, while an active attempt stays first", async () => {
+  const h = harness(); const ids = await start(h); h.setClock(SUBMIT);
+  const saved = await h.service.execute(OWNER, ids.sessionId, submission(ids.attemptId));
+  const ready = await h.service.create(OWNER, { requestId: "unopened-today", questionId: reference().questionId });
+  h.setClock(saved.state.reviewTasks[0].dueAt);
+  assert.equal((await h.service.getTodayContinuation(OWNER)).action.sessionId, saved.sessionId);
+  await h.service.execute(OWNER, ready.sessionId, { action: "begin", requestId: "open-today",
+    expectedRevision: 1, questionId: reference().questionId });
+  const active = (await h.service.getTodayContinuation(OWNER)).action;
+  assert.equal(active.kind, "resume_attempt");
+  assert.equal(active.sessionId, ready.sessionId);
+});
+
+test("equal due reviews use durable task identity before session identity", async () => {
+  const h = harness(); const saved = [];
+  for (let index = 0; index < 12; index++) {
+    h.setClock("2026-09-06T10:00:00.000Z");
+    const row = await h.service.create(OWNER, { requestId: `tie-create-${index}`, questionId: reference().questionId });
+    const begun = await h.service.execute(OWNER, row.sessionId, { action: "begin", requestId: `tie-begin-${index}`,
+      expectedRevision: 1, questionId: reference().questionId });
+    h.setClock(SUBMIT);
+    saved.push(await h.service.execute(OWNER, row.sessionId, {
+      ...submission(begun.state.attempts[0].attemptId), requestId: `tie-submit-${index}`,
+    }));
+  }
+  const byTask = [...saved].sort((a, b) => a.state.reviewTasks[0].reviewTaskId < b.state.reviewTasks[0].reviewTaskId ? -1 : 1);
+  const bySession = [...saved].sort((a, b) => a.sessionId < b.sessionId ? -1 : 1);
+  assert.notEqual(byTask[0].sessionId, bySession[0].sessionId, "fixture must distinguish task and session ordering");
+  h.setClock(byTask[0].state.reviewTasks[0].dueAt);
+  const action = (await h.service.getTodayContinuation(OWNER)).action;
+  assert.equal(action.reviewTaskId, byTask[0].state.reviewTasks[0].reviewTaskId);
+  assert.equal(action.sessionId, byTask[0].sessionId);
+});
+
+test("future exhausted review remains scheduled until the exact due boundary", async () => {
+  const base = harness();
+  const h = harness({ catalog: { ...base.catalog, retryAvailability: () => "exhausted" } });
+  const ids = await start(h); h.setClock(SUBMIT);
+  const saved = await h.service.execute(OWNER, ids.sessionId, submission(ids.attemptId));
+  const dueAt = saved.state.reviewTasks[0].dueAt;
+  h.setClock(new Date(Date.parse(dueAt) - 1).toISOString());
+  assert.equal((await h.service.getTodayContinuation(OWNER)).action.kind, "review_scheduled");
+  h.setClock(dueAt);
+  const blocked = (await h.service.getTodayContinuation(OWNER)).action;
+  assert.equal(blocked.kind, "review_blocked");
+  assert.equal(blocked.reviewTaskId, saved.state.reviewTasks[0].reviewTaskId);
+});
+
 test("failed persistence constructs and discloses no assistance; later retry completes", async () => {
   const h = harness(); const ids = await start(h); h.setClock(SUBMIT); h.failNextWrite();
   await assert.rejects(h.service.execute(OWNER, ids.sessionId, submission(ids.attemptId)), /synthetic-storage-failure/u);

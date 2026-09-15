@@ -297,6 +297,9 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
       {ownerLocalTrial && view && !busy && !retryable && !error && <p className="mt-4 text-sm">
         <a href="/app/first-stage/economics-trial" target="_blank" rel="noopener noreferrer" className="underline">다른 문항 선택 — 현재 기록은 이 창에 보존</a>
       </p>}
+      {view && !busy && !retryable && !error && !ownerLocalTrial && <p className="mt-4 text-sm">
+        <a href="/app/first-stage" className="underline">1차 오늘 학습에서 다음 행동 확인</a>
+      </p>}
       <p className="mt-5 text-xs leading-5 text-slate-500">이 주소를 다시 열면 서버에 저장된 기록을 조회합니다.
         문항·해설은 브라우저 저장소에 저장하지 않습니다. 반복·도움만으로 숙달이나 전이 성공을 주장하지 않습니다.</p>
     </section>

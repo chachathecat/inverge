@@ -15,6 +15,9 @@ export interface PrivateSessionApplicationDependencies {
   environment(): Environment;
   session(): Promise<Session>;
   catalog(): Promise<PrivateFirstStageCatalog | null>;
+  /** Other server-loaded reviewed subject catalogs used only to validate and
+   * exclude their complete durable rows from this subject's Today projection. */
+  peerCatalogs?(): Promise<readonly PrivateFirstStageCatalog[]>;
   repository(): PrivateFirstStageSessionStore;
   planningRepository?(): TrialPlanningStore;
   bankRepository?(): ReviewedBankStore;
@@ -57,6 +60,20 @@ export function createPrivateSessionApplication(dependencies: PrivateSessionAppl
       if (bankRequest) return handleReviewedBank(request, dependencies, owner.ownerId, catalog);
       const blocker = dependencies.unavailableBlocker ?? "approved_content_required";
       if (request.method === "GET" && !new URL(request.url).search) {
+        const continuation = catalog
+          ? await createPrivateFirstStageSessionService(
+              dependencies.repository(),
+              catalog,
+              dependencies.now,
+            ).getTodayContinuation(owner.ownerId, dependencies.peerCatalogs)
+          : {
+              schemaVersion: "first_stage.private_today_continuation.v1" as const,
+              state: "ready" as const,
+              action: null,
+            };
+        if (catalog && continuation.state !== "ready") {
+          return response({ ok: false, error: "temporarily_unavailable" }, 503);
+        }
         // No adapter presentation or explanation construction in availability.
         return response({ ok: true, availability: {
           schemaVersion: "first_stage.private_availability.v1",
@@ -69,7 +86,7 @@ export function createPrivateSessionApplication(dependencies: PrivateSessionAppl
           masteryClaim: false, transferEvidence: false,
           ...(reviewedBankEnabled(dependencies.environment()) && catalog && reviewedEconomicsBankCandidates(catalog)
             ? { bankPractice: true } : {}),
-        } });
+        }, continuation });
       }
       if (!catalog?.initialReferences.length) {
         return response({ ok: false, error: blocker }, 503);
