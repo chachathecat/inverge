@@ -5,11 +5,17 @@ import { chromium } from "playwright";
 
 /** Real React workbench/practice + real HTTP application. Auth/catalog/clock are
  * explicitly synthetic test ports, never genuine local-login evidence. */
-export async function verifyOwnerLocalTodayBrowser(h,{curriculum=false,screenshotPath=null}={}) {
+export async function verifyOwnerLocalTodayBrowser(h,{curriculum=false,screenshotPath=null,stallMode=null}={}) {
   const root="/app/first-stage/economics-trial",api="/api/review-os/first-stage/economics-trial/sessions";
   const bundle=await build({stdin:{contents:'import React from "react";import {createRoot} from "react-dom/client";import {OwnerLocalTrialWorkbench} from "./components/review-os/owner-local-trial-workbench";createRoot(document.getElementById("root")).render(React.createElement(OwnerLocalTrialWorkbench));',resolveDir:process.cwd(),loader:"tsx"},
     bundle:true,write:false,platform:"browser",format:"iife",jsx:"automatic",define:{"process.env.NODE_ENV":'"production"'},logLevel:"silent"});
   let origin,loseStart=true,deny=false,browser;const failures=[],external=[],statuses=[];
+  const stalls = Object.fromEntries(["read", "save", "start"].map(kind => {
+    let entered;
+    const ready = new Promise(resolve => { entered = resolve; });
+    return [kind, { ready, entered, used: false, requests: [] }];
+  }));
+  const held = [];
   const server=createServer(async(req,res)=>{
     try {
       const url=new URL(req.url,origin);
@@ -19,7 +25,20 @@ export async function verifyOwnerLocalTodayBrowser(h,{curriculum=false,screensho
       if(deny){res.writeHead(404,{"content-type":"application/json","cache-control":"no-store"});res.end('{"ok":false,"error":"not_found"}');return;}
       const chunks=[];let bytes=0;for await(const chunk of req){bytes+=chunk.length;if(bytes>16384)throw new Error("test-input-overflow");chunks.push(chunk);}
       const body=bytes?JSON.parse(Buffer.concat(chunks).toString("utf8")):undefined;
+      const kind = !body && url.search === "?view=today" ? "read"
+        : body?.action === "save_availability" ? "save" : body?.action === "start_planned" ? "start" : null;
+      if (kind) stalls[kind].requests.push(body ? Buffer.concat(chunks).toString("utf8") : null);
       const result=await h.send(body,url.search);statuses.push(result.status);
+      if (stallMode && kind && !stalls[kind].used) {
+        stalls[kind].used = true;
+        assert.equal(result.status, 200);
+        if (kind === "start") loseStart = false;
+        if (stallMode === "body") {
+          res.writeHead(result.status, Object.fromEntries(result.headers));
+          res.write('{"ok":'); // Real headers arrive; the JSON body never completes.
+        }
+        held.push(res); stalls[kind].entered(); return;
+      }
       if(body?.action==="start_planned" && loseStart){loseStart=false;assert.equal(result.status,200);res.writeHead(503,{"content-type":"application/json","cache-control":"no-store"});res.end('{"ok":false,"error":"temporarily_unavailable"}');return;}
       res.writeHead(result.status,Object.fromEntries(result.headers));res.end(JSON.stringify(result.body));
     }catch {failures.push("synthetic-host-failure");res.writeHead(500).end();}
@@ -29,10 +48,33 @@ export async function verifyOwnerLocalTodayBrowser(h,{curriculum=false,screensho
     browser=await chromium.launch({headless:true});const context=await browser.newContext();
     await context.route("**/*",route=>{if(new URL(route.request().url()).origin===origin)return route.continue();external.push("external-blocked");return route.abort();});
     const page=await context.newPage();page.on("pageerror",()=>failures.push("browser-error"));
-    await page.goto(origin+root);await page.getByRole("button",{name:"남은 시간 저장·재계획"}).waitFor();
+    if (stallMode) await page.clock.install(); // Advance client wait only, never the authoritative server clock.
+    await page.goto(origin+root);
+    if (stallMode) {
+      await stalls.read.ready;
+      await page.clock.fastForward(15_001);
+      await page.getByRole("link", { name: "현재 서버 기록 새로 불러오기", exact: true }).waitFor({ timeout: 1_000 });
+      assert.equal(stalls.save.requests.length, 0);
+      assert.equal(stalls.start.requests.length, 0);
+      assert.equal(h.rows.size, 0); assert.equal(h.planningRows.size, 0);
+      await page.reload();
+    }
+    await page.getByRole("button",{name:"남은 시간 저장·재계획"}).waitFor();
     assert.equal(await page.getByRole("radio").count(),0);assert.equal(await page.getByRole("region",{name:"저장된 응답 해설"}).count(),0);
     await page.getByLabel("구간 1 시작",{exact:true}).fill("18:00");await page.getByLabel("구간 1 종료",{exact:true}).fill("23:59");
     await page.getByLabel("남은 공부시간",{exact:true}).fill("150");await page.getByRole("button",{name:"남은 시간 저장·재계획"}).click();
+    if (stallMode) {
+      await stalls.save.ready;
+      const saved = JSON.stringify([...h.planningRows.values()]);
+      await page.clock.fastForward(15_001);
+      await page.getByRole("button", { name: "같은 계획 요청 다시 확인", exact: true }).waitFor({ timeout: 1_000 });
+      assert.equal(stalls.save.requests.length, 1, "timeout must not replay automatically");
+      assert.equal(await page.getByRole("button", { name: "남은 시간 저장·재계획", exact: true }).isDisabled(), true);
+      await page.getByRole("button", { name: "같은 계획 요청 다시 확인", exact: true }).click();
+      await page.getByRole("button", { name: "새 문제 · 경제학 46번", exact: true }).waitFor();
+      assert.deepEqual(stalls.save.requests, [stalls.save.requests[0], stalls.save.requests[0]]);
+      assert.equal(JSON.stringify([...h.planningRows.values()]), saved, "same-request replay must not resave preferences");
+    }
     await page.getByRole("button",{name:"새 문제 · 경제학 46번",exact:true}).waitFor();
     assert.equal(await page.getByRole("button",{name:"새 문제 · 경제학 46번",exact:true}).isDisabled(),true);
     await page.getByText("아직 이 블록의 시작 시간이 아닙니다.",{exact:false}).waitFor();
@@ -74,9 +116,22 @@ export async function verifyOwnerLocalTodayBrowser(h,{curriculum=false,screensho
       return {browserErrors:0,externalRequests:0,threeTeachingGroups:true,selectedAidOnly:true,draftAnswerPreserved:true,persistedResume:true};
     }
     await page.getByRole("button",{name:"새 문제 · 경제학 46번",exact:true}).evaluate(button=>{button.click();button.click();});
+    let started;
+    if (stallMode) {
+      await stalls.start.ready;
+      started = JSON.stringify({ rows: [...h.rows.values()], planning: [...h.planningRows.values()] });
+      await page.clock.fastForward(15_001);
+      await page.getByRole("button", { name: "같은 계획 요청 다시 확인", exact: true }).waitFor({ timeout: 1_000 });
+      assert.equal(stalls.start.requests.length, 1);
+    }
     await page.getByRole("button",{name:"같은 계획 요청 다시 확인"}).waitFor();const pending=page.url();assert.ok(new URL(pending).searchParams.has("planId"));
     await page.reload();await page.getByRole("button",{name:"같은 계획 요청 다시 확인"}).waitFor();assert.equal(page.url(),pending);
     await page.getByRole("button",{name:"같은 계획 요청 다시 확인"}).click();await page.getByRole("radio").first().waitFor();
+    if (stallMode) {
+      assert.deepEqual(stalls.start.requests, [stalls.start.requests[0], stalls.start.requests[0]]);
+      assert.equal(JSON.stringify({ rows: [...h.rows.values()], planning: [...h.planningRows.values()] }), started);
+      assert.equal(h.rows.size, 1);
+    }
     assert.equal(await page.getByRole("region",{name:"저장된 응답 해설"}).count(),0);
     await page.getByRole("radio").first().check();h.setClock("2026-09-08T00:01:00.000Z");
     await page.getByRole("button",{name:"응답 저장 후 해설 확인"}).click();
@@ -108,5 +163,5 @@ export async function verifyOwnerLocalTodayBrowser(h,{curriculum=false,screensho
     assert.equal(await page.getByRole("button",{name:/새 문제 ·/}).count(),0);
     assert.deepEqual(failures,[]);assert.deepEqual(external,[]);assert.ok(statuses.every(status=>status===200));
     return {browserErrors:0,externalRequests:0,persistedResume:true,remainingReplan:true,expiredLoginDenied:true,futureBlocksDisabled:true};
-  }finally{await browser?.close();await new Promise(resolve=>server.close(resolve));}
+  }finally{await browser?.close();for (const response of held) response.destroy();await new Promise(resolve=>server.close(resolve));}
 }

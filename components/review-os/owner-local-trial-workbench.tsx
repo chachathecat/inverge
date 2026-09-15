@@ -49,22 +49,28 @@ function OwnerLocalToday({initialSearch}:{initialSearch:string}) {
   }
   useEffect(() => {
     let active = true; mounted.current = true;
-    fetch(API,{cache:"no-store",credentials:"same-origin"}).then(async response => {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 15_000);
+    fetch(API,{cache:"no-store",credentials:"same-origin",signal:controller.signal}).then(async response => {
       if ([401,403,404].includes(response.status)) { if(active)setLoginRequired(true); throw new Error("access"); }
       const payload = await response.json() as Payload;
       if (!response.ok || !payload.ok || !payload.today) throw new Error("unavailable");
       if (active) accept(payload.today);
     }).catch(() => { if(active)setError("현재 계획을 확인하지 못했습니다. 기록은 변경하지 않았습니다."); })
-      .finally(() => {if(active)setBusy(false);});
-    return () => {active=false; mounted.current=false;};
+      .finally(() => {window.clearTimeout(timeout);if(active)setBusy(false);});
+    return () => {active=false; mounted.current=false;window.clearTimeout(timeout);controller.abort();};
   }, []);
 
   async function send(command: unknown) {
     if (busy || inFlight.current) return;
     inFlight.current=true; pending.current=command; setBusy(true); setError(null); setRetryable(false);
+    const controller = new AbortController();
+    // Stop only client waiting. The server can still commit; retain the exact
+    // command so explicit replay resolves its durable winner without a new ID.
+    const timeout = window.setTimeout(() => controller.abort(), 15_000);
     try {
       const response=await fetch(API,{method:"POST",cache:"no-store",credentials:"same-origin",
-        headers:{"Content-Type":"application/json"},body:JSON.stringify(command)});
+        headers:{"Content-Type":"application/json"},body:JSON.stringify(command),signal:controller.signal});
       const payload=await response.json() as Payload;
       if(!mounted.current)return;
       if([401,403,404].includes(response.status)) {setLoginRequired(true);throw new Error("access");}
@@ -78,8 +84,10 @@ function OwnerLocalToday({initialSearch}:{initialSearch:string}) {
       if(!payload.today)throw new Error("unavailable");
       accept(payload.today);pending.current=null;
     } catch {
-      if(mounted.current) {setError("처리 결과를 확인하지 못했습니다. 같은 요청으로 다시 확인하면 중복 저장을 방지합니다.");setRetryable(true);}
-    } finally {inFlight.current=false;if(mounted.current)setBusy(false);}
+      if(mounted.current) {setError(controller.signal.aborted
+        ? "응답 대기가 길어져 결과를 확인하지 못했습니다. 서버 저장은 계속될 수 있습니다. 같은 계획 요청을 다시 확인하세요."
+        : "처리 결과를 확인하지 못했습니다. 같은 요청으로 다시 확인하면 중복 저장을 방지합니다.");setRetryable(true);}
+    } finally {window.clearTimeout(timeout);inFlight.current=false;if(mounted.current)setBusy(false);}
   }
   function start(actionId:string) {
     if(today?.state!=="planned" || !today.executableNowActionIds.includes(actionId) || busy || inFlight.current)return;
