@@ -15,10 +15,10 @@ jobs:
     name: risk-classifier
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
       - name: Classify risk
@@ -26,7 +26,7 @@ jobs:
           RISK_OUTPUT_PATH: .agent-factory/risk.json
         run: node scripts/automation/classify-risk.mjs
       - name: Upload bounded risk artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: agent-risk-${{ github.event.pull_request.number }}
           path: .agent-factory/risk.json
