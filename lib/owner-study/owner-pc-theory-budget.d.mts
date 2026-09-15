@@ -6,3 +6,4 @@ export function validateTheorySettings(settings: unknown, now?: number): OwnerTh
 export function initializeTheoryBudget(root: string, settings: OwnerTheorySettings): Promise<void>;
 export function readTheoryBudget(root: string, settings: OwnerTheorySettings): Promise<{usedReservations: number; reservedMicros: number; remainingMicros: number; remainingCalls: number; caseId: string | null}>;
 export function generateOwnerTheory(root: string, settings: OwnerTheorySettings, authority: OwnerTheoryAuthority, request: unknown): Promise<{response: {text(): string}}>;
+export function testOwnerTheoryConnection(root: string, settings: OwnerTheorySettings): Promise<{ok: true; modelVersion: string; usage: {promptTokenCount: number | null; candidatesTokenCount: number | null; thoughtsTokenCount: number | null; totalTokenCount: number | null}; estimatedCostMicros: number | null}>;

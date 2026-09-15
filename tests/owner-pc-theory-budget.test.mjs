@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { THEORY_POLICY as policy, initializeTheoryBudget, reserveTheoryCall, readTheoryBudget,
-  generateOwnerTheory, validateTheorySettings } from "../lib/owner-study/owner-pc-theory-budget.mjs";
+  generateOwnerTheory, validateTheorySettings, testOwnerTheoryConnection } from "../lib/owner-study/owner-pc-theory-budget.mjs";
 const settings = () => ({ version: policy.version, model: policy.model, apiKey: "synthetic-never-provider-key", projectId: "synthetic-project",
   ownerId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", paidProjectVerified: true, dataSharingEnabled: false,
   verifiedAt: new Date().toISOString(), verificationEvidenceSha256: "a".repeat(64) });
@@ -71,4 +71,45 @@ test("ordinary economics startup and rollback never inherit Theory/provider auth
  assert.equal(theory.INVERGE_OWNER_ECONOMICS_R3_TRIAL_ENABLED,"true");assert.equal(theory.INVERGE_OWNER_PC_THEORY_ENABLED,"true");
  assert.equal(theory.WCV_C2R_C_T_THEORY_ENABLED,"true");assert.equal(theory.GEMINI_API_KEY,undefined);
  assert.equal(theory.AI_COST_GUARDRAIL_ADMIN_OVERRIDE,undefined);
+});
+
+
+test("synthetic connection test spends the same budget without selecting a learner case", async () => {
+  const {root,config}=await fixture();let calls=0;
+  const result=await testOwnerTheoryConnection(root,config,async(url,init)=>{
+    calls++;assert.match(url,/models\/gemini-2\.5-flash:generateContent$/);
+    const body=JSON.parse(init.body);
+    assert.deepEqual(body.contents,[{role:"user",parts:[{text:"Synthetic connection check. Reply only READY."}]}]);
+    assert.equal(body.generationConfig.maxOutputTokens,32);assert.equal(body.generationConfig.thinkingConfig.thinkingBudget,0);
+    assert.equal(body.generationConfig.candidateCount,1);assert.equal(init.redirect,"error");
+    assert.equal((await readTheoryBudget(root,config)).reservedMicros,policy.reservationMicros);
+    assert.equal((await readTheoryBudget(root,config)).caseId,null);
+    return Response.json({modelVersion:"gemini-2.5-flash",usageMetadata:{promptTokenCount:9,candidatesTokenCount:1,totalTokenCount:10},candidates:[{finishReason:"STOP",content:{parts:[{text:"READY"}]}}]});
+  });
+  assert.equal(result.estimatedCostMicros,6);assert.equal(result.modelVersion,policy.model);
+  await assert.rejects(testOwnerTheoryConnection(root,config,()=>{calls++;}),{code:"OWNER_THEORY_CONNECTION_TEST_ALREADY_USED"});
+  assert.equal(calls,1);assert.equal((await readTheoryBudget(root,config)).remainingCalls,13);
+  assert.equal((await readdir(root)).includes("case.json"),false);
+  await reserveTheoryCall(root,config,authority);
+  const next=await readTheoryBudget(root,config);assert.equal(next.caseId,authority.sourceItemId);assert.equal(next.usedReservations,2);
+  assert.equal(next.remainingMicros,policy.budgetMicros-2*policy.reservationMicros);
+});
+
+test("concurrent, failed and restarted connection probes cannot regain budget or retry", async () => {
+  const {root,config}=await fixture();let calls=0;
+  const attempts=await Promise.allSettled(Array.from({length:12},()=>testOwnerTheoryConnection(root,config,async()=>{calls++;throw Error("unknown timeout");})));
+  assert.ok(attempts.every(r=>r.status==="rejected"));assert.equal(calls,1);
+  assert.equal((await readTheoryBudget(root,config)).usedReservations,1);
+  await assert.rejects(testOwnerTheoryConnection(root,config),{code:"OWNER_THEORY_CONNECTION_TEST_ALREADY_USED"});
+  await reserveTheoryCall(root,config,authority);
+  await assert.rejects(testOwnerTheoryConnection(root,config),{code:"OWNER_THEORY_CONNECTION_TEST_ALREADY_USED"});
+  assert.equal((await readTheoryBudget(root,config)).usedReservations,2);
+  const invalid=await fixture();await writeFile(path.join(invalid.root,"call-01.json"),"",{flag:"wx"});
+  await assert.rejects(readTheoryBudget(invalid.root,invalid.config),{code:"OWNER_THEORY_CASE_INVALID"});
+});
+
+test("connection response without usage is never reported as free", async () => {
+  const {root,config}=await fixture();
+  const result=await testOwnerTheoryConnection(root,config,async()=>Response.json({modelVersion:policy.model,candidates:[{finishReason:"STOP",content:{parts:[{text:"READY"}]}}]}));
+  assert.equal(result.estimatedCostMicros,null);assert.equal((await readTheoryBudget(root,config)).reservedMicros,policy.reservationMicros);
 });
