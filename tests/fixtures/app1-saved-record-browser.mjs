@@ -1,3 +1,4 @@
+import { OwnerTheoryError } from "../../lib/owner-study/owner-pc-theory-budget.mjs";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import React from "react";
@@ -9,7 +10,7 @@ import { productionHarness, OWNER_ID, SOURCE_ID, NOW } from "./app1-production-p
 // Existing Capture source + real repair UI, API, authority, service, repository,
 // saved-item, Review and Today pages. Only auth/model/clock/storage transport are
 // synthetic. Never loads the Owner's account, environment or personal database.
-export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, captureInput = false, actionTimeout = 15_000 } = {}) {
+export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, captureInput = false, ownerTheory = null, actionTimeout = 15_000 } = {}) {
   const repairText = "임대료 미납 사실을 계약 해지 논거의 요건에 연결하여 계약 종료 결론을 도출했습니다.";
   const draft = {
     questionSummary: "합성 문제 구조", coreConcepts: ["정의", "논거", "적용"], requiredIssues: "정의, 논거, 적용",
@@ -21,8 +22,16 @@ export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, ca
   };
   let origin, browser, page, savedId, sourceId = SOURCE_ID, modelCalls = 0;
   const failures = [], external = [], writes = [], reads = [];
-  const app = productionHarness(execute, { overrides: ({ load, session }) => ({
-    "@/lib/evaluate/gemini": {
+  const app = productionHarness(execute, { env: ownerTheory ? {ALPHA_ADMIN_EMAILS:"owner@localhost.test",WCV_C2R_C_T_OWNER_EMAILS:"owner@localhost.test"} : {}, overrides: ({ load, session }) => ({
+    ...(ownerTheory ? {"@/lib/owner-study/owner-pc-theory": {
+      isOwnerPcTheoryEnabled: () => true, OwnerTheoryError,
+      generateOwnerTheoryStructure: async (authority,request) => {
+        modelCalls++;
+        const corrected=JSON.stringify(request).includes(repairText);
+        const result=corrected ? {...draft,strengths:[repairText],missingIssueCandidates:["결론 문장의 범위를 한정할 필요가 있습니다."],weakParagraphPoint:"결론 문장의 범위를 한정해 다시 적으세요.",weakLogicPoint:"결론 범위를 확인하세요."} : draft;
+        return ownerTheory.generate(authority,request,result);
+      },
+    }} : {"@/lib/evaluate/gemini": {
       isGeminiConfigured: () => true,
       GeminiEnvError: class extends Error {}, GeminiStructureParseError: class extends Error {}, isGeminiQuotaExceededError: () => false,
       structureAnswerReviewWithGemini: async ({ answerText }) => {
@@ -30,6 +39,7 @@ export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, ca
         return answerText === repairText ? { ...draft, strengths: [repairText], missingIssueCandidates: ["결론 문장의 범위를 한정할 필요가 있습니다."], weakParagraphPoint: "결론 문장의 범위를 한정해 다시 적으세요.", weakLogicPoint: "결론 범위를 확인하세요." } : draft;
       },
     },
+    }),
     "@/lib/review-os/server": {
       buildReviewOsReturnTo: (url, mode) => `${url}?mode=${mode}`,
       getReviewOsServerContext: async () => ({ session, access: load("lib/review-os/access-result").buildReviewOsAccessResult(await load("lib/review-os/service").reviewOsService.ensureAccess(OWNER_ID, session.email)), profile: null }),
@@ -37,7 +47,8 @@ export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, ca
     "next/link": ({ children, href, prefetch, ...props }) => { void prefetch; return React.createElement("a", { ...props, href }, children); },
     "next/navigation": { notFound() { throw new Error("synthetic-page-not-found"); }, redirect(href) { throw new Error(`unexpected-redirect:${href}`); }, useRouter: () => ({}), usePathname: () => "/app/items", useSearchParams: () => new URLSearchParams("mode=second") },
   }) });
-  const bundle = await build({ stdin: { contents: `import React from "react";import {createRoot} from "react-dom/client";import {App1CaptureRepairLoop} from "./components/owner-study/app1-capture-repair-loop";import {WrongAnswerCaptureForm} from "./components/review-os/capture-form";const capture=location.pathname==="/app/capture";createRoot(document.getElementById("root")).render(capture?React.createElement(WrongAnswerCaptureForm,{userId:${JSON.stringify(OWNER_ID)},mode:"second",initialSubject:"감정평가이론",ownerCaptureRepairEnabled:true,ownerCaptureRepairSubjects:["appraisal_theory"]}):React.createElement(App1CaptureRepairLoop,{ownerScope:${JSON.stringify(OWNER_ID)},itemId:new URLSearchParams(location.search).get("itemId"),availableSubjects:["appraisal_theory"]}));`, resolveDir: process.cwd(), loader: "tsx" }, bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic", define: { "process.env.NODE_ENV": '"production"' }, logLevel: "silent", plugins: [{name:"synthetic-navigation",setup(b) {
+  if(ownerTheory) app.session.email="owner@localhost.test";
+  const bundle = await build({ stdin: { contents: `import React from "react";import {createRoot} from "react-dom/client";import {App1CaptureRepairLoop} from "./components/owner-study/app1-capture-repair-loop";import {WrongAnswerCaptureForm} from "./components/review-os/capture-form";const capture=location.pathname==="/app/capture";createRoot(document.getElementById("root")).render(capture?React.createElement(WrongAnswerCaptureForm,{userId:${JSON.stringify(OWNER_ID)},mode:"second",textOnly:${Boolean(ownerTheory)},initialSubject:"감정평가이론",ownerCaptureRepairEnabled:true,ownerCaptureRepairSubjects:["appraisal_theory"]}):React.createElement(App1CaptureRepairLoop,{ownerTheoryMode:${Boolean(ownerTheory)},ownerScope:${JSON.stringify(OWNER_ID)},itemId:new URLSearchParams(location.search).get("itemId"),availableSubjects:["appraisal_theory"]}));`, resolveDir: process.cwd(), loader: "tsx" }, bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic", define: { "process.env.NODE_ENV": '"production"' }, logLevel: "silent", plugins: [{name:"synthetic-navigation",setup(b) {
     b.onResolve({filter:/^next\/link$/},()=>({path:"link",namespace:"synthetic"}));
     b.onResolve({filter:/^next\/navigation$/},()=>({path:"navigation",namespace:"synthetic"}));
     b.onLoad({filter:/^navigation$/,namespace:"synthetic"},()=>({contents:'export function useRouter(){return {push:href=>location.assign(href),refresh(){}}}export function usePathname(){return location.pathname}export function useSearchParams(){return new URLSearchParams(location.search)}',loader:"js"}));
@@ -81,8 +92,10 @@ export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, ca
     await page.clock.setFixedTime(new Date(NOW));
     if (captureInput) {
       await page.goto(`${origin}/app/capture?mode=second`);
-      await page.getByRole("button",{name:"사진·PDF·텍스트로 시작",exact:true}).click();
-      await page.getByRole("button",{name:"텍스트 붙여넣기",exact:true}).click();
+      if (!ownerTheory) {
+        await page.getByRole("button",{name:"사진·PDF·텍스트로 시작",exact:true}).click();
+        await page.getByRole("button",{name:"텍스트 붙여넣기",exact:true}).click();
+      } else { await page.locator("[data-owner-theory-text-only]").waitFor(); assert.equal(modelCalls,0); }
       await page.getByLabel("오늘 공부한 내용 또는 내 답안",{exact:true}).fill("임대료 미납 사례에서 계약 해지 논거를 설명하시오.");
       await page.getByRole("button",{name:"입력 내용 확인하기",exact:true}).click();
       await page.getByRole("button",{name:"쟁점 회상부터 진행",exact:true}).click();
@@ -102,7 +115,14 @@ export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, ca
       sourceId=new URL(page.url()).searchParams.get("itemId");
       assert.ok(sourceId);assert.notEqual(sourceId,SOURCE_ID);
     } else await page.goto(`${origin}/app/capture/repair?itemId=${sourceId}`);
-    await page.getByRole("button",{name:"이 내용으로 분석",exact:true}).click();
+    if(ownerTheory) {
+      assert.equal(modelCalls,0,"page loads and local Capture do not call Gemini");
+      const body=new FormData();body.set("requestPurpose","app1_initial_analysis");body.set("sourceItemId",sourceId);body.set("examMode","second");body.set("subject","감정평가이론");
+      const denied=await app.load("app/api/answer-review/structure/route").POST(new Request(`${origin}/api/answer-review/structure`,{method:"POST",body}));
+      assert.equal(denied.status,403,"missing explicit selected-text consent fails before provider");
+      assert.equal(modelCalls,0);
+    }
+    await page.getByRole("button",{name:ownerTheory ? "선택한 문제·답안을 Gemini로 보내 분석" : "이 내용으로 분석",exact:true}).click();
     await page.getByRole("button",{name:"직접 복구하기",exact:true}).click();
     await page.getByLabel("내 복구 입력").fill(repairText);
     await page.getByRole("button",{name:"복구 확인",exact:true}).click();
@@ -131,6 +151,7 @@ export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, ca
     assert.equal(writes.filter(p=>p==="/api/os/items").length,captureInput?2:1);
     assert.ok(modelCalls>=2);assert.ok(reads.includes(sourceId));assert.ok(reads.includes(savedId));
     assert.deepEqual(failures,[]);assert.deepEqual(external,[]);
+    return {savedId,sourceId,modelCalls};
   } catch(error) { throw new Error(`${error.message}\n${failures.join("\n")}\n${await page?.locator("body").innerText().catch(()=>"")}`,{cause:error}); }
   finally {await browser?.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 }

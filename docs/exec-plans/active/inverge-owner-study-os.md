@@ -1,5 +1,25 @@
 # Inverge Owner Study OS
 
+## PC Theory continuation after #936 / #937
+
+The existing Goal and PC writer continue from merged #936 (`4d1cb03`). Its
+completion evidence and #932/#934 are reused. The Owner conditionally approved
+one explicit local Theory text case and additive local schema after reviewed
+SQL, restorable backup and record preservation checks. The candidate reuses
+Capture, APP1, C3R, saved records, Review and Today. Economics startup remains
+separate from explicit `start-theory`; no provider key is inherited.
+
+Only an authenticated Owner click sends the selected case to the paid provider.
+Durable exclusive reservations include every in-flight/failed/retried request,
+bind one case and never reset by date or restart. Other provider operations,
+files and automatic reference enrichment remain disabled in this mode.
+Concurrent-process/unknown-outcome budget tests and actual additive SQL plus
+PostgREST/browser input, correction, save, reload, Review and Today pass with
+synthetic data. Personal apply and paid calls wait for their exact operational
+preconditions; no independent Owner learning or whole-Goal completion is claimed.
+Rollback starts economics without Theory and preserves records and reservations.
+
+
 ## PC continuation after #934 — second-stage saved correction / #935
 
 The same PC writer continues from merged main `1d02af97920ac855534e86a2b09aa92aba9f99f5`.

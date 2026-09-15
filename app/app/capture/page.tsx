@@ -1,3 +1,4 @@
+import { isOwnerPcTheoryEnabled } from "@/lib/owner-study/owner-pc-theory";
 import { WrongAnswerCaptureForm } from "@/components/review-os/capture-form";
 import { V3RouteFrame } from "@/components/learner";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
@@ -67,6 +68,7 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
         </p>
       </header>
       <WrongAnswerCaptureForm
+        textOnly={mode === "second" && isOwnerPcTheoryEnabled()}
         userId={session.userId}
         mode={mode}
         initialPreferredSubjects={profile?.preferredSubjects}

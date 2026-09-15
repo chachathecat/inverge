@@ -1,3 +1,4 @@
+import { isOwnerPcTheoryEnabled } from "@/lib/owner-study/owner-pc-theory";
 import { notFound } from "next/navigation";
 
 import { App1CaptureRepairLoop } from "@/components/owner-study/app1-capture-repair-loop";
@@ -29,6 +30,7 @@ export default async function App1CaptureRepairPage({ searchParams }: PageProps)
 
   return (
     <App1CaptureRepairLoop
+      ownerTheoryMode={isOwnerPcTheoryEnabled()}
       ownerScope={access.userId}
       itemId={itemId}
       availableSubjects={access.trustedRepairSubjects}

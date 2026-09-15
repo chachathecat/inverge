@@ -1,3 +1,4 @@
+import { isOwnerPcTheoryEnabled } from "@/lib/owner-study/owner-pc-theory";
 import { NextResponse } from "next/server";
 import { getServerSessionUser } from "@/lib/auth/session";
 import { extractStructuredDraftWithGemini, extractTranscriptionFromImages } from "@/lib/evaluate/gemini";
@@ -20,6 +21,7 @@ export async function POST(request: Request) {
     const pastedText = formData.get("text")?.toString() ?? formData.get("raw_text")?.toString() ?? "";
     const sourceLabel = formData.get("source_label")?.toString() ?? "";
     const imageFiles = [...formData.getAll("images"), ...formData.getAll("image")].filter((item): item is File => item instanceof File && item.size > 0);
+    if (isOwnerPcTheoryEnabled() && imageFiles.length > 0) return NextResponse.json({ ok: false, errorCode: "OWNER_THEORY_TEXT_ONLY", error: "이론 모드는 텍스트 입력만 지원합니다. 사진·PDF 분석은 미지원입니다." }, {status: 400});
     if (imageFiles.length === 0 && !pastedText.trim()) return NextResponse.json({ ok: false, error: "이미지 또는 텍스트를 하나 이상 입력해 주세요.", errorCode: "OCR_FAILED", recovery: "retry" }, { status: 400 });
     const ocrPages = imageFiles.length > 0
       ? await Promise.all(
@@ -34,7 +36,7 @@ export async function POST(request: Request) {
       ? ocrPages.map((page) => `[Page ${page.pageNumber}]\n${page.text}`).join("\n\n")
       : pastedText.trim();
     let rawExtractionJson: Record<string, unknown> = {};
-    if (process.env.OCR_STRUCTURED_EXTRACTION_AI === "true") {
+    if (!isOwnerPcTheoryEnabled() && process.env.OCR_STRUCTURED_EXTRACTION_AI === "true") {
       try { rawExtractionJson = await extractStructuredDraftWithGemini(mode, rawOcrText); } catch { rawExtractionJson = {}; }
     }
     const extraction = normalizeExtractionDraft(mode, rawOcrText, rawExtractionJson, sourceLabel || imageFiles[0]?.name || "");
