@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -79,7 +79,7 @@ export function productionHarness(executeQuery, options = {}) {
   const noNetwork = () => { throw new Error("test-network-provider-execution-forbidden"); };
   function load(relative) {
     let filename = path.resolve(root, relative);
-    if (!path.extname(filename)) filename += ".ts";
+    if (!path.extname(filename)) filename = [filename + ".ts", filename + ".tsx", path.join(filename, "index.ts"), path.join(filename, "index.tsx")].find(existsSync) ?? filename + ".ts";
     if (modules.has(filename)) return modules.get(filename).exports;
     if (filename.endsWith(".json")) return JSON.parse(readFileSync(filename, "utf8"));
     const loadedModule = { exports: {} };
@@ -102,6 +102,7 @@ export function productionHarness(executeQuery, options = {}) {
   const repository = load("lib/review-os/repository").reviewOsRepository;
   const authority = load("lib/owner-study/app1-server-authority");
   const route = load("app/api/os/items/route");
+  if (options.overrides) Object.assign(overrides, options.overrides({ load, session }));
   return {
     repository, authority, load, calls, session,
     async command(suffix = "one") {

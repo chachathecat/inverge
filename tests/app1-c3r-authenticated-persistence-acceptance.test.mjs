@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import test from "node:test";
+import { verifyApp1SavedRecordBrowser } from "./fixtures/app1-saved-record-browser.mjs";
 import { productionHarness, completedQueueRetryScenario, seedRows, OWNER_ID, RAW_MARKER as PRODUCTION_RAW_MARKER } from "./fixtures/app1-production-persistence-harness.mjs";
 
 import {
@@ -54,7 +55,7 @@ test("actual authenticated production constructor/service/repository recover rep
   };
   const literal = value => value === null ? "null" : typeof value === "object" ? jsonLiteral(value) : sqlLiteral(value);
   const transport = async q => {
-    assert.ok(tableNames.includes(q.table));
+    assert.ok([...tableNames, "action_seeds", "study_logs"].includes(q.table), `unexpected table ${q.table}`);
     const table = `public.${identifier(q.table)}`;
     const predicates = q.filters.map(([field, operator, value]) => operator === "notNull"
       ? `${expression(field)} is not null` : operator === "in"
@@ -169,6 +170,19 @@ test("actual authenticated production constructor/service/repository recover rep
     const derived=await sql("select coalesce(string_agg(metadata_json::text,''),'') from learning_signal_events");
     assert.equal(derived.includes(PRODUCTION_RAW_MARKER),false);
     await sql("delete from learning_signal_events; delete from usage_events; delete from review_queue_items; delete from wrong_answer_tags; delete from wrong_answer_notes; delete from recurrence_features; delete from wrong_answer_items; delete from profiles");
+    // A fresh synthetic source in this same networkless disposable database
+    // proves the real browser -> HTTP -> repository -> PostgreSQL -> page path.
+    // The ten prior repair/replay assertions above remain unchanged.
+    await sql(`
+      create table action_seeds(id uuid primary key, user_id uuid references auth.users(id), source_type text, seed_type text, priority_score numeric, rendered_text text, raw_payload jsonb, created_at timestamptz default now());
+      create table study_logs(id uuid primary key, user_id uuid references auth.users(id), mode text, created_at timestamptz default now());
+      ${["action_seeds", "study_logs"].map(table => `alter table ${table} enable row level security; alter table ${table} force row level security; create policy own_row on ${table} to authenticated using (user_id=auth.uid()); grant select,insert,update,delete on ${table} to authenticated;`).join("\n")}
+    `, false);
+    for (const [table, rows] of Object.entries(seedRows())) for (const values of rows) await transport({ table, values, operation: "insert", filters: [] });
+    await verifyApp1SavedRecordBrowser(transport, { captureInput: true, actionTimeout: 90_000 });
+    await sql("delete from action_seeds; delete from study_logs; delete from learning_signal_events; delete from usage_events; delete from review_queue_items; delete from wrong_answer_tags; delete from wrong_answer_notes; delete from recurrence_features; delete from wrong_answer_items; delete from profiles");
+    assert.equal(await sql("select (select count(*) from action_seeds)+(select count(*) from study_logs)"), "0");
+    process.stdout.write(JSON.stringify({ acceptance:"APP1_SAVED_RECORD_BROWSER_POSTGRESQL_ACCEPTED", actualPages:["repair","saved_item","review","today"], exactSavedRecordReconnect:true, personalDatabaseAccessed:false, realNextDayObserved:false })+"\n");
     await sql("delete from auth.users",false);
     assert.equal(await sql(`select ${[...tableNames,"auth.users"].map(table=>`(select count(*) from ${table})`).join("+")}`,false),"0");
     process.stdout.write(JSON.stringify({ acceptance:"APP1_PRODUCTION_REPEAT_REPAIR_POSTGRESQL_ACCEPTED", previousTopicHistoryPreserved:true, repairCount:saved.length, queueCount:10, journeyCount:10, completedQueueCases:5, currentPendingMatchesListReviewQueue:true, noCompletedH0Issued:true, legacyLinkNormalizationAccepted:true, identicalAndConcurrentRetriesAccepted:true, delayedRetryPreservesOriginalD1:true, syntheticRowsAndUserCleaned:true })+"\n");

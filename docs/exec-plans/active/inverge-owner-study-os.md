@@ -1,5 +1,32 @@
 # Inverge Owner Study OS
 
+## PC continuation after #934 — second-stage saved correction / #935
+
+The same PC writer continues from merged main `1d02af97920ac855534e86a2b09aa92aba9f99f5`.
+#932/#934 completion evidence is reused; the existing Goal remains open. The
+approved economics installation now runs that integrated code at
+`http://127.0.0.1:3883/app/first-stage/economics-trial`. Existing authentication,
+six saved responses and saved-record reload were checked; record/plan digests
+remained identical. Seven originals plus seven retries remain human-unreviewed.
+
+The bounded second-stage continuation reuses Capture, APP-1 analysis/repair,
+C3R, item detail, Review and Today. A real browser exposed final-confirmation
+button reuse causing an implicit form submit; canceling that click preserves
+the explicit save step. Successful correction save now links its exact stored
+item. Synthetic typed Capture through real APIs, direct repair, save, reload,
+Review and Today passes, including no save during final confirmation and no
+review completion on reads. Related/domain regressions pass 76/76; the earlier
+full run passed 1,891 tests. Final native checks and exact-head review are pending.
+The authenticated disposable PostgreSQL/browser scenario also runs in Full CI.
+Both local SQL acceptance tests passed, including the complete typed Capture
+journey. Review of `7149e87` found the legacy stage-order test still required
+the unsafe inline handler. Its correction retains every ordered transition and
+additionally requires a non-submit button with preventDefault before confirm.
+No personal second-stage schema, provider, content or feature activation is
+included. Its PC schema is absent and provider configuration remains disabled;
+actual second-stage Owner acceptance and the wider Goal remain incomplete.
+Rollback removes these two UI changes without deleting stored work.
+
 ## PC continuation after #932 — trial Today recovery / #933
 
 PR #932 merged exact reviewed head `d385e20513cd675afed1f53e5962560f06f1dd44`
