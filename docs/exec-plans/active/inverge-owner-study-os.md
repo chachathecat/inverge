@@ -10,6 +10,10 @@ the existing paid-project/private-key checks; no Vercel setting, database,
 public endpoint or billing-setting change belongs to this patch. Final native
 checks and independent exact-head review remain required. The synthetic result
 is connectivity evidence only, not Owner learning or next-day review evidence.
+The first exact-head review identified a probe/learner reservation race. A
+permanent atomic first-operation selector now excludes concurrent learner
+transports until the probe succeeds; failed/crashed probes remain blocked.
+The nine budget tests and isolated PostgreSQL/PostgREST/browser regression pass.
 
 ## PC Theory continuation after #936 / #937
 

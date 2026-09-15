@@ -101,9 +101,11 @@ test("concurrent, failed and restarted connection probes cannot regain budget or
   assert.ok(attempts.every(r=>r.status==="rejected"));assert.equal(calls,1);
   assert.equal((await readTheoryBudget(root,config)).usedReservations,1);
   await assert.rejects(testOwnerTheoryConnection(root,config),{code:"OWNER_THEORY_CONNECTION_TEST_ALREADY_USED"});
-  await reserveTheoryCall(root,config,authority);
+  await assert.rejects(reserveTheoryCall(root,config,authority),{code:"OWNER_THEORY_CONNECTION_NOT_READY"});
   await assert.rejects(testOwnerTheoryConnection(root,config),{code:"OWNER_THEORY_CONNECTION_TEST_ALREADY_USED"});
-  assert.equal((await readTheoryBudget(root,config)).usedReservations,2);
+  assert.equal((await readTheoryBudget(root,config)).usedReservations,1);
+  assert.equal((await readTheoryBudget(root,config)).connectionPending,true);
+  assert.equal((await readdir(root)).includes("case.json"),false);
   const invalid=await fixture();await writeFile(path.join(invalid.root,"call-01.json"),"",{flag:"wx"});
   await assert.rejects(readTheoryBudget(invalid.root,invalid.config),{code:"OWNER_THEORY_CASE_INVALID"});
 });
@@ -112,4 +114,23 @@ test("connection response without usage is never reported as free", async () => 
   const {root,config}=await fixture();
   const result=await testOwnerTheoryConnection(root,config,async()=>Response.json({modelVersion:policy.model,candidates:[{finishReason:"STOP",content:{parts:[{text:"READY"}]}}]}));
   assert.equal(result.estimatedCostMicros,null);assert.equal((await readTheoryBudget(root,config)).reservedMicros,policy.reservationMicros);
+});
+
+
+test("probe and learner transports cannot race the permanent first-operation selector", async () => {
+  const {root,config}=await fixture();let release,entered;let learnerCalls=0;
+  const enteredPromise=new Promise(resolve=>{entered=resolve;});
+  const responsePromise=new Promise(resolve=>{release=resolve;});
+  const probe=testOwnerTheoryConnection(root,config,async()=>{entered();return responsePromise;});
+  await enteredPromise;
+  await assert.rejects(generateOwnerTheory(root,config,authority,request,async()=>{learnerCalls++;}),{code:"OWNER_THEORY_CONNECTION_NOT_READY"});
+  assert.equal(learnerCalls,0);assert.equal((await readdir(root)).includes("case.json"),false);
+  release(Response.json({modelVersion:policy.model,candidates:[{finishReason:"STOP",content:{parts:[{text:"READY"}]}}]}));
+  await probe;assert.equal((await readTheoryBudget(root,config)).connectionPending,false);
+  await reserveTheoryCall(root,config,authority);assert.equal((await readTheoryBudget(root,config)).usedReservations,2);
+  const learnerFirst=await fixture();await reserveTheoryCall(learnerFirst.root,learnerFirst.config,authority);
+  await assert.rejects(testOwnerTheoryConnection(learnerFirst.root,learnerFirst.config,async()=>{throw Error("must not call");}),{code:"OWNER_THEORY_CONNECTION_TEST_ALREADY_USED"});
+  const crashed=await fixture();await writeFile(path.join(crashed.root,"first-operation.json"),JSON.stringify({purpose:"connection_test"}),{flag:"wx"});
+  await assert.rejects(reserveTheoryCall(crashed.root,crashed.config,authority),{code:"OWNER_THEORY_CONNECTION_NOT_READY"});
+  await assert.rejects(testOwnerTheoryConnection(crashed.root,crashed.config),{code:"OWNER_THEORY_CONNECTION_TEST_ALREADY_USED"});
 });

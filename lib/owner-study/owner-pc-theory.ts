@@ -21,7 +21,7 @@ export async function ownerTheoryStatus() {
   try {
     const settings = await configuration();
     const budget = await readTheoryBudget(path.join(root(), "budget"), settings);
-    return { ready: budget.remainingCalls > 0, ...budget, reason: budget.remainingCalls ? null : "누적 예산의 호출 한도에 도달했습니다." };
+    return { ready: budget.remainingCalls > 0 && !budget.connectionPending, ...budget, reason: budget.connectionPending ? "연결 확인이 완료되지 않았습니다. 입력한 자료는 로컬에 보존됩니다." : budget.remainingCalls ? null : "누적 예산의 호출 한도에 도달했습니다." };
   } catch { return { ready: false, remainingCalls: 0, reservedMicros: 0, remainingMicros: 0, caseId: null,
     reason: "Gemini 유료 프로젝트 확인과 누적 예산 설치가 필요합니다. 입력한 자료는 로컬에 보존됩니다." }; }
 }
