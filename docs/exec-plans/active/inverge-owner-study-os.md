@@ -1,5 +1,32 @@
 # Inverge Owner Study OS
 
+## PC continuation after #932 — trial Today recovery / #933
+
+PR #932 merged exact reviewed head `d385e20513cd675afed1f53e5962560f06f1dd44`
+as `540c341fc3111344b776e00db97a783f6bf2e8ca`, with identical tree
+`7675435c493d55a8ea846c3f625c9ccf307d52e4`. Required native checks 9/9,
+Linux/Windows full tests 1,870/1,870 each, actual SQL/browser 8/8, clean Codex
+review and zero unresolved threads passed. All five resulting-main workflows
+passed; the actual Production deployment is CANCELED. #931 closed; the Goal
+and #880/#883/#772 remain open. GitHub remains the delivery authority:
+https://github.com/chachathecat/inverge/pull/932.
+
+The same PC writer continues on `codex/trial-today-request-recovery` for #933.
+Existing #905 already supplies trial Today, saved history and planned starts.
+The remaining gap is indefinite fetch/JSON waiting in that workbench. A bounded
+client wait now exposes its existing reload or exact-request replay; it does
+not cancel server commits, auto-replay or alter scheduling/persistence rules.
+Real browser/HTTP faults first reproduced the stuck read, then passed for both
+missing headers and unfinished JSON through saved preferences, planned start,
+reload, same-request replay and the existing complete learning flow. Focused
+regressions pass 68/68, including three real browser flows; typecheck, changed
+lint, build and diff checks pass. Final native validation/review remain pending.
+The existing trial Today browser file was absent from the default test list;
+it is now registered so all three completed/stalled browser journeys execute
+in normal native CI instead of only the focused local command.
+No personal data, schema,
+content, activation, Production or separate legal-collection change is included.
+
 ## PC continuation of PR #932 — 2026-09-15
 
 The existing Goal continues on `codex/first-stage-durable-today-s2` in the PC

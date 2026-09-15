@@ -6,3 +6,11 @@ test("S01/S04/S07/S11/S13 Today browser persists preferences, starts exact actio
   const h=trialHarness({fixture:syntheticTrialInput({numericTrialModels:true})});h.setClock("2026-09-08T00:00:00.000Z");
   await verifyOwnerLocalTodayBrowser(h);
 });
+
+for (const stallMode of ["headers", "body"]) {
+  test(`Today recovers stalled ${stallMode} for reads, committed preferences and committed planned starts`, { timeout: 90_000 }, async () => {
+    const h = trialHarness({ fixture: syntheticTrialInput({ numericTrialModels: true }) });
+    h.setClock("2026-09-08T00:00:00.000Z");
+    await verifyOwnerLocalTodayBrowser(h, { stallMode });
+  });
+}
