@@ -2293,7 +2293,12 @@ export function WrongAnswerCaptureForm({
               mode={mode}
               type="button"
               disabled={submitting}
-              onClick={() => setStage("confirm")}
+              onClick={(event) => {
+                // React reuses this button as the submit control in confirm.
+                // Cancel this click before its default action sees the new type.
+                event.preventDefault();
+                setStage("confirm");
+              }}
               className="w-full sm:w-auto"
               data-s232e-second-write-primary-action="6"
             >

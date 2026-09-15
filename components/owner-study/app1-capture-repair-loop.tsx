@@ -893,7 +893,10 @@ export function App1CaptureRepairLoop({
               <div><dt className="v3-type-caption text-[var(--color-text-secondary)]">복습 시점</dt><dd className="v3-type-body mt-1 text-[var(--color-text-primary)]">{POLICY_WINDOW_LABELS[nextReview.policyWindow]} · {new Date(nextReview.dueAt).toLocaleString("ko-KR")}</dd></div>
             </dl>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <V3ActionLink href="/app/review?mode=second">복습 대기로 이동</V3ActionLink>
+              <V3ActionLink href={`/app/items/${encodeURIComponent(persistedRecordId)}?mode=second`}>
+                저장한 교정 기록 확인
+              </V3ActionLink>
+              <V3ActionLink href="/app/review?mode=second" tone="secondary">복습 대기로 이동</V3ActionLink>
               <V3ActionLink href="/app?mode=second" tone="secondary">오늘 할 일로 이동</V3ActionLink>
             </div>
           </V3Surface>

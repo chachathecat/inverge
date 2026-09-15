@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import crypto from "node:crypto";
+import { verifyApp1SavedRecordBrowser } from "./fixtures/app1-saved-record-browser.mjs";
 import { memoryTransport, productionHarness, completedQueueRetryScenario, OWNER_ID, NOW, RAW_MARKER } from "./fixtures/app1-production-persistence-harness.mjs";
 
 function assertSaved(store, result, count) {
@@ -19,6 +20,12 @@ function assertSaved(store, result, count) {
   assert.equal(JSON.stringify([queue.derived_payload, journey.metadata_json]).includes(RAW_MARKER), false);
   return plan;
 }
+
+test("2차 saved correction opens its exact record, reconnects, and reaches existing Review and Today", { timeout: 120_000 }, async () => {
+  const store = memoryTransport();
+  Object.assign(store.tables, { study_profiles: [], action_seeds: [], study_logs: [] });
+  await verifyApp1SavedRecordBrowser(store.execute, { captureInput: true });
+});
 
 test("production APP-1 preserves topic history and completes each repair's first D+1", async () => {
   const store = memoryTransport();
