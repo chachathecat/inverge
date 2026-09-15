@@ -641,7 +641,7 @@ test("historical package identities remain exact while current packages bind the
   const lockBytes = await readFile(path.join(repositoryRoot, "package-lock.json"));
   const lock = JSON.parse(lockBytes.toString("utf8"));
   // Historical A1 authority is immutable; the 2026-09-09 Owner amendment
-  // separately authorizes the current Next/sharp/js-yaml security recovery.
+  // separately authorizes the current Next/sharp/js-yaml/Babel security recovery.
   assert.equal(contract.packageIdentity.packageJsonGitBlob, "33a8d29b52ac225c6e957c71fce1f28f2eaba16d");
   assert.equal(gitBlob(packageBytes), "2354d061aa947e3d542f2c61b4b5c0ab10f924e5");
   assert.equal(
@@ -650,7 +650,7 @@ test("historical package identities remain exact while current packages bind the
   );
   assert.equal(
     gitBlob(lockBytes),
-    "aea917dbb485a0cfef97af9406e6941bb26091e2",
+    "2d8b82770bf451039f423871fbbc591ff9a327e8",
   );
   assert.equal(contract.packageIdentity.packageMutationAuthorized, false);
   const browserslistInstances = Object.entries(lock.packages)
@@ -664,7 +664,7 @@ test("historical package identities remain exact while current packages bind the
     }));
   assert.deepEqual(browserslistInstances, [{
     packagePath: "node_modules/browserslist",
-    version: "4.28.8",
+    version: "4.28.9",
     dev: true,
   }]);
 });

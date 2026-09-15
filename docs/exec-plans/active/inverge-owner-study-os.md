@@ -1,5 +1,38 @@
 # Inverge Owner Study OS
 
+## PC continuation of PR #932 — 2026-09-15
+
+The existing Goal continues on `codex/first-stage-durable-today-s2` in the PC
+worktree `.agent-factory/worktrees/first-stage-durable-today-s2`, starting from
+the still-open PR head `68ebec6adae0b62cf126ed17740936a14dbcb7f6`.
+The PC main checkout and all pre-existing dirty worktrees remain preserved.
+The remote product writer was inactive; its product-only pause latch is set.
+Remote checkpoint/source candidates were copied with matching SHA-256 hashes
+to ignored `.agent-factory/handoffs/pc-20260915`; they remain separate inputs,
+not merged implementation. The legal repository and collection were not changed.
+
+The current correction restores the existing Today ordering: active attempt,
+due review by priority/time/durable task ID, then unopened work. Future reviews
+retain their saved-result link on the subject card without becoming today's
+primary action, including exhausted stock before its due time. The Full CI
+blocker assertion now distinguishes the one authorized pre-revocation history
+read from zero subsequent storage access, writes or assistance construction.
+Service/HTTP/mobile-home regressions pass (27 tests), the exact legacy r3
+compatibility suite passes (18), and the five-subject revocation browser passes.
+The first full run found one expired Babel security exception among 1,868 tests.
+Compatible Babel 7.29.7 replaces the vulnerable development dependency; live npm
+audit now reports zero advisories, the SBOM validator passes, and all 28 security
+regressions pass, including external source-map denial and exception expiry.
+No exception expiry, audit gate or runtime check was relaxed. The patched full
+run passed 1,867/1,870; its three current-lock identity failures were corrected
+to the exact new lock blob, preserving historical identities, and the affected
+security/A1/Practice suites passed 130/130. Typecheck, full lint (12 pre-existing
+warnings), build and diff checks pass. Fresh exact-head native full CI/runtime
+and independent review must finish before expected-head-pinned squash merge.
+Production-build suppression was freshly read through the authenticated Vercel
+CLI; Preview alone may build. No environment, content, personal database,
+Production or activation change is included. #880/#883 and the Goal stay open.
+
 ## Active post-#928 Goal — received 2026-09-13T13:12:59Z
 
 ### Current transition: #928 integrated -> #929 shared-route Korean first glance

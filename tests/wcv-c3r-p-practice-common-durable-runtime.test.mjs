@@ -77,7 +77,7 @@ const productionAccessBlobs = Object.freeze({
 });
 
 const OWNER_BRIDGE_SECURITY_PATCHED_PACKAGE_LOCK_GIT_BLOB =
-  "aea917dbb485a0cfef97af9406e6941bb26091e2";
+  "2d8b82770bf451039f423871fbbc591ff9a327e8";
 
 function assertPackageIdentityAfterOwnerBridgeSecurityPatch() {
   const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -85,7 +85,8 @@ function assertPackageIdentityAfterOwnerBridgeSecurityPatch() {
   assert.equal(execFileSync("git", ["hash-object", "package.json"], { cwd: root, encoding: "utf8" }).trim(),
     "2354d061aa947e3d542f2c61b4b5c0ab10f924e5");
   // Keep historical C3R-P identity/authority intact, separately from the
-  // current security-only package update authorized by Owner on 2026-09-09.
+  // current security-only package update authorized by Owner on 2026-09-09,
+  // including the compatible Babel 7 repair of the expired low advisory.
   assert.equal(contract.packageIdentity.packageJsonGitBlob,
     "33a8d29b52ac225c6e957c71fce1f28f2eaba16d");
   assert.equal(contract.packageIdentity.packageLockJsonGitBlob,
@@ -102,7 +103,7 @@ function assertPackageIdentityAfterOwnerBridgeSecurityPatch() {
       packagePath, version: metadata.version, dev: metadata.dev,
     }));
   assert.deepEqual(browserslistInstances, [{
-    packagePath: "node_modules/browserslist", version: "4.28.8", dev: true,
+    packagePath: "node_modules/browserslist", version: "4.28.9", dev: true,
   }]);
 }
 

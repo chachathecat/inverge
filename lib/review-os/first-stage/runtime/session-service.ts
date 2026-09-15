@@ -438,11 +438,11 @@ export function createPrivateFirstStageSessionService(
       for (const review of history.reviews) {
         if (review.status !== "pending") continue;
         actions.push({
-          kind: review.stock !== "available"
-            ? "review_blocked" as const
-            : Date.parse(review.dueAt) <= nowMs
-              ? "review_due" as const
-              : "review_scheduled" as const,
+          kind: Date.parse(review.dueAt) > nowMs
+            ? "review_scheduled" as const
+            : review.stock !== "available"
+              ? "review_blocked" as const
+              : "review_due" as const,
           sessionId: history.sessionId,
           reviewTaskId: review.reviewTaskId,
           actionAt: review.dueAt,
@@ -452,19 +452,22 @@ export function createPrivateFirstStageSessionService(
     }
     const rank = {
       resume_attempt: 0,
-      resume_ready: 1,
-      review_due: 2,
-      review_blocked: 3,
-      review_scheduled: 4,
+      review_due: 1,
+      review_blocked: 1,
+      resume_ready: 2,
+      review_scheduled: 3,
     } as const;
     const reviewPriority = { critical: 0, high: 1, normal: 2 } as const;
+    const isDueReview = (action: TodayAction) => action.kind === "review_due" || action.kind === "review_blocked";
+    const compareId = (left: string, right: string) => left < right ? -1 : left > right ? 1 : 0;
     actions.sort((left, right) =>
       rank[left.kind] - rank[right.kind] ||
-      (left.kind === "review_due" && right.kind === "review_due"
+      (isDueReview(left) && isDueReview(right)
         ? reviewPriority[left.priority!] - reviewPriority[right.priority!]
         : 0) ||
-      String(left.actionAt ?? "").localeCompare(String(right.actionAt ?? "")) ||
-      left.sessionId.localeCompare(right.sessionId));
+      Date.parse(left.actionAt ?? "1970-01-01T00:00:00.000Z") - Date.parse(right.actionAt ?? "1970-01-01T00:00:00.000Z") ||
+      compareId(left.reviewTaskId ?? "", right.reviewTaskId ?? "") ||
+      compareId(left.sessionId, right.sessionId));
 
     return {
       schemaVersion: "first_stage.private_today_continuation.v1",

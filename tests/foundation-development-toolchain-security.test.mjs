@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { transformSync } from "@babel/core";
 import yaml from "js-yaml";
 
 const CONTRACT = "config/foundation-development-toolchain-security-v1.json";
@@ -72,8 +75,8 @@ test("patched js-yaml counts empty merge mappings against its work budget", () =
 test("records every resolved Phase D advisory exactly once", async () => {
   const contract = await readJson(CONTRACT);
   const findings = contract.resolved_findings;
-  assert.equal(findings.length, 14);
-  assert.equal(new Set(findings.map((finding) => finding.ghsa)).size, 14);
+  assert.equal(findings.length, 15);
+  assert.equal(new Set(findings.map((finding) => finding.ghsa)).size, 15);
 
   for (const finding of findings) {
     assert.match(finding.ghsa, /^GHSA-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}$/);
@@ -94,32 +97,25 @@ test("records every resolved Phase D advisory exactly once", async () => {
   }
 });
 
-test("bounds the sole low residual and leaves no critical, high, or moderate", async () => {
+test("resolves the expired Babel exception with a compatible patched lock graph", async () => {
   const contract = await readJson(CONTRACT);
   assert.deepEqual(contract.final_audit_counts, {
     critical: 0,
     high: 0,
     moderate: 0,
-    low: 1,
-    total: 1,
+    low: 0,
+    total: 0,
   });
-  assert.equal(contract.residual_exceptions.length, 1);
-  const [exception] = contract.residual_exceptions;
-  assert.equal(exception.ghsa, "GHSA-4x5r-pxfx-6jf8");
-  assert.equal(exception.severity, "low");
-  assert.equal(exception.owner, "repository_owner");
-  assert.match(exception.patched_version, /breaking major/);
-  assert.ok(exception.rationale.length > 0);
-  assert.ok(exception.compensating_control.length > 0);
-
-  const evaluatedAt = Date.parse(contract.evaluated_at);
-  const expiresAt = Date.parse(exception.expires_at);
-  assert.ok(expiresAt > evaluatedAt);
-  assert.ok(expiresAt - evaluatedAt <= 30 * 24 * 60 * 60 * 1000);
-  assert.ok(
-    expiresAt > Date.now(),
-    `${exception.ghsa} exception expired at ${exception.expires_at}`,
-  );
+  assert.deepEqual(contract.residual_exceptions, []);
+  const installations = findPackageInstallations((await readJson("package-lock.json")).packages, "@babel/core");
+  assert.ok(installations.length > 0);
+  for (const [path, entry] of installations) {
+    assert.equal(entry.version, "7.29.7", path);
+    assert.equal(entry.dev, true, path);
+  }
+  const finding = contract.resolved_findings.find((item) => item.ghsa === "GHSA-4x5r-pxfx-6jf8");
+  assert.equal(finding.patched_version, "7.29.6");
+  assert.equal(contract.resolved_toolchain.babel_core, "7.29.7");
 });
 
 test("forbids runtime, live Supabase, migration, and browser-install side effects", async () => {
@@ -128,7 +124,7 @@ test("forbids runtime, live Supabase, migration, and browser-install side effect
     development_critical: 0,
     development_high: 0,
     development_moderate: 0,
-    development_low: 1,
+    development_low: 0,
     production_runtime_behavior_changed: false,
     production_migration_run: false,
     live_supabase_command_run: false,
@@ -144,4 +140,24 @@ test("forbids runtime, live Supabase, migration, and browser-install side effect
     "npm.cmd test",
     "npm.cmd run build",
   ]);
+});
+
+test("Babel preserves in-package maps but does not disclose an external source map", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "inverge-babel-map-"));
+  try {
+    const root = path.join(fixture, "package");
+    await mkdir(root);
+    await writeFile(path.join(root, "package.json"), "{}");
+    const marker = "SYNTHETIC_EXTERNAL_MAP_CONTENT";
+    const map = JSON.stringify({ version: 3, sources: ["original.js"], sourcesContent: [marker], names: [], mappings: "AAAA" });
+    await writeFile(path.join(fixture, "external.map"), map);
+    await writeFile(path.join(root, "allowed.map"), map);
+    const options = { filename: path.join(root, "input.js"), root, configFile: false, babelrc: false, sourceMaps: true };
+    const allowed = transformSync("const value = 1;\n//# sourceMappingURL=allowed.map", options);
+    assert.ok(allowed.map.sourcesContent.includes(marker));
+    const external = transformSync("const value = 1;\n//# sourceMappingURL=../external.map", options);
+    assert.ok(!external.map.sourcesContent.includes(marker));
+  } finally {
+    await rm(fixture, { recursive: true, force: true });
+  }
 });

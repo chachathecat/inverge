@@ -146,7 +146,23 @@ test("real browser selects reviewed stock, then local trial, then second-stage h
           "content-type": "application/json",
           "cache-control": "private, no-store, max-age=0",
         });
-        if (scenario === "resume" && url.pathname === reviewedEndpoints[0]) {
+        if (["ready-versus-due", "tie", "future"].includes(scenario) && reviewedEndpoints.includes(url.pathname)) {
+          const economics = url.pathname === reviewedEndpoints[0];
+          const accounting = url.pathname === reviewedEndpoints[1];
+          const action = scenario === "ready-versus-due"
+            ? economics
+              ? { kind: "review_due", sessionId: "due-session", reviewTaskId: "due-task", actionAt: "2026-09-13T01:00:00.000Z", priority: "high" }
+              : { kind: "resume_ready", sessionId: "unopened-session", reviewTaskId: null, actionAt: null }
+            : scenario === "tie"
+              ? { kind: "review_due", sessionId: economics ? "z-session" : "a-session",
+                  reviewTaskId: economics ? "task-Z" : "task-a", actionAt: "2026-09-13T01:00:00.000Z", priority: "high" }
+              : economics
+                ? { kind: "review_scheduled", sessionId: "saved-future-session", reviewTaskId: "future-task",
+                    actionAt: "2026-09-15T01:00:00.000Z", priority: "high" }
+                : null;
+          response.end(economics || accounting ? availability("available", 2, null, false, action)
+            : availability("blocked", 0, "approved_content_required"));
+        } else if (scenario === "resume" && url.pathname === reviewedEndpoints[0]) {
           response.end(availability("available", 2, null, false, {
             kind: "review_due",
             sessionId: "economics-due-behind-active",
@@ -242,6 +258,14 @@ test("real browser selects reviewed stock, then local trial, then second-stage h
     await verify("학습 가능 2/5과목", "회계학 진행 중인 문제 이어가기", "/app/first-stage/accounting?sessionId=accounting-session-1");
     scenario = "priority";
     await verify("학습 가능 2/5과목", "회계학 D+1 복습 시작", "/app/first-stage/accounting?sessionId=accounting-high-review");
+    scenario = "ready-versus-due";
+    await verify("학습 가능 2/5과목", "경제학 D+1 복습 시작", "/app/first-stage/practice?sessionId=due-session");
+    scenario = "tie";
+    await verify("학습 가능 2/5과목", "경제학 D+1 복습 시작", "/app/first-stage/practice?sessionId=z-session");
+    scenario = "future";
+    await verify("학습 가능 2/5과목", "경제학 연습 시작", "/app/first-stage/practice");
+    assert.equal(await page.locator('article a[href="/app/first-stage/practice?sessionId=saved-future-session"]').count(), 1);
+    assert.equal(await page.getByText("응답 저장됨 · D+1 예약", { exact: true }).count(), 1);
     scenario = "due";
     await verify("학습 가능 1/5과목", "경제학 D+1 복습 시작", "/app/first-stage/practice?sessionId=economics-session-1");
     scenario = "reviewed";

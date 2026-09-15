@@ -69,9 +69,11 @@ test("legacy compatibility is exact-installation and original-46 only, never a g
   const [key,row]=[...h.rows.entries()][0];
   row.catalogDigest=digest({mode:"owner-local-r3-unreviewed",installed:h.fixture.input.installation,selection:[46]});
   assert.equal((await h.send(undefined,`?sessionId=${row.sessionId}`)).status,503);
+  assert.equal((await h.send()).status,503);
   h.rows.clear();const old=structuredClone(legacy.states[2]);
   old.catalogDigest="f".repeat(64);h.rows.set(`${old.ownerId}/${old.sessionId}`,old);
   assert.equal((await h.send(undefined,`?sessionId=${old.sessionId}`)).status,503);
+  assert.equal((await h.send()).status,503);
   assert.ok(key); // the denial must not manufacture or rewrite a stored record.
 });
 
@@ -83,6 +85,11 @@ test("expanded catalog consumes precisely its unchanged installation's previous 
   row.catalogDigest=digest({mode:"owner-local-r3-unreviewed",installed:h.fixture.input.installation,selection:[46]});
   const before=digest(row);
   assert.equal((await h.send(undefined,`?sessionId=${row.sessionId}`)).status,200);
+  const home = await h.send();
+  assert.equal(home.status,200);
+  assert.equal(home.body.continuation.state,"ready");
+  assert.equal(home.body.continuation.action.kind,"resume_ready");
+  assert.equal(home.body.continuation.action.sessionId,row.sessionId);
   assert.equal(digest(h.rows.get(key)),before);
 });
 

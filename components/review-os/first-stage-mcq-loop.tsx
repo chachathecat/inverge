@@ -224,8 +224,11 @@ export function FirstStageMcqLoop({
     [subjects],
   );
   const continuationSubject = useMemo(() => {
-    const rank = { resume_attempt: 0, resume_ready: 1, review_due: 2, review_blocked: 3, review_scheduled: 4 } as const;
+    const rank = { resume_attempt: 0, review_due: 1, review_blocked: 1, resume_ready: 2, review_scheduled: 3 } as const;
     const reviewRank = { critical: 0, high: 1, normal: 2 } as const;
+    const isDueReview = (action: NonNullable<Continuation["action"]>) =>
+      action.kind === "review_due" || action.kind === "review_blocked";
+    const compareId = (left: string, right: string) => left < right ? -1 : left > right ? 1 : 0;
     return REVIEWED_SUBJECTS
       .map((subject) => {
         const status = subjects[subject.id];
@@ -239,14 +242,16 @@ export function FirstStageMcqLoop({
       .filter((entry): entry is {
         subject: (typeof REVIEWED_SUBJECTS)[number];
         action: NonNullable<Continuation["action"]>;
-      } => Boolean(entry.action))
+      // A future D+1 remains reachable on its subject card, outside today's CTA.
+      } => Boolean(entry.action && entry.action.kind !== "review_scheduled"))
       .sort((left, right) =>
         rank[left.action.kind] - rank[right.action.kind] ||
-        (left.action.kind === "review_due" && right.action.kind === "review_due"
+        (isDueReview(left.action) && isDueReview(right.action)
           ? reviewRank[left.action.priority ?? "normal"] - reviewRank[right.action.priority ?? "normal"]
           : 0) ||
-        String(left.action.actionAt ?? "").localeCompare(String(right.action.actionAt ?? "")) ||
-        left.subject.id.localeCompare(right.subject.id))[0] ?? null;
+        Date.parse(left.action.actionAt ?? "1970-01-01T00:00:00.000Z") - Date.parse(right.action.actionAt ?? "1970-01-01T00:00:00.000Z") ||
+        compareId(left.action.reviewTaskId ?? "", right.action.reviewTaskId ?? "") ||
+        compareId(left.subject.id, right.subject.id))[0] ?? null;
   }, [subjects]);
   const hasUnknownAvailability = pending ||
     REVIEWED_SUBJECTS.some((subject) => {
