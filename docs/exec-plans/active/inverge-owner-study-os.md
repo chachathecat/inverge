@@ -18,6 +18,10 @@ Review and Today passes, including no save during final confirmation and no
 review completion on reads. Related/domain regressions pass 76/76; the earlier
 full run passed 1,891 tests. Final native checks and exact-head review are pending.
 The authenticated disposable PostgreSQL/browser scenario also runs in Full CI.
+Both local SQL acceptance tests passed, including the complete typed Capture
+journey. Review of `7149e87` found the legacy stage-order test still required
+the unsafe inline handler. Its correction retains every ordered transition and
+additionally requires a non-submit button with preventDefault before confirm.
 No personal second-stage schema, provider, content or feature activation is
 included. Its PC schema is absent and provider configuration remains disabled;
 actual second-stage Owner acceptance and the wider Goal remain incomplete.

@@ -100,7 +100,7 @@ test("S232E.2 preserves the established stage order, validation, and learner-dat
     'setStage("second-reference")',
     'setStage("second-gap")',
     'onNext={() => setStage("second-rewrite")}',
-    'onClick={() => setStage("confirm")}',
+    'setStage("confirm");',
   ];
 
   let previousIndex = capture.indexOf("secondWriteEnabled ? (");
@@ -109,6 +109,11 @@ test("S232E.2 preserves the established stage order, validation, and learner-dat
     assert.ok(index > previousIndex, `missing ordered transition: ${transition}`);
     previousIndex = index;
   }
+
+  const confirmationMarker = capture.indexOf('data-s232e-second-write-primary-action="6"');
+  const confirmationAction = capture.slice(capture.lastIndexOf("<CaptureActionButton", confirmationMarker), confirmationMarker);
+  assert.match(confirmationAction, /type="button"/);
+  assert.match(confirmationAction, /onClick=\{\(event\) => \{[\s\S]*event\.preventDefault\(\);\s*setStage\("confirm"\);\s*\}\}/);
 
   for (const preserved of [
     "issueRecall.trim().length < 8",
