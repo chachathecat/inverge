@@ -21,6 +21,9 @@ missing headers and unfinished JSON through saved preferences, planned start,
 reload, same-request replay and the existing complete learning flow. Focused
 regressions pass 68/68, including three real browser flows; typecheck, changed
 lint, build and diff checks pass. Final native validation/review remain pending.
+The existing trial Today browser file was absent from the default test list;
+it is now registered so all three completed/stalled browser journeys execute
+in normal native CI instead of only the focused local command.
 No personal data, schema,
 content, activation, Production or separate legal-collection change is included.
 

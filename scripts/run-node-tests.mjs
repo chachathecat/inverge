@@ -119,6 +119,7 @@ const defaultTestFiles = [
   "tests/first-stage-owner-local-trial-http.test.mjs",
   "tests/first-stage-owner-local-r3-bundle.test.mjs",
   "tests/first-stage-owner-local-today.test.mjs",
+  "tests/first-stage-owner-local-today-browser.test.mjs",
   "tests/first-stage-owner-local-curriculum.test.mjs",
   "tests/owner-economics-loopback.test.mjs",
   "tests/owner-economics-gateway.test.mjs",
