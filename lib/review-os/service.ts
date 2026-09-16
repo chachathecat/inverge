@@ -1864,6 +1864,7 @@ export class ReviewOsService {
       dedupeKey,
     );
     if (existing) {
+      let sourceInputMatched = false;
       const incomingProvenance = readCaptureReviewProvenance(normalizedInput.extractionPayload);
       const existingProvenance = readCaptureReviewProvenance(existing.rawPayload);
       if (incomingProvenance || existingProvenance) {
@@ -1873,8 +1874,24 @@ export class ReviewOsService {
           incomingProvenance.referenceComparison === existingProvenance.referenceComparison &&
           incomingProvenance.learningMaterial === existingProvenance.learningMaterial &&
           (normalizedInput.issueRecall ?? "") === (existing.rawPayload.issue_recall ?? "") &&
-          (normalizedInput.outlineDraft ?? "") === (existing.rawPayload.outline_draft ?? "");
+          (normalizedInput.outlineDraft ?? "") === (existing.rawPayload.outline_draft ?? "") &&
+          normalizedInput.subjectLabel === existing.subjectLabel &&
+          normalizedInput.sourceType === existing.sourceType &&
+          (normalizedInput.rawQuestionText ?? "") === (existing.rawQuestionText ?? "") &&
+          (normalizedInput.rawAnswerText ?? "") === (existing.rawAnswerText ?? "") &&
+          normalizedInput.userAnswer === existing.userAnswer &&
+          normalizedInput.correctAnswer === existing.correctAnswer &&
+          normalizedInput.confidence === existing.confidence &&
+          (normalizedInput.sourceLabel ?? "") === (existing.sourceLabel ?? "") &&
+          (normalizedInput.problemTitle ?? "") === (existing.problemTitle ?? "") &&
+          (normalizedInput.problemIdentifier ?? "") === (existing.problemIdentifier ?? "") &&
+          Boolean(normalizedInput.productionBeforeComparison) === Boolean(existing.rawPayload.production_before_comparison) &&
+          Boolean(normalizedInput.referenceAnswerAddedAfterProduction) === Boolean(existing.rawPayload.reference_answer_added_after_production) &&
+          ["pageCount", "ocrConfirmedByLearner", "lowConfidenceFlag", "hasManualCorrection"].every(key =>
+            (normalizedInput.extractionPayload?.user_confirmed_fields?.[key] ?? null) ===
+            ((existing.rawPayload.user_confirmed_fields as Record<string, unknown> | undefined)?.[key] ?? null));
         if (!sameSource) throw new Error("review-os:capture-source-provenance-conflict");
+        sourceInputMatched = true;
       }
       if (replayAuthority) {
         const plan = parseApp1ReplayPlan(
@@ -1890,6 +1907,7 @@ export class ReviewOsService {
         if (!resumed) throw new Error("review-os-item-missing-after-replay");
         return { item: resumed, deduped: true };
       }
+      if (sourceInputMatched) return { item: existing, deduped: true, sourceInputMatched: true };
       return { item: existing, deduped: true };
     }
 

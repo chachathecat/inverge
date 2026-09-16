@@ -334,7 +334,7 @@ export function App1CaptureRepairLoop({
         ownerTheoryMode,
       );
       setDiagnosis(result.draft);
-      if (ownerTheoryMode && result.draft.diagnosticStatus && result.draft.diagnosticStatus !== "finding") {
+      if (result.draft.diagnosticStatus && result.draft.diagnosticStatus !== "finding") {
         setPhase("structure_confirmation");
         return;
       }

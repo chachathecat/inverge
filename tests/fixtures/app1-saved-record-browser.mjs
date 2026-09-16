@@ -40,7 +40,7 @@ export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, ca
       GeminiEnvError: class extends Error {}, GeminiStructureParseError: class extends Error {}, isGeminiQuotaExceededError: () => false,
       structureAnswerReviewWithGemini: async ({ answerText }) => {
         modelCalls++;
-        return answerText === repairText ? { ...draft, strengths: [repairText], missingIssueCandidates: ["결론 문장의 범위를 한정할 필요가 있습니다."], weakParagraphPoint: "결론 문장의 범위를 한정해 다시 적으세요.", weakLogicPoint: "결론 범위를 확인하세요." } : draft;
+        return answerText === repairText ? { ...draft, answerEvidenceQuote:repairText, strengths: [repairText], missingIssueCandidates: ["결론 문장의 범위를 한정할 필요가 있습니다."], weakParagraphPoint: "결론 문장의 범위를 한정해 다시 적으세요.", weakLogicPoint: "결론 범위를 확인하세요." } : draft;
       },
     },
     }),

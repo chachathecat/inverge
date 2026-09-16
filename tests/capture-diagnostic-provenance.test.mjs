@@ -96,6 +96,14 @@ test("both real Owner entry pages hydrate an existing Theory draft and preserve 
     for(const table of ["wrong_answer_notes","wrong_answer_tags","review_queue_items","learning_signal_events","recurrence_features","study_logs"])assert.equal(store.tables[table]?.length??0,0,table);
     const preview=app.load("lib/review-os/study-note").buildNotebookPreview(saved);
     assert.equal(preview.weakPoint,"AI 분석 전 · 진단 없음");assert.equal(preview.noteLabel,"AI 예시 기능시험");
+    // Re-entering after a successful handoff creates a fresh operation, but resumes
+    // the exact stored source without forging a new receipt or duplicating records.
+    const sourceCount=store.tables.wrong_answer_items.length;
+    await page.goto(`${origin}/app/capture?mode=second`);
+    await page.locator('[data-owner-prepare-analysis]').click();
+    await page.waitForURL(`**/app/capture/repair?itemId=${id}`);
+    assert.equal(store.tables.wrong_answer_items.length,sourceCount);
+    assert.equal(await page.evaluate(key=>localStorage.getItem(key),draftKey),persistedDraft);
     assert.deepEqual(errors,[]);
   }finally{await browser?.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 });
@@ -123,11 +131,12 @@ test("AI answer evidence is quoted only when the exact text exists in the submit
 test("provenance replay preserves the exact source and refuses reclassification without changing records",async()=>{
   const store=memoryTransport();const app=productionHarness(store.execute);
   const service=app.load("lib/review-os/service").reviewOsService;
-  const input={examName:"감정평가사 2차",subjectLabel:"감정평가이론",sourceType:"text",rawQuestionText:draft.rawQuestionText,userAnswer:draft.userAnswer,rawAnswerText:draft.userAnswer,correctAnswer:"-",issueRecall:draft.issueRecall,outlineDraft:draft.outlineDraft,extractionPayload:{user_confirmed_fields:{capture_review_provenance:provenance}}};
+  const input={examName:"감정평가사 2차",subjectLabel:"감정평가이론",sourceType:"text",confidence:"중간",rawQuestionText:draft.rawQuestionText,userAnswer:draft.userAnswer,rawAnswerText:draft.userAnswer,correctAnswer:"-",issueRecall:draft.issueRecall,outlineDraft:draft.outlineDraft,extractionPayload:{user_confirmed_fields:{capture_review_provenance:provenance}}};
   const save=value=>service.createWrongAnswerItem(OWNER_ID,app.session.email,value);
   const before=store.tables.wrong_answer_items.length;
   const first=await save(input),replay=await save(input);
-  assert.equal(replay.item.id,first.item.id);assert.equal(replay.deduped,true);
+  assert.equal(replay.item.id,first.item.id);assert.equal(replay.deduped,true);assert.equal(replay.sourceInputMatched,true);
+  await assert.rejects(save({...input,confidence:"높음"}),/capture-source-provenance-conflict/);
   await assert.rejects(save({...input,outlineDraft:"수정된 합성 목차"}),/capture-source-provenance-conflict/);
   await assert.rejects(save({...input,extractionPayload:{user_confirmed_fields:{capture_review_provenance:{...provenance,learningMaterial:"learner_input"}}}}),/capture-source-provenance-conflict/);
   await assert.rejects(save({...input,extractionPayload:{user_confirmed_fields:{capture_review_provenance:{...provenance,verified:true}}}}),/invalid-capture-review-provenance/);
@@ -138,9 +147,9 @@ test("provenance replay preserves the exact source and refuses reclassification 
 
 
 test("real initial-analysis API excludes functional tests from learning signals but retains ordinary analysis signals",async()=>{
-  const modelDraft={questionSummary:"시장가치 판단의 조건을 설명하는 합성 문제",coreConcepts:["시장가치","시장 노출"],requiredIssues:"시장 조건과 개별 사정의 구분",userAnswerSummary:"시장 노출 조건을 설명했으나 개별 사정과 연결이 약함",userAnswerStructure:"정의와 논거",referenceStructure:"참고자료 미제공",strengths:["시장 노출 조건을 제시함"],missingIssueCandidates:["개별 사정과 시장 조건의 적용 연결이 부족함"],weakParagraphPoint:"개별 사정을 시장 일반의 조건과 구분하는 문장을 작성하세요.",weakLogicPoint:"정의에서 사례 적용으로 연결이 필요함",rewriteTarget:"사례 적용 문장",nextAction:"개별 사정과 시장 조건을 구분해 한 문장으로 작성하세요."};
+  const modelDraft={diagnosticStatus:"finding",questionRequirementQuote:"시장가치 판단의 조건을 설명하시오.",answerEvidenceQuote:"시장가치는 통상적인 시장 노출과 거래 당사자를 전제로 합니다.",reviewedAnswerScope:"entire_submitted_answer",questionSummary:"시장가치 판단의 조건을 설명하는 합성 문제",coreConcepts:["시장가치","시장 노출"],requiredIssues:"시장 조건과 개별 사정의 구분",userAnswerSummary:"시장 노출 조건을 설명했으나 개별 사정과 연결이 약함",userAnswerStructure:"정의와 논거",referenceStructure:"참고자료 미제공",strengths:["시장 노출 조건을 제시함"],missingIssueCandidates:["개별 사정과 시장 조건의 적용 연결이 부족함"],weakParagraphPoint:"개별 사정을 시장 일반의 조건과 구분하는 문장을 작성하세요.",weakLogicPoint:"정의에서 사례 적용으로 연결이 필요함",rewriteTarget:"사례 적용 문장",nextAction:"개별 사정과 시장 조건을 구분해 한 문장으로 작성하세요."};
   for(const learningMaterial of ["ai_example_functional_test","learner_input"]){
-    const seed=seedRows();seed.wrong_answer_items[0].raw_payload.user_confirmed_fields.capture_review_provenance={...provenance,learningMaterial};
+    const seed=seedRows();Object.assign(seed.wrong_answer_items[0],{raw_question_text:draft.rawQuestionText,user_answer:draft.userAnswer,raw_answer_text:draft.userAnswer});seed.wrong_answer_items[0].raw_payload.user_confirmed_fields.capture_review_provenance={...provenance,learningMaterial};
     const store=memoryTransport(seed);let calls=0;
     const app=productionHarness(store.execute,{overrides:()=>({"@/lib/evaluate/gemini":{isGeminiConfigured:()=>true,GeminiEnvError:class extends Error{},GeminiStructureParseError:class extends Error{},isGeminiQuotaExceededError:()=>false,structureAnswerReviewWithGemini:async()=>{calls++;return modelDraft;}}})});
     const body=new FormData();body.set("requestPurpose","app1_initial_analysis");body.set("sourceItemId",SOURCE_ID);body.set("examMode","second");body.set("subject","감정평가이론");

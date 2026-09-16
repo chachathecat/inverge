@@ -211,10 +211,10 @@ export async function POST(request: Request) {
     const referenceGrounding = ownerTheoryAuthority ? { references: [], displayLabel: "선택한 이론 입력만 검토", promptContext: "" } : buildAnswerReviewReferenceGrounding({ examMode: mode, subject, questionText, answerText, referenceText, normalizedDraft: normalizeAnswerReviewStructureDraft(initialDraft) });
     const draft = referenceGrounding.references.length > 0 ? await structureAnswerReviewWithGemini({ ownerTheoryAuthority, questionFiles, answerFiles, referenceFiles, questionText, answerText, referenceText, referenceGroundingContext: referenceGrounding.promptContext, explanationLevel }) : initialDraft;
     const normalizedDraft = normalizeAnswerReviewStructureDraft(draft);
-    const normalized = ownerTheoryAuthority ? groundAnswerReviewDiagnosis(normalizedDraft, questionText, answerText) : normalizedDraft;
+    const normalized = app1Detail ? groundAnswerReviewDiagnosis(normalizedDraft, questionText, answerText) : normalizedDraft;
     const analysisAuthority =
       requestPurpose === "app1_initial_analysis" &&
-      (!ownerTheoryAuthority || normalized.diagnosticStatus === "finding") &&
+      (normalized.diagnosticStatus === "finding") &&
       session.userId &&
       app1Detail
         ? createApp1AnalysisAuthority({
@@ -225,7 +225,7 @@ export async function POST(request: Request) {
         : null;
     const repairAuthority =
       requestPurpose === "repair_verification" &&
-      (!ownerTheoryAuthority || ["finding", "no_clear_gap"].includes(normalized.diagnosticStatus ?? "")) &&
+      (["finding", "no_clear_gap"].includes(normalized.diagnosticStatus ?? "")) &&
       session.userId &&
       app1Detail &&
       app1PrimaryGap &&
@@ -245,7 +245,7 @@ export async function POST(request: Request) {
         : null;
     let learningSignalStatus: "saved" | "skipped" | "failed" = "skipped";
     const learningSignalSkipReason = requestPurpose === "repair_verification" ? "repair_verification"
-      : app1Detail && isCaptureFunctionalTest(app1Detail.item.rawPayload) ? "functional_test" : ownerTheoryAuthority && normalized.diagnosticStatus !== "finding" ? "no_grounded_finding" : undefined;
+      : app1Detail && isCaptureFunctionalTest(app1Detail.item.rawPayload) ? "functional_test" : normalized.diagnosticStatus && normalized.diagnosticStatus !== "finding" ? "no_grounded_finding" : undefined;
     const skipReason = learningSignalSkipReason ?? shouldSkipLearningSignalSave(normalized);
     if (session.userId && session.email && requestPurpose !== "repair_verification" && !skipReason) {
       try { await reviewOsService.createLearningSignalEvent(session.userId, session.email, buildAnswerReviewLearningSignalInput({ examMode: mode, subjectInput: subject, answerSourceType: answerFiles.length > 0 ? "file" : "text", normalizedDraft: normalized })); learningSignalStatus = "saved"; }

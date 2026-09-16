@@ -14,6 +14,10 @@ without replacing internal requests with successful mocks. Keep incomplete/
 delayed-response tests separately labeled. Verify diagnosis evidence, correction,
 save/reconnect/review and personal Today isolation. No personal schema or
 Production changes; do not count simulated study as Owner learning.
+Actual menu re-entry exposed an identical-source receipt mismatch. Resume only
+a server-validated exact existing source without forging a new operation receipt.
+The first independent review found non-finding authority leakage outside Owner-PC;
+apply evidence/status guards to every APP1 analysis and verification path.
 
 
 ## Owner Theory diagnostic provenance after merged #942
