@@ -805,6 +805,10 @@ export function App1CaptureRepairLoop({
               {summary.uncertainty}
             </p>
           ) : null}
+          {repairText ? <details className="quiet-disclosure" data-app1-preserved-repair>
+            <summary>보존된 교정 초안 · 확인 미완료</summary>
+            <Textarea aria-label="보존된 교정 초안" value={repairText} readOnly />
+          </details> : null}
           <V3ActionButton
             type="button"
             onClick={() => void analyze()}
@@ -878,7 +882,7 @@ export function App1CaptureRepairLoop({
             data-app1-repair-input
           />
           <p id="app1-repair-help" className="v3-type-compact text-[var(--color-text-secondary)]">
-            AI가 완성 답안을 자동 입력하지 않습니다. 현재 입력은 저장 전 메모리 안에만 있고, 새로고침하면 복원되지 않습니다.
+            AI가 완성 답안을 자동 입력하지 않습니다. 교정 초안은 이 브라우저 탭에 임시 보관되어 새로고침 뒤에도 이어 쓸 수 있습니다. 계정의 학습 기록에는 결과 저장 버튼을 눌러야 저장됩니다. 공용 기기에서는 입력칸을 비운 뒤 탭을 닫아 주세요.
           </p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <V3ActionButton type="button" onClick={() => void verifyRepair()} disabled={!canonicalizeApp1RepairBody(repairText)} data-app1-verify-repair>
