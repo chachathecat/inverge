@@ -3107,7 +3107,7 @@ test("APP1-UI-002A exposes guided fallback after verification service failure wi
   assert.ok(verifyRepair, "missing verification request boundary");
   assert.match(
     verifyRepair,
-    /catch \(verificationError\) \{[\s\S]*?APP1_ANALYSIS_BINDING_INVALID[\s\S]*?APP1_VERIFICATION_EXPIRED[\s\S]*?returnToFreshAnalysis\(\);[\s\S]*?setVerification\(preliminary\);[\s\S]*?setVerificationReceipt\(null\);[\s\S]*?setError\(VERIFICATION_FAILURE_MESSAGE\);[\s\S]*?setPhase\("repair_verification"\);[\s\S]*?\}/u,
+    /catch \(verificationError\) \{[\s\S]*?APP1_ANALYSIS_BINDING_INVALID[\s\S]*?APP1_VERIFICATION_EXPIRED[\s\S]*?returnToFreshAnalysis\(\);[\s\S]*?setVerification\(preliminary\);[\s\S]*?setVerificationReceipt\(null\);[\s\S]*?setError\(verificationError instanceof App1RequestTimeoutError \? verificationError.message : VERIFICATION_FAILURE_MESSAGE\);[\s\S]*?setPhase\("repair_verification"\);[\s\S]*?\}/u,
   );
   assert.match(
     repairLoop,
