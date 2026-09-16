@@ -76,6 +76,11 @@ test("tab repair drafts isolate owners/items and preserve text without trusting 
   const draft = { repairText: realRepair.repairText, analysisBinding: "untrusted-local-token", gap: realRepair.requestedGap };
   writeApp1ResumeDraft(storage, "owner-one", SOURCE_ID, draft);
   assert.deepEqual(readApp1ResumeDraft(storage, "owner-one", SOURCE_ID), draft);
+  for (const length of [4001, 50000]) {
+    const oversized = { ...draft, repairText: "가".repeat(length) + "\n끝" };
+    writeApp1ResumeDraft(storage, "owner-one", SOURCE_ID, oversized);
+    assert.deepEqual(readApp1ResumeDraft(storage, "owner-one", SOURCE_ID), oversized);
+  }
   assert.equal(readApp1ResumeDraft(storage, "owner-two", SOURCE_ID), null);
   assert.equal(readApp1ResumeDraft(storage, "owner-one", crypto.randomUUID()), null);
   values.set(app1ResumeDraftKey("owner-one", SOURCE_ID), '{"version":1}');

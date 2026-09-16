@@ -22,6 +22,11 @@ The first independent review found non-finding authority leakage outside Owner-P
 apply evidence/status guards to every APP1 analysis and verification path.
 
 
+Review follow-up: the existing APP1 contract now declares read-only analysis
+resume. Successfully stored oversized drafts remain recoverable; verification
+limits remain unchanged. A reproduced Windows delete-pending lock error receives
+bounded acquisition retries, without reclaiming a lock or refunding a reservation.
+
 ## Owner Theory diagnostic provenance after merged #942
 
 PR #944 was closed unmerged after its two source corrections. Its second
