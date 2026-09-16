@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {mkdtemp,readFile,readdir,writeFile} from "node:fs/promises";
 import os from "node:os";import path from "node:path";
-import {THEORY_POLICY as policy,initializeTheoryBudget,testOwnerTheoryConnection,authorizeTheoryDevelopment,readTheoryDevelopmentApproval,reserveTheoryDevelopmentCall,reserveTheoryCall,readTheoryBudget,generateOwnerTheory} from "../lib/owner-study/owner-pc-theory-budget.mjs";
+import {THEORY_POLICY as policy,authorizeAdditionalTheoryDevelopmentCall,readTheoryDevelopmentCallLimit,initializeTheoryBudget,testOwnerTheoryConnection,authorizeTheoryDevelopment,readTheoryDevelopmentApproval,reserveTheoryDevelopmentCall,reserveTheoryCall,readTheoryBudget,generateOwnerTheory} from "../lib/owner-study/owner-pc-theory-budget.mjs";
 const user="cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 async function fixture(){const root=path.join(await mkdtemp(path.join(os.tmpdir(),"theory-dev-")),"budget");const settings={version:policy.version,model:policy.model,ownerId:"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",projectId:"synthetic-project",apiKey:"synthetic-not-a-provider-key",paidProjectVerified:true,dataSharingEnabled:false,verifiedAt:new Date().toISOString(),verificationEvidenceSha256:"a".repeat(64)};await initializeTheoryBudget(root,settings);await testOwnerTheoryConnection(root,settings,async()=>Response.json({modelVersion:policy.model,candidates:[{finishReason:"STOP",content:{parts:[{text:"READY"}]}}]}));await authorizeTheoryDevelopment(root,settings,{userId:user,questionSha256:"b".repeat(64),supabaseUrl:"http://127.0.0.1:55431"});const development=await readTheoryDevelopmentApproval(root,settings);return {root,settings,authority:{userId:user,sourceItemId:"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",purpose:"app1_initial_analysis",questionSha256:"b".repeat(64),development}};}
 test("development shares existing spend without consuming or replacing personal case",async()=>{const f=await fixture();const before=await readFile(path.join(f.root,"installation.json"),"utf8");await reserveTheoryDevelopmentCall(f.root,f.settings,f.authority);const b=await readTheoryBudget(f.root,f.settings);assert.equal(b.usedReservations,2);assert.equal(b.caseId,null);assert.equal(b.remainingMicros,policy.budgetMicros-2*policy.reservationMicros);assert.equal(await readFile(path.join(f.root,"installation.json"),"utf8"),before);await reserveTheoryCall(f.root,f.settings,{userId:f.settings.ownerId,sourceItemId:"dddddddd-dddd-4ddd-8ddd-dddddddddddd",purpose:"app1_initial_analysis"});assert.equal((await readTheoryBudget(f.root,f.settings)).usedReservations,3);assert.equal((await readTheoryBudget(f.root,f.settings)).caseId,"dddddddd-dddd-4ddd-8ddd-dddddddddddd");await assert.rejects(authorizeTheoryDevelopment(f.root,f.settings,{userId:user,questionSha256:"b".repeat(64),supabaseUrl:"http://127.0.0.1:55431"}),{code:"EEXIST"});});
@@ -25,4 +25,38 @@ test("an existing development lock is never reclaimed or charged by a waiting re
  await assert.rejects(reserveTheoryDevelopmentCall(f.root,f.settings,f.authority),{code:"OWNER_THEORY_DEVELOPMENT_BUSY"});
  assert.equal(await readFile(lock,"utf8"),"unknown previous operation");
  assert.equal((await readTheoryBudget(f.root,f.settings)).usedReservations,1);
+});
+
+test("one explicit extra-call amendment preserves five used calls and the original personal ledger",async()=>{
+ const f=await fixture();
+ const original=new Map(await Promise.all((await readdir(f.root)).map(async name=>[name,await readFile(path.join(f.root,name),"utf8")])));
+ await assert.rejects(authorizeAdditionalTheoryDevelopmentCall(f.root,f.settings),{code:"OWNER_THEORY_DEVELOPMENT_EXTENSION_NOT_READY"});
+ assert.equal(await readTheoryDevelopmentCallLimit(f.root,f.settings),6);
+ for(let i=0;i<5;i++)await reserveTheoryDevelopmentCall(f.root,f.settings,f.authority);
+ const before=await readTheoryBudget(f.root,f.settings);
+ await authorizeAdditionalTheoryDevelopmentCall(f.root,f.settings);
+ assert.equal(await readTheoryDevelopmentCallLimit(f.root,f.settings),7);
+ assert.deepEqual(await readTheoryBudget(f.root,f.settings),before);
+ for(const [name,body] of original)assert.equal(await readFile(path.join(f.root,name),"utf8"),body);
+ await assert.rejects(authorizeAdditionalTheoryDevelopmentCall(f.root,f.settings),{code:"EEXIST"});
+ const out=await Promise.allSettled(Array.from({length:6},()=>reserveTheoryDevelopmentCall(f.root,f.settings,f.authority)));
+ assert.equal(out.filter(x=>x.status==="fulfilled").length,2);
+ assert.ok(out.filter(x=>x.status==="rejected").every(x=>x.reason.code==="OWNER_THEORY_DEVELOPMENT_CALL_LIMIT"));
+ const after=await readTheoryBudget(f.root,f.settings);
+ assert.equal(after.developmentUsedCalls,7);assert.equal(after.caseId,null);assert.equal(after.usedReservations,8);
+ assert.equal(after.reservedMicros,8*policy.reservationMicros);assert.equal(after.remainingMicros,policy.budgetMicros-8*policy.reservationMicros);
+ const restarted=await import(`../lib/owner-study/owner-pc-theory-budget.mjs?restart=${Date.now()}`);
+ await assert.rejects(restarted.reserveTheoryDevelopmentCall(f.root,f.settings,f.authority),{code:"OWNER_THEORY_DEVELOPMENT_CALL_LIMIT"});
+});
+
+test("a changed or foreign extension fails closed without reserving a call",async()=>{
+ const f=await fixture();for(let i=0;i<5;i++)await reserveTheoryDevelopmentCall(f.root,f.settings,f.authority);
+ await authorizeAdditionalTheoryDevelopmentCall(f.root,f.settings);
+ const file=path.join(path.dirname(f.root),"development-call-extension-20260916.json");
+ const extension=JSON.parse(await readFile(file,"utf8"));
+ for(const delta of [{maximumDevelopmentCalls:8},{additionalReservationMicros:0},{developmentApprovalSha256:"f".repeat(64)},{approvalId:"unapproved"}]){
+  await writeFile(file,JSON.stringify({...extension,...delta}));
+  await assert.rejects(reserveTheoryDevelopmentCall(f.root,f.settings,f.authority),{code:"OWNER_THEORY_DEVELOPMENT_EXTENSION_INVALID"});
+ }
+ assert.equal((await readTheoryBudget(f.root,f.settings)).usedReservations,6);
 });

@@ -10,3 +10,6 @@ export function testOwnerTheoryConnection(root: string, settings: OwnerTheorySet
 
 export type TheoryDevelopmentApproval = {approvalId: string; installationSha256: string; questionSha256: string; supabaseUrl: string; userId: string};
 export function readTheoryDevelopmentApproval(root: string, settings: OwnerTheorySettings): Promise<TheoryDevelopmentApproval>;
+
+export function readTheoryDevelopmentCallLimit(root: string, settings: OwnerTheorySettings): Promise<number>;
+export function authorizeAdditionalTheoryDevelopmentCall(root: string, settings: OwnerTheorySettings): Promise<void>;

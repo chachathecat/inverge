@@ -1,7 +1,7 @@
 import "server-only";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { generateOwnerTheory, readTheoryBudget, readTheoryDevelopmentApproval, validateTheorySettings, OwnerTheoryError,
+import { generateOwnerTheory, readTheoryBudget, readTheoryDevelopmentApproval, readTheoryDevelopmentCallLimit, validateTheorySettings, OwnerTheoryError,
   type OwnerTheoryAuthority } from "./owner-pc-theory-budget.mjs";
 export type { OwnerTheoryAuthority } from "./owner-pc-theory-budget.mjs";
 export { OwnerTheoryError } from "./owner-pc-theory-budget.mjs";
@@ -23,7 +23,8 @@ export async function ownerTheoryStatus() {
     const settings = await configuration();
     if (developmentEnabled()) await readTheoryDevelopmentApproval(path.join(root(), "budget"), settings);
     const shared = await readTheoryBudget(path.join(root(), "budget"), settings);
-    const budget = { ...shared, remainingCalls: developmentEnabled() ? Math.min(shared.remainingCalls, 6 - shared.developmentUsedCalls) : shared.remainingCalls };
+    const maximumDevelopmentCalls = developmentEnabled() ? await readTheoryDevelopmentCallLimit(path.join(root(), "budget"), settings) : 0;
+    const budget = { ...shared, remainingCalls: developmentEnabled() ? Math.min(shared.remainingCalls, maximumDevelopmentCalls - shared.developmentUsedCalls) : shared.remainingCalls };
     return { ready: budget.remainingCalls > 0 && !budget.connectionPending, ...budget, reason: budget.connectionPending ? "연결 확인이 완료되지 않았습니다. 입력한 자료는 로컬에 보존됩니다." : budget.remainingCalls ? null : "누적 예산의 호출 한도에 도달했습니다." };
   } catch { return { ready: false, remainingCalls: 0, reservedMicros: 0, remainingMicros: 0, caseId: null,
     reason: "Gemini 유료 프로젝트 확인과 누적 예산 설치가 필요합니다. 입력한 자료는 로컬에 보존됩니다." }; }
