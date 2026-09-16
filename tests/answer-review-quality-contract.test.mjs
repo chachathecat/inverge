@@ -59,7 +59,7 @@ test('duplicate skeleton fixture deduplicates sections', () => {
 
 test('answer review client includes quality-view integration copy', () => {
   const source = fs.readFileSync('app/answer-review/answer-review-client.tsx', 'utf8');
-  ['buildAnswerReviewQualityView', '검토 품질 확인 필요', '가장 먼저 고칠 1가지', '답안 구조 Skeleton'].forEach((text) => {
+  ['buildAnswerReviewQualityView', '검토 품질 확인 필요', '가장 먼저 고칠 1가지', '답안 구조', '목차와 필수 키워드만'].forEach((text) => {
     assert.ok(source.includes(text), `missing copy: ${text}`);
   });
 });
@@ -77,7 +77,10 @@ test('gemini prompt includes stricter korean output contract lines', () => {
 
 test('guardrails and no payment keywords in learner/public files', () => {
   const files = ['app/answer-review/answer-review-client.tsx', 'app/app/page.tsx', 'app/page.tsx', 'app/(marketing)/page.tsx'].filter((p) => fs.existsSync(p));
-  const text = files.map((p) => fs.readFileSync(p, 'utf8')).join('\n');
+  const raw = files.map((p) => fs.readFileSync(p, 'utf8')).join('\n');
+  const disclaimer = '※ 학습 보조 초안입니다. 공식 채점이나 합격 판정이 아닙니다.';
+  assert.ok(raw.includes(disclaimer), 'required denial must remain explicit');
+  const text = raw.replaceAll(disclaimer, '');
   ['공식 채점', '합격 판정', '확정 점수', '모범답안 확정', 'official grader', 'pass/fail judge', '정답 보장', '합격 보장', '합격 확률'].forEach((bad) => {
     assert.ok(!text.includes(bad), `forbidden guardrail copy found: ${bad}`);
   });

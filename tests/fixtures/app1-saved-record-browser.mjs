@@ -10,11 +10,12 @@ import { productionHarness, OWNER_ID, SOURCE_ID, NOW } from "./app1-production-p
 // Existing Capture source + real repair UI, API, authority, service, repository,
 // saved-item, Review and Today pages. Only auth/model/clock/storage transport are
 // synthetic. Never loads the Owner's account, environment or personal database.
-export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, captureInput = false, ownerTheory = null, actionTimeout = 15_000, requestRecovery = null } = {}) {
+export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, captureInput = false, ownerTheory = null, actionTimeout = 15_000, requestRecovery = null, resumeOnReload = false } = {}) {
   const repairText = "임대료 미납 사실을 계약 해지 논거의 요건에 연결하여 계약 종료 결론을 도출했습니다.";
   const draft = {
+    diagnosticStatus: "finding", questionRequirementQuote: "계약 해지 논거를 설명하시오.", reviewedAnswerScope: "entire_submitted_answer",
     questionSummary: "합성 문제 구조", coreConcepts: ["정의", "논거", "적용"], requiredIssues: "정의, 논거, 적용",
-    answerEvidenceQuote: "임대료 미납 사실과 계약 해지 논거를 제시했다.", userAnswerSummary: "논거에서 적용 연결이 약함", userAnswerStructure: "정의 → 논거", referenceStructure: "정의 → 논거 → 적용 → 결론",
+    answerEvidenceQuote: captureInput ? "임대료 미납 사실과 계약 해지 논거를 제시했다." : "정의와 논거를 적었으나 사례 적용이 부족합니다.", userAnswerSummary: "논거에서 적용 연결이 약함", userAnswerStructure: "정의 → 논거", referenceStructure: "정의 → 논거 → 적용 → 결론",
     strengths: ["정의와 핵심 논거가 확인됩니다."], missingIssueCandidates: ["사례 사실과 논거의 연결이 약합니다."],
     weakParagraphPoint: "사례 사실을 논거에 연결하는 한 문장을 직접 적으세요.", weakLogicPoint: "논거에서 사례로 이어지는 연결이 필요합니다.",
     rewriteTarget: "적용 연결 문장", rewriteDraftSuggestion: "직접 작성해야 합니다.", nextAction: "사실과 논거를 직접 연결하세요.",
@@ -31,7 +32,7 @@ export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, ca
       generateOwnerTheoryStructure: async (authority,request) => {
         modelCalls++;
         const corrected=JSON.stringify(request).includes(repairText);
-        const result=corrected ? {...draft,strengths:[repairText],missingIssueCandidates:["결론 문장의 범위를 한정할 필요가 있습니다."],weakParagraphPoint:"결론 문장의 범위를 한정해 다시 적으세요.",weakLogicPoint:"결론 범위를 확인하세요."} : draft;
+        const result=corrected ? {...draft,answerEvidenceQuote:repairText,strengths:[repairText],missingIssueCandidates:["결론 문장의 범위를 한정할 필요가 있습니다."],weakParagraphPoint:"결론 문장의 범위를 한정해 다시 적으세요.",weakLogicPoint:"결론 범위를 확인하세요."} : draft;
         return ownerTheory.generate(authority,request,result);
       },
     }} : {"@/lib/evaluate/gemini": {
@@ -39,7 +40,7 @@ export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, ca
       GeminiEnvError: class extends Error {}, GeminiStructureParseError: class extends Error {}, isGeminiQuotaExceededError: () => false,
       structureAnswerReviewWithGemini: async ({ answerText }) => {
         modelCalls++;
-        return answerText === repairText ? { ...draft, strengths: [repairText], missingIssueCandidates: ["결론 문장의 범위를 한정할 필요가 있습니다."], weakParagraphPoint: "결론 문장의 범위를 한정해 다시 적으세요.", weakLogicPoint: "결론 범위를 확인하세요." } : draft;
+        return answerText === repairText ? { ...draft, answerEvidenceQuote:repairText, strengths: [repairText], missingIssueCandidates: ["결론 문장의 범위를 한정할 필요가 있습니다."], weakParagraphPoint: "결론 문장의 범위를 한정해 다시 적으세요.", weakLogicPoint: "결론 범위를 확인하세요." } : draft;
       },
     },
     }),
@@ -160,6 +161,14 @@ export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, ca
     await analysisButton.click();
     await page.getByRole("button",{name:"직접 복구하기",exact:true}).click();
     await page.getByLabel("내 복구 입력").fill(repairText);
+    if (resumeOnReload) {
+      const before = modelCalls;
+      await page.waitForFunction(() => Object.keys(sessionStorage).some(key => key.startsWith("inverge:app1-resume:") && JSON.parse(sessionStorage.getItem(key)).repairText));
+      await page.reload();
+      await page.getByLabel("내 복구 입력").waitFor();
+      assert.equal(await page.getByLabel("내 복구 입력").inputValue(), repairText);
+      assert.equal(modelCalls, before, "reconnect validates the prior signature without another model call");
+    }
     if (requestRecovery) {
       const before=writes.filter(p=>p==="/api/answer-review/structure").length,stalled=armFault("verify");await page.getByRole("button",{name:"복구 확인",exact:true}).click();await expireWait(stalled,90_000);
       await page.locator('[data-app1-error]').waitFor();assert.equal(writes.filter(p=>p==="/api/answer-review/structure").length,before+1,"timeout never automatically repeats verification");

@@ -1,6 +1,32 @@
 <!-- 2026-09-16 PR #945 second source correction: exact-head review identified per-item reads in paginated learner lists and an APP1 repair-skip source contract regression. Map selected page rows locally with established timestamp normalization; regression proves three queries for 230 rows and mapper parity. Preserve repair-verification skip precedence while keeping functional-test signal exclusion. Personal runtime/data/provider remain untouched pending final checks/review. -->
 # Inverge Owner Study OS
 
+## 2026-09-16 actual Theory app validation
+
+The seven-call amendment was applied append-only to the existing permanent USD 5 ledger. At 84dfbd72, the last two actual Gemini calls produced a grounded weak-answer finding and a no-clear-gap correction with same-session confirmation. Real authenticated API/SQL save created one repair record, one note and one review; an identical save returned the same item, and browser reload re-read the persisted correction. No development calls remain. The paraphrase omission prompt fix has controlled coverage but no paid re-test. Actual readback exposed the original gap being mislabeled as still outstanding: project the server-saved same-session result separately and continue to the existing review queue, preserving original data. Actual same-day review completion is persisted as one completed queue plus a two-day follow-up, and the learning agenda reads its completion event (not a separate study-log row). Fix the observed Today subject drift and source-only agenda classification; pending-review routing and dates must follow the current queue, including an empty completed queue. Final actual readback confirms the saved correction, completion event and September 18 follow-up. Review also requires the write destination to consume each task's explicit subject before fallback while preserving an existing draft. Native checks and independent exact-head review remain required before the authorized protected squash and PC update. This is not real next-day or Owner learning evidence. PR #946 closes only #947; #772/#883 remain open.
+
+Reuse merged #945 / 224a35c8 and the same PC writer. Apply the post909 A/B/C
+root-cause continuation exception; keep native checks, exact-head independent
+review and protected squash. Preserve the live personal draft and binding.
+The Owner authorizes one original synthetic Theory question, at most three
+answer sources and seven total development analysis/verification/retry calls,
+from the existing permanent USD 5 ledger including all prior/unknown spend.
+Use actual Next.js menus, Supabase Auth and isolated PostgreSQL/PostgREST,
+without replacing internal requests with successful mocks. Keep incomplete/
+delayed-response tests separately labeled. Verify diagnosis evidence, correction,
+save/reconnect/review and personal Today isolation. No personal schema or
+Production changes; do not count simulated study as Owner learning.
+Actual menu re-entry exposed an identical-source receipt mismatch. Resume only
+a server-validated exact existing source without forging a new operation receipt.
+The first independent review found non-finding authority leakage outside Owner-PC;
+apply evidence/status guards to every APP1 analysis and verification path.
+
+
+Review follow-up: the existing APP1 contract now declares read-only analysis
+resume. Successfully stored oversized drafts remain recoverable; verification
+limits remain unchanged. A reproduced Windows delete-pending lock error receives
+bounded acquisition retries, without reclaiming a lock or refunding a reservation.
+
 ## Owner Theory diagnostic provenance after merged #942
 
 PR #944 was closed unmerged after its two source corrections. Its second

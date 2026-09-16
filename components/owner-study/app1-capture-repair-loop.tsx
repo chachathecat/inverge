@@ -12,7 +12,7 @@ import {
   V3Surface,
 } from "@/components/learner";
 import { Textarea } from "@/components/ui/textarea";
-import { normalizeAnswerReviewStructureDraft } from "@/lib/evaluate/answer-review-structure";
+import { normalizeAnswerReviewStructureDraft, type AnswerReviewStructureDraft } from "@/lib/evaluate/answer-review-structure";
 import {
   APP1_LIMITS,
   APP1_RUNTIME_BOUNDARY_RECEIPT,
@@ -33,6 +33,7 @@ import {
   type PendingCaptureSaveOperation,
 } from "@/lib/review-os/capture-persistence-controller";
 import { isCaptureFunctionalTest } from "@/lib/review-os/capture-review-provenance";
+import { app1ResumeDraftKey, readApp1ResumeDraft, writeApp1ResumeDraft } from "@/lib/owner-study/app1-resume-draft";
 import type { WrongAnswerDetail } from "@/lib/review-os/types";
 
 type TrustedRepairSubject =
@@ -227,6 +228,7 @@ export function App1CaptureRepairLoop({
 }) {
   const [phase, setPhase] = useState<App1Phase>("loading");
   const [detail, setDetail] = useState<WrongAnswerDetail | null>(null);
+  const [diagnosis, setDiagnosis] = useState<AnswerReviewStructureDraft | null>(null);
   const [gap, setGap] = useState<App1PrimaryGap | null>(null);
   const [repairText, setRepairText] = useState("");
   const [verification, setVerification] =
@@ -240,11 +242,13 @@ export function App1CaptureRepairLoop({
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
   const pendingSaveRef = useRef<PendingCaptureSaveOperation | null>(null);
+  const restoredDraftKeyRef = useRef<string | null>(null);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
   const repairRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     let active = true;
+    restoredDraftKeyRef.current = null;
     const load = async () => {
       setPhase("loading");
       setError(null);
@@ -268,6 +272,34 @@ export function App1CaptureRepairLoop({
         }
         if (!active) return;
         setDetail(payload.detail);
+        let saved: ReturnType<typeof readApp1ResumeDraft> = null;
+        try { saved = readApp1ResumeDraft(window.sessionStorage, ownerScope, itemId); }
+        catch { setError("이 브라우저의 이전 초안을 읽지 못했습니다. 저장된 원문은 유지됩니다."); }
+        setDiagnosis(null);
+        setRepairText(saved?.repairText ?? "");
+        setGap(null); setAnalysisBinding(null); setVerification(null); setVerificationReceipt(null);
+        if (saved?.analysisBinding && saved.gap) {
+          const body = new FormData();
+          body.set("requestPurpose", "app1_resume_analysis"); body.set("examMode", "second");
+          body.set("subject", payload.detail.item.subjectLabel); body.set("sourceItemId", itemId);
+          body.set("analysisBinding", saved.analysisBinding); body.set("primaryGap", JSON.stringify(saved.gap));
+          try {
+            const resumed = await readApp1Response("/api/answer-review/structure", { method: "POST", body }, 15000);
+            if (!active) return;
+            const result = resumed.payload as { ok?: boolean; primaryGap?: App1PrimaryGap; analysisBinding?: string } | null;
+            if (resumed.response.ok && result?.ok && result.primaryGap && result.analysisBinding) {
+              setGap(result.primaryGap); setAnalysisBinding(result.analysisBinding);
+              restoredDraftKeyRef.current = app1ResumeDraftKey(ownerScope, itemId);
+              setPhase(saved.repairText ? "direct_repair" : "evidence_review");
+              return;
+            }
+            setError(AUTHORITY_EXPIRED_MESSAGE);
+          } catch {
+            if (!active) return;
+            setError("이전 분석 상태를 확인하지 못했습니다. 교정 초안은 보존했고 AI 요청은 다시 보내지 않았습니다.");
+          }
+        }
+        restoredDraftKeyRef.current = app1ResumeDraftKey(ownerScope, itemId);
         setPhase("structure_confirmation");
       } catch (loadError) {
         if (!active) return;
@@ -281,7 +313,24 @@ export function App1CaptureRepairLoop({
     return () => {
       active = false;
     };
-  }, [availableSubjects, itemId]);
+  }, [availableSubjects, itemId, ownerScope]);
+
+  useEffect(() => {
+    if (phase === "loading" || detail?.item.id !== itemId ||
+        restoredDraftKeyRef.current !== app1ResumeDraftKey(ownerScope, itemId)) return;
+    try {
+      if (["completed", "saved_without_queue", "saved_review_already_completed"].includes(phase)) {
+        window.sessionStorage.removeItem(app1ResumeDraftKey(ownerScope, itemId));
+      } else {
+        writeApp1ResumeDraft(window.sessionStorage, ownerScope, itemId, { repairText, gap, analysisBinding });
+      }
+    }
+    catch {
+      // Report a storage failure after this render; cancel a stale notification.
+      const timer = window.setTimeout(() => setError("이 브라우저에서 교정 초안을 보존하지 못했습니다. 화면을 닫기 전에 입력을 복사해 주세요."), 0);
+      return () => window.clearTimeout(timer);
+    }
+  }, [analysisBinding, detail, gap, itemId, ownerScope, phase, repairText]);
 
   useEffect(() => {
     if (phase === "loading") return;
@@ -317,6 +366,7 @@ export function App1CaptureRepairLoop({
       return;
     }
     setPhase("analyzing");
+    setDiagnosis(null);
     setError(null);
     setGap(null);
     setVerification(null);
@@ -331,6 +381,11 @@ export function App1CaptureRepairLoop({
         ANALYSIS_FAILURE_MESSAGE,
         ownerTheoryMode,
       );
+      setDiagnosis(result.draft);
+      if (result.draft.diagnosticStatus && result.draft.diagnosticStatus !== "finding") {
+        setPhase("structure_confirmation");
+        return;
+      }
       if (
         !result.primaryGap ||
         typeof result.analysisBinding !== "string" ||
@@ -708,6 +763,11 @@ export function App1CaptureRepairLoop({
         </div>
       ) : null}
 
+      {diagnosis?.diagnosticStatus && diagnosis.diagnosticStatus !== "finding" ? <V3Surface data-app1-diagnostic-status={diagnosis.diagnosticStatus}>
+        <h2>{diagnosis.diagnosticStatus === "no_clear_gap" ? "명백한 보완점이 확인되지 않았습니다" : diagnosis.diagnosticStatus === "analysis_failed" ? "분석이 완료되지 않았습니다" : "개인 진단 근거가 충분하지 않습니다"}</h2>
+        <p>입력은 보존됩니다. 이 결과로 약점·복구 완료·학습성과를 만들지 않습니다.</p>
+        <p>{diagnosis.diagnosticStatus === "no_clear_gap" ? "제출 답안 전체를 문제 요구와 대조한 AI 의견이며, 완전한 답안이나 공식 판정을 뜻하지 않습니다." : "필수 근거가 부족하거나 응답이 불완전하여 보완점을 확정하지 않았습니다."}</p>
+      </V3Surface> : null}
       {phase === "structure_confirmation" && detail && summary ? (
         <V3Surface className="space-y-5" data-app1-structure-confirmation>
           <div>
@@ -745,6 +805,10 @@ export function App1CaptureRepairLoop({
               {summary.uncertainty}
             </p>
           ) : null}
+          {repairText ? <details className="quiet-disclosure" data-app1-preserved-repair>
+            <summary>보존된 교정 초안 · 확인 미완료</summary>
+            <Textarea aria-label="보존된 교정 초안" value={repairText} readOnly />
+          </details> : null}
           <V3ActionButton
             type="button"
             onClick={() => void analyze()}
@@ -767,6 +831,7 @@ export function App1CaptureRepairLoop({
             </h2>
           </div>
           <p className="v3-type-caption" data-app1-evidence-source>입력한 답안에 대한 AI 검토 의견입니다. 사람 검토·공식 채점이 아닙니다.</p>
+          {diagnosis?.questionRequirementQuote ? <p data-app1-question-evidence>문제 요구: 「{diagnosis.questionRequirementQuote}」 · 확인 범위: 제출한 답안 전체</p> : null}
           {gap.anchorKind !== "exact" ? <p data-app1-evidence-unavailable>답안의 정확한 근거 구절은 확인되지 않았습니다. 아래 전체 답안과 직접 대조해 주세요.</p> : null}
           <details className="quiet-disclosure"><summary>분석에 사용한 답안 확인</summary><p className="whitespace-pre-wrap">{detail ? getApp1LearnerAnswer(detail) : ""}</p></details>
           <div data-app1-primary-gap-count="1">
@@ -817,7 +882,7 @@ export function App1CaptureRepairLoop({
             data-app1-repair-input
           />
           <p id="app1-repair-help" className="v3-type-compact text-[var(--color-text-secondary)]">
-            AI가 완성 답안을 자동 입력하지 않습니다. 현재 입력은 저장 전 메모리 안에만 있고, 새로고침하면 복원되지 않습니다.
+            AI가 완성 답안을 자동 입력하지 않습니다. 교정 초안은 이 브라우저 탭에 임시 보관되어 새로고침 뒤에도 이어 쓸 수 있습니다. 계정의 학습 기록에는 결과 저장 버튼을 눌러야 저장됩니다. 공용 기기에서는 입력칸을 비운 뒤 탭을 닫아 주세요.
           </p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <V3ActionButton type="button" onClick={() => void verifyRepair()} disabled={!canonicalizeApp1RepairBody(repairText)} data-app1-verify-repair>

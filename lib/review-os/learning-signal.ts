@@ -77,6 +77,7 @@ export function getAnswerReviewInputQualityIssue(params: {
 }
 
 export function shouldSkipLearningSignalSave(normalizedDraft: AnswerReviewStructureDraft): "insufficient_structure" | null {
+  if (normalizedDraft.diagnosticStatus && normalizedDraft.diagnosticStatus !== "finding") return "insufficient_structure";
   const weakTaxonomy = isMostlyFallbackLike(normalizedDraft.coreConcepts) && isMostlyFallbackLike(normalizedDraft.missingIssueCandidates);
   const hasConcreteTaxonomySignal = !weakTaxonomy;
 

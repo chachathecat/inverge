@@ -1,11 +1,13 @@
+import { createHash } from "node:crypto";
 import { isCaptureFunctionalTest } from "@/lib/review-os/capture-review-provenance";
 import { isOwnerPcTheoryEnabled, OwnerTheoryError, type OwnerTheoryAuthority } from "@/lib/owner-study/owner-pc-theory";
 import { NextResponse } from "next/server";
 import { getServerSessionUser } from "@/lib/auth/session";
-import { normalizeAnswerReviewStructureDraft, type AnswerReviewExplanationLevel } from "@/lib/evaluate/answer-review-structure";
+import { normalizeAnswerReviewStructureDraft, groundAnswerReviewDiagnosis, type AnswerReviewExplanationLevel } from "@/lib/evaluate/answer-review-structure";
 import { GeminiEnvError, GeminiStructureParseError, isGeminiQuotaExceededError, isGeminiConfigured, structureAnswerReviewWithGemini } from "@/lib/evaluate/gemini";
 import {
   assertApp1RepairVerificationRequestAuthority,
+  assertApp1ResumableAnalysisAuthority,
   assertApp1SigningAuthorityReady,
   createApp1AnalysisAuthority,
   createApp1RepairVerificationAuthority,
@@ -31,6 +33,7 @@ const INPUT_QUALITY_MESSAGE = "검토에 필요한 정보가 부족합니다. �
 const ANSWER_REVIEW_REQUEST_PURPOSES = [
   "learning_analysis",
   "app1_initial_analysis",
+  "app1_resume_analysis",
   "repair_verification",
 ] as const;
 type AnswerReviewRequestPurpose = (typeof ANSWER_REVIEW_REQUEST_PURPOSES)[number];
@@ -134,6 +137,21 @@ export async function POST(request: Request) {
         app1Detail.item.correctAnswer === "-"
           ? ""
           : app1Detail.item.correctAnswer;
+      if (requestPurpose === "app1_resume_analysis") {
+        const binding = singleFormString(formData, "analysisBinding");
+        const rawGap = singleFormString(formData, "primaryGap");
+        if (!binding || binding.length > 8192 || !rawGap || rawGap.length > 4096) {
+          return repairVerificationError(400, "INVALID_REPAIR_AUTHORITY");
+        }
+        let value: unknown;
+        try { value = JSON.parse(rawGap); }
+        catch { return repairVerificationError(400, "INVALID_REPAIR_AUTHORITY"); }
+        const primaryGap = parseApp1PrimaryGap(value);
+        assertApp1ResumableAnalysisAuthority({ userId: session.userId, detail: app1Detail,
+          primaryGap, analysisBinding: binding });
+        return NextResponse.json({ ok: true, primaryGap, analysisBinding: binding },
+          { headers: { "Cache-Control": "private, no-store" } });
+      }
       if (requestPurpose === "app1_initial_analysis") {
         answerText = getApp1LearnerAnswer(app1Detail);
       }
@@ -201,17 +219,21 @@ export async function POST(request: Request) {
       // Only the Owner-selected saved problem/answer and current manual correction.
       // Stored reference material and automatic reference enrichment stay private.
       referenceText = "";
-      ownerTheoryAuthority = { userId: session.userId, sourceItemId: app1Detail.item.id, purpose: requestPurpose };
+      ownerTheoryAuthority = { userId: session.userId, sourceItemId: app1Detail.item.id, purpose: requestPurpose, questionSha256: createHash("sha256").update(questionText).digest("hex") };
     }
     // This exact approved Owner-PC request uses the permanent one-case budget,
     // not the commercial daily quota. No global admin override or tier mutation.
     if (session.userId && !ownerTheoryAuthority) await assertCanRunAnswerReview(session.userId);
-    const initialDraft = await structureAnswerReviewWithGemini({ ownerTheoryAuthority, questionFiles, answerFiles, referenceFiles, questionText, answerText, referenceText, explanationLevel });
+    const repairTarget = requestPurpose === "repair_verification" && app1PrimaryGap
+      ? { gap: app1PrimaryGap.gap, repairAction: app1PrimaryGap.repairAction } : undefined;
+    const initialDraft = await structureAnswerReviewWithGemini({ ownerTheoryAuthority, repairTarget, questionFiles, answerFiles, referenceFiles, questionText, answerText, referenceText, explanationLevel });
     const referenceGrounding = ownerTheoryAuthority ? { references: [], displayLabel: "선택한 이론 입력만 검토", promptContext: "" } : buildAnswerReviewReferenceGrounding({ examMode: mode, subject, questionText, answerText, referenceText, normalizedDraft: normalizeAnswerReviewStructureDraft(initialDraft) });
-    const draft = referenceGrounding.references.length > 0 ? await structureAnswerReviewWithGemini({ ownerTheoryAuthority, questionFiles, answerFiles, referenceFiles, questionText, answerText, referenceText, referenceGroundingContext: referenceGrounding.promptContext, explanationLevel }) : initialDraft;
-    const normalized = normalizeAnswerReviewStructureDraft(draft);
+    const draft = referenceGrounding.references.length > 0 ? await structureAnswerReviewWithGemini({ ownerTheoryAuthority, repairTarget, questionFiles, answerFiles, referenceFiles, questionText, answerText, referenceText, referenceGroundingContext: referenceGrounding.promptContext, explanationLevel }) : initialDraft;
+    const normalizedDraft = normalizeAnswerReviewStructureDraft(draft);
+    const normalized = app1Detail ? groundAnswerReviewDiagnosis(normalizedDraft, questionText, answerText) : normalizedDraft;
     const analysisAuthority =
       requestPurpose === "app1_initial_analysis" &&
+      (normalized.diagnosticStatus === "finding") &&
       session.userId &&
       app1Detail
         ? createApp1AnalysisAuthority({
@@ -222,6 +244,7 @@ export async function POST(request: Request) {
         : null;
     const repairAuthority =
       requestPurpose === "repair_verification" &&
+      (["finding", "no_clear_gap"].includes(normalized.diagnosticStatus ?? "")) &&
       session.userId &&
       app1Detail &&
       app1PrimaryGap &&
@@ -241,7 +264,7 @@ export async function POST(request: Request) {
         : null;
     let learningSignalStatus: "saved" | "skipped" | "failed" = "skipped";
     const learningSignalSkipReason = requestPurpose === "repair_verification" ? "repair_verification"
-      : app1Detail && isCaptureFunctionalTest(app1Detail.item.rawPayload) ? "functional_test" : undefined;
+      : app1Detail && isCaptureFunctionalTest(app1Detail.item.rawPayload) ? "functional_test" : normalized.diagnosticStatus && normalized.diagnosticStatus !== "finding" ? "no_grounded_finding" : undefined;
     const skipReason = learningSignalSkipReason ?? shouldSkipLearningSignalSave(normalized);
     if (session.userId && session.email && requestPurpose !== "repair_verification" && !skipReason) {
       try { await reviewOsService.createLearningSignalEvent(session.userId, session.email, buildAnswerReviewLearningSignalInput({ examMode: mode, subjectInput: subject, answerSourceType: answerFiles.length > 0 ? "file" : "text", normalizedDraft: normalized })); learningSignalStatus = "saved"; }
@@ -251,7 +274,7 @@ export async function POST(request: Request) {
     logServerEvent({ eventName: requestPurpose === "repair_verification" ? "answer_review_structure_repair_verification" : "answer_review_structure", userId: session.userId, route: "/api/answer-review/structure", mode, subject, costCategory: "answer_review", durationMs: Date.now()-startedAt, ok: true });
     return NextResponse.json({
       ok: true,
-      draft,
+      draft: normalized,
       ...(analysisAuthority ?? {}),
       ...(repairAuthority ?? {}),
       learningSignalStatus,

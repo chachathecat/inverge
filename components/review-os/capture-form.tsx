@@ -1686,14 +1686,16 @@ export function WrongAnswerCaptureForm({
           } },
         }),
       });
-      const result = await response.json() as { ok?: boolean; item?: { id: string; updatedAt?: string; rawPayload?: Record<string, unknown> }; error?: string };
+      const result = await response.json() as { ok?: boolean; item?: { id: string; updatedAt?: string; rawPayload?: Record<string, unknown> }; error?: string; deduped?: boolean; sourceInputMatched?: boolean };
       if (!response.ok || !result.ok || !result.item?.id || !result.item.updatedAt) {
         if (result.error === "review-os:capture-source-provenance-conflict") {
           throw new Error("같은 문제·답안의 기존 기록과 자료 성격 또는 쟁점·목차가 다릅니다. 기존 기록을 덮어쓰지 않았으며 현재 초안은 그대로 남아 있습니다.");
         }
         throw new Error("분석용 입력 보관을 완료하지 못했습니다. 기기 초안은 그대로 남아 있습니다.");
       }
-      if (!buildDurableCapturePersistenceReceipt(result.item, operation)) {
+      // An authenticated server read may resume an exactly matched existing source.
+      // It does not forge a receipt for this new operation or mutate the stored record.
+      if (!buildDurableCapturePersistenceReceipt(result.item, operation) && !(result.deduped && result.sourceInputMatched)) {
         throw new Error("보관된 입력과 현재 초안의 저장 영수증이 일치하지 않습니다. 초안은 보존됩니다.");
       }
       settleCaptureSaveOperation(operation);
@@ -2114,6 +2116,10 @@ export function WrongAnswerCaptureForm({
         </dl>
       </section>
 
+      {ownerAnalysisEntry && !ownerAnalysisPanelOpen && !savedConfirmation ? <section className="space-y-2" data-owner-existing-answer-entry>
+        <p>이미 쓴 답안이 있으면 문제·답안만 입력해 분석할 수 있습니다. 쟁점·목차 훈련은 선택할 수 있습니다.</p>
+        <V3ActionButton type="button" onClick={() => setStage("second-gap")}>이미 쓴 답안 AI 검토</V3ActionButton>
+      </section> : null}
       {submitting && !savedConfirmation ? (
         <section
           role="status"

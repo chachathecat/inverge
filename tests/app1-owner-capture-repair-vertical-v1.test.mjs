@@ -2931,7 +2931,10 @@ test("APP1-UI-001 binds exact copy, one-gap UI, no prefilled repair and truthful
   assert.ok(repairLoop.includes("AI가 완성 답안을 자동 입력하지 않습니다."));
   assert.ok(repairLoop.includes("중복 성공으로 처리하지 않았습니다."));
   assert.ok(repairLoop.includes("복습이 예약되었다고 표시하지 않습니다."));
-  assert.ok(repairLoop.includes("새로고침하면 복원되지 않습니다."));
+  assert.ok(repairLoop.includes("교정 초안은 이 브라우저 탭에 임시 보관되어 새로고침 뒤에도 이어 쓸 수 있습니다."));
+  assert.ok(repairLoop.includes("계정의 학습 기록에는 결과 저장 버튼을 눌러야 저장됩니다."));
+  assert.ok(repairLoop.includes("공용 기기에서는 입력칸을 비운 뒤 탭을 닫아 주세요."));
+  assert.equal(repairLoop.includes("새로고침하면 복원되지 않습니다."), false);
   assert.ok(repairLoop.includes("same-session") || repairLoop.includes("같은 세션"));
   assert.equal(repairLoop.includes("Date.now("), false);
 });
@@ -2953,9 +2956,14 @@ test("APP1-API-001 isolates repair verification from learning-state signals behi
     "learning_analysis",
     "app1_initial_analysis",
     "repair_verification",
+    "app1_resume_analysis",
   ]);
   assert.equal(config.answerReviewStructure.defaultRequestPurpose, "learning_analysis");
   assert.equal(config.answerReviewStructure.repairVerificationCreatesLearningSignal, false);
+  assert.equal(config.answerReviewStructure.analysisResumeRequiresOriginalUnexpiredBinding, true);
+  assert.equal(config.answerReviewStructure.analysisResumeReissuesAuthority, false);
+  assert.equal(config.answerReviewStructure.analysisResumeInvokesProvider, false);
+  assert.equal(config.answerReviewStructure.analysisResumeCreatesLearningSignal, false);
   assert.match(route, /value === null\) return "learning_analysis"/u);
   assert.match(route, /requestPurposeValues\.length > 1/u);
   assert.match(route, /"learning_analysis",[\s\S]*?"app1_initial_analysis",[\s\S]*?"repair_verification"/u);

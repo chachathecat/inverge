@@ -81,12 +81,17 @@
     "requestPurposes": [
       "learning_analysis",
       "app1_initial_analysis",
-      "repair_verification"
+      "repair_verification",
+      "app1_resume_analysis"
     ],
     "defaultRequestPurpose": "learning_analysis",
     "repairVerificationRequiresAuthenticatedOwnedExactSecondStageItem": true,
     "repairVerificationRequiresExactSubjectAuthorization": true,
     "repairVerificationCreatesLearningSignal": false,
+    "analysisResumeRequiresOriginalUnexpiredBinding": true,
+    "analysisResumeReissuesAuthority": false,
+    "analysisResumeInvokesProvider": false,
+    "analysisResumeCreatesLearningSignal": false,
     "callerControlledGenericSideEffectSuppression": false
   },
   "serverAuthority": {
@@ -98,7 +103,7 @@
     "analysisBindingReceipt": "App1AnalysisBindingReceiptV1",
     "verificationEvaluatedByServer": true,
     "verificationReceipt": "App1RepairVerificationReceiptV1",
-    "verificationPolicyVersion": "App1SameSessionRepairPolicyV1",
+    "verificationPolicyVersion": "App1SameSessionRepairPolicyV2",
     "analysisBindingLifetimeSeconds": 900,
     "verificationReceiptLifetimeSeconds": 300,
     "signingAlgorithm": "HMAC-SHA256",

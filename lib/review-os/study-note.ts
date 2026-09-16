@@ -56,6 +56,18 @@ function getConfirmedFieldString(rawPayload: Record<string, unknown> | undefined
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+// Server-authorized save fields describe a historical result, never new mastery.
+function hasSavedSameSessionRepair(item: WrongAnswerItemRecord) {
+  const fields = item.rawPayload?.user_confirmed_fields as Record<string, unknown> | undefined;
+  const sourceId = getRawPayloadString(item.rawPayload, "rewrite_source_item_id");
+  return item.rawPayload?.rewrite_completed === true && !isCaptureFunctionalTest(item.rawPayload) &&
+    fields?.app1_contract_version === "OwnerCaptureToRepairVerticalV1" &&
+    fields.app1_verification_state === "repair_confirmed_for_this_session" &&
+    fields.app1_same_session_only === true && fields.app1_mastery_created === false &&
+    fields.app1_transfer_created === false && Boolean(sourceId) &&
+    fields.app1_source_item_id === sourceId;
+}
+
 function truncateLine(value: string, max = 220) {
   const line = compact(value).replace(/([.!?])\s+/g, "$1 ");
   if (line.length <= max) return line;
@@ -73,12 +85,13 @@ export function buildNotebookPreview(item: WrongAnswerItemRecord, tag?: WrongAns
   const isSecond = mode === "second";
   const title = item.problemTitle ?? item.problemIdentifier ?? (isSecond ? "2차 교정노트" : "1차 오답노트");
   if (isUnanalyzedCaptureRecord(item.rawPayload)) return {
-    mode, title, weakPoint: "AI 분석 전 · 진단 없음", keyTerms: [item.subjectLabel],
+    mode, title, sameSessionRepairConfirmed: false, weakPoint: "AI 분석 전 · 진단 없음", keyTerms: [item.subjectLabel],
     coreLine: "입력만 보관됐습니다. 답안의 강점·약점을 아직 분석하지 않았습니다.",
     nextAction: "보관된 입력을 확인하고 AI 분석 여부를 직접 선택하세요.",
     nextReviewDate: "복습 미생성", noteLabel: isCaptureFunctionalTest(item.rawPayload) ? "AI 예시 기능시험" : "분석 전 입력",
     summaryLine: "입력 보관 · 비교·검증·학습성과 미생성", notebookLine: "개인 감점 진단이나 검증된 학습신호가 아닙니다.",
   };
+  const sameSessionRepairConfirmed = isSecond && hasSavedSameSessionRepair(item);
   const weakPoint = compact(
     getDraftString(item.rawPayload, isSecond ? "missingIssue" : "comparisonPoint") ??
       item.userReasonText ??
@@ -94,7 +107,7 @@ export function buildNotebookPreview(item: WrongAnswerItemRecord, tag?: WrongAns
     item.userReasonPreset,
   ]);
   const coreLine = compact(
-    isSecond
+    sameSessionRepairConfirmed ? item.rewriteParagraph ?? item.userAnswer : isSecond
       ? (getDraftString(item.rawPayload, "weakApplicationSentence") ??
           SECOND_CORE_SENTENCE_BY_SUBJECT[item.subjectLabel] ??
           "누락 논점 1개를 사례 적용 문장으로 보강합니다.")
@@ -103,7 +116,7 @@ export function buildNotebookPreview(item: WrongAnswerItemRecord, tag?: WrongAns
           "개념 -> 조건 -> 적용")
   );
   const nextAction = compact(
-    isSecond
+    sameSessionRepairConfirmed ? "다음 복습에서 답을 보지 않고 보강한 연결을 다시 작성하세요." : isSecond
       ? (getDraftString(item.rawPayload, "rewriteInstruction") ??
           getSecondSubjectTemplate(item.subjectLabel).rewriteGuidance)
       : "같은 유형 1문제를 다시 풀고, 헷갈린 차이 5줄을 남깁니다."
@@ -112,16 +125,21 @@ export function buildNotebookPreview(item: WrongAnswerItemRecord, tag?: WrongAns
   return {
     mode,
     title,
+    sameSessionRepairConfirmed,
     weakPoint,
     keyTerms,
     coreLine,
     nextAction,
-    nextReviewDate: getNextReviewDate(item.rawPayload),
-    noteLabel: isSecond ? "교정노트" : "오답노트",
-    summaryLine: isSecond
+    nextReviewDate: sameSessionRepairConfirmed ? "복습 큐에서 일정 확인" : getNextReviewDate(item.rawPayload),
+    noteLabel: sameSessionRepairConfirmed ? "같은 세션 교정 확인" : isSecond ? "교정노트" : "오답노트",
+    summaryLine: sameSessionRepairConfirmed
+      ? "AI 미검토 학습보조 · 요청한 연결 1개를 같은 세션에서 확인했습니다. 숙달이나 독립 복습 성과를 판정하는 결과가 아닙니다."
+      : isSecond
       ? "답안에서 빠진 논점과 다음 rewrite 지시를 한 장으로 정리했습니다."
       : "오답 원인과 다음 복습 기준을 한 장으로 정리했습니다.",
-    notebookLine: isSecond
+    notebookLine: sameSessionRepairConfirmed
+      ? "교정 전 간극을 복습 대상으로 보존했습니다. 현재 남은 간극이나 숙달을 새로 판정한 결과가 아닙니다."
+      : isSecond
       ? `다음 답안에서는 ${weakPoint}을 먼저 고정합니다.`
       : `다음 복습에서는 ${weakPoint}을 먼저 확인합니다.`,
   };
@@ -132,22 +150,28 @@ export function buildDetailStudyNote(detail: WrongAnswerDetail) {
   const preview = buildNotebookPreview(detail.item, primaryTag);
   const isSecond = preview.mode === "second";
   const pendingAnalysis = isUnanalyzedCaptureRecord(detail.item.rawPayload);
+  const pendingDueTimes = detail.reviewQueue.map((row) => Date.parse(row.dueAt)).filter(Number.isFinite);
+  const nextReviewDate = preview.sameSessionRepairConfirmed
+    ? pendingDueTimes.length > 0
+      ? new Date(Math.min(...pendingDueTimes)).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" })
+      : "예약된 복습 없음"
+    : preview.nextReviewDate;
   const summary = compact(
-    (pendingAnalysis ? preview.summaryLine : detail.note?.aiSummary) ??
+    (pendingAnalysis || preview.sameSessionRepairConfirmed ? preview.summaryLine : detail.note?.aiSummary) ??
       (isSecond
         ? "답안 비교 결과를 누락 논점, 구조, rewrite 지시로 정리했습니다."
         : "오답 원인을 핵심 키워드, 공식, 다음 복습 행동으로 정리했습니다.")
   );
   const noteCard = compact(
-    pendingAnalysis ? preview.coreLine : isSecond
+    pendingAnalysis ? preview.coreLine : preview.sameSessionRepairConfirmed ? preview.nextAction : isSecond
       ? (detail.note?.nextTryTip ?? `교정노트: ${preview.weakPoint}을 먼저 보강하고, 핵심 문장을 다시 씁니다.`)
       : (detail.note?.reviewCheckpoint ?? `오답노트: 정답 근거와 내가 고른 답의 차이를 5줄로 남깁니다.`)
   );
   const missingIssue = getDraftString(detail.item.rawPayload, "missingIssue");
-  const weakStructurePoint = getDraftString(detail.item.rawPayload, "weakStructurePoint");
-  const weakApplicationSentence = getDraftString(detail.item.rawPayload, "weakApplicationSentence");
+  const weakStructurePoint = preview.sameSessionRepairConfirmed ? null : getDraftString(detail.item.rawPayload, "weakStructurePoint");
+  const weakApplicationSentence = preview.sameSessionRepairConfirmed ? null : getDraftString(detail.item.rawPayload, "weakApplicationSentence");
   const comparisonPoint = getDraftString(detail.item.rawPayload, "comparisonPoint");
-  const rewriteSignal = isSecond && !pendingAnalysis
+  const rewriteSignal = isSecond && !pendingAnalysis && !preview.sameSessionRepairConfirmed
     ? buildSecondAnswerRewriteSignal({
         caseSummary: getDraftString(detail.item.rawPayload, "caseSummary") ?? undefined,
         myAnswerSummary: getDraftString(detail.item.rawPayload, "myAnswerSummary") ?? undefined,
@@ -168,7 +192,7 @@ export function buildDetailStudyNote(detail: WrongAnswerDetail) {
     missingIssue,
     weakStructurePoint,
     weakApplicationSentence,
-    rewriteInstruction: getDraftString(detail.item.rawPayload, "rewriteInstruction"),
+    rewriteInstruction: preview.sameSessionRepairConfirmed ? preview.nextAction : getDraftString(detail.item.rawPayload, "rewriteInstruction"),
     calculationRisk: rewriteSignal?.calculationRisk ?? null,
     unitRisk: rewriteSignal?.unitRisk ?? null,
     rewriteTaskType: rewriteSignal?.rewriteTaskType ?? null,
@@ -177,7 +201,7 @@ export function buildDetailStudyNote(detail: WrongAnswerDetail) {
     casioUnsupportedMessage: rewriteSignal?.casioUnsupportedMessage ?? null,
     comparisonPoint,
     noteCard,
-    nextReviewDate: preview.nextReviewDate,
+    nextReviewDate,
     recurrenceText: pendingAnalysis ? "학습·반복 신호 미생성" :
       detail.recurrence && detail.recurrence.recurrenceCount > 1
         ? `${detail.recurrence.recurrenceCount}회 반복된 신호입니다.`
@@ -186,6 +210,7 @@ export function buildDetailStudyNote(detail: WrongAnswerDetail) {
 }
 
 export type RewriteComparisonNote = {
+  sameSessionRepairConfirmed: boolean;
   sourceGap: string;
   previousParagraph: string;
   sourceAnswerSummary: string;
@@ -232,10 +257,16 @@ export function buildRewriteComparisonNote(
       detail.item.userAnswer?.trim() ||
       "다시 쓴 문단이 아직 기록되지 않았습니다.");
 
-  const remainingNextGap = detailNote.weakStructurePoint ?? detailNote.weakApplicationSentence ?? detailNote.weakPoint;
-  const improvement = truncateLine(`${sourceGap}을 문단에 반영해 이전 문단보다 근거 연결이 또렷해졌습니다.`);
+  const sameSessionRepairConfirmed = detailNote.sameSessionRepairConfirmed;
+  const remainingNextGap = sameSessionRepairConfirmed
+    ? "요청한 연결 1개만 같은 세션에서 확인했습니다. 다른 간극·독립 복습·숙달은 확인하지 않았습니다."
+    : detailNote.weakStructurePoint ?? detailNote.weakApplicationSentence ?? detailNote.weakPoint;
+  const improvement = sameSessionRepairConfirmed
+    ? "AI 미검토 학습보조로 요청한 연결 1개를 같은 세션에서 확인하고 교정문을 저장했습니다."
+    : truncateLine(`${sourceGap}을 문단에 반영해 이전 문단보다 근거 연결이 또렷해졌습니다.`);
 
   return {
+    sameSessionRepairConfirmed,
     sourceGap: truncateLine(sourceGap, 140),
     previousParagraph: truncateLine(previousParagraph, 260),
     sourceAnswerSummary: truncateLine(sourceAnswerSummary, 260),

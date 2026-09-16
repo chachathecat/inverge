@@ -256,3 +256,15 @@ for (const requestRecovery of ["headers", "body"]) {
     assert.equal(budget.remainingMicros,THEORY_POLICY.budgetMicros-4*THEORY_POLICY.reservationMicros);
   });
 }
+
+test("2차 analysis and unsaved correction reconnect without provider replay, then save and review", {timeout:120000}, async () => {
+  const baseline = memoryTransport();
+  const resumed = memoryTransport();
+  for (const store of [baseline, resumed]) Object.assign(store.tables, { study_profiles: [], action_seeds: [], study_logs: [] });
+  // The ordinary route may enrich each analysis with a reference call. Compare
+  // identical flows: reconnect must add exactly zero provider executions.
+  const control = await verifyApp1SavedRecordBrowser(baseline.execute, { captureInput: true });
+  const result = await verifyApp1SavedRecordBrowser(resumed.execute, { captureInput: true, resumeOnReload: true });
+  assert.ok(control.modelCalls >= 2);
+  assert.equal(result.modelCalls - control.modelCalls, 0, "reload must add zero provider calls");
+});

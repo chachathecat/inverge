@@ -173,7 +173,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
           createdAt={resolvedDetail.item.createdAt}
           savedAt={resolvedDetail.item.updatedAt}
           biggestGap={note.missingIssue ?? note.weakPoint}
-          biggestGapLabel={REVIEW_OS_LEARNER_LANGUAGE.biggestGap}
+          biggestGapLabel={note.sameSessionRepairConfirmed ? "교정 전 간극" : REVIEW_OS_LEARNER_LANGUAGE.biggestGap}
           nextAction={note.rewriteInstruction ?? note.nextAction}
           coreLine={note.coreLine}
           keyTerms={note.keyTerms}

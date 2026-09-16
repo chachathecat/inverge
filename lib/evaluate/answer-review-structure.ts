@@ -1,6 +1,9 @@
 export type AnswerReviewExplanationLevel = "easy" | "standard" | "exam";
 
 export type AnswerReviewStructureDraft = {
+  diagnosticStatus?: "finding" | "no_clear_gap" | "insufficient_evidence" | "analysis_failed";
+  questionRequirementQuote?: string;
+  reviewedAnswerScope?: "entire_submitted_answer";
   questionSummary: string;
   coreConcepts: string[];
   requiredIssues: string;
@@ -28,22 +31,23 @@ const DETAIL_TEXT_MAX_LENGTH = 1200;
 const BANNED_TERMS = ["점수", "합격 가능성", "합격 판정", "최종 채점", "AI 판정", "등급"];
 
 const STRING_FALLBACKS: Record<keyof AnswerReviewStructureDraft, string> = {
+  diagnosticStatus: "", questionRequirementQuote: "", reviewedAnswerScope: "",
   questionSummary: "문제 요구를 더 입력하면 구조화를 보강할 수 있습니다.",
   coreConcepts: "",
-  requiredIssues: "기준답안과 문제 요구를 더 입력하면 보강할 간극이 선명해집니다.",
-  userAnswerSummary: "내 답안의 핵심을 한 줄로 정리해 주세요.",
+  requiredIssues: "",
+  userAnswerSummary: "",
   answerEvidenceQuote: "",
-  userAnswerStructure: "문단별 주장과 근거를 정리하면 구조 분석이 선명해집니다.",
-  referenceStructure: "기준답안의 목차를 입력하면 비교가 정확해집니다.",
+  userAnswerStructure: "",
+  referenceStructure: "",
   strengths: "",
   missingIssueCandidates: "",
-  weakParagraphPoint: "보강할 문단 포인트를 검토자가 직접 확인해 주세요.",
-  weakLogicPoint: "논리 연결이 약한 지점을 검토자가 직접 확인해 주세요.",
-  rewriteTarget: "교정 문단을 직접 작성해 다음 답안에 반영해 주세요.",
-  rewriteDraftSuggestion: "교정 문단을 직접 작성해 다음 답안에 반영해 주세요.",
-  nextAction: "문단 하나를 다시 쓰고 검토자 확인을 진행하세요.",
+  weakParagraphPoint: "",
+  weakLogicPoint: "",
+  rewriteTarget: "",
+  rewriteDraftSuggestion: "",
+  nextAction: "",
   caution: "구조화 결과는 검토 보조 초안이며 검토자 확인이 필요합니다.",
-  plainExplanation: "핵심은 문제에서 묻는 조건을 먼저 나누고, 답안에서 빠진 조건 1개를 보강하는 것입니다.",
+  plainExplanation: "",
   keyTermExplanations: "",
   stepByStepExplanation: "",
   examAnswerHints: "",
@@ -115,11 +119,14 @@ export function normalizeAnswerReviewStructureDraft(input: unknown): AnswerRevie
   const source = input && typeof input === "object" ? (input as Record<string, unknown>) : {};
 
   return {
+    ...(["finding", "no_clear_gap", "insufficient_evidence", "analysis_failed"].includes(String(source.diagnosticStatus)) ? { diagnosticStatus: source.diagnosticStatus as AnswerReviewStructureDraft["diagnosticStatus"] } : {}),
+    ...(typeof source.questionRequirementQuote === "string" ? { questionRequirementQuote: source.questionRequirementQuote.trim().slice(0, 240) } : {}),
+    ...(source.reviewedAnswerScope === "entire_submitted_answer" ? { reviewedAnswerScope: "entire_submitted_answer" as const } : {}),
     questionSummary: normalizeStringField("questionSummary", source.questionSummary),
     coreConcepts: normalizeArray(source.coreConcepts),
     requiredIssues: normalizeStringField("requiredIssues", source.requiredIssues),
     userAnswerSummary: normalizeStringField("userAnswerSummary", source.userAnswerSummary),
-    ...(typeof source.answerEvidenceQuote === "string" && source.answerEvidenceQuote.trim().length >= 4 && source.answerEvidenceQuote.trim().length <= 120
+    ...(typeof source.answerEvidenceQuote === "string" && source.answerEvidenceQuote.trim().length >= 4 && source.answerEvidenceQuote.trim().length <= 600
       ? { answerEvidenceQuote: source.answerEvidenceQuote.trim() } : {}),
     userAnswerStructure: normalizeStringField("userAnswerStructure", source.userAnswerStructure),
     referenceStructure: normalizeStringField("referenceStructure", source.referenceStructure),
@@ -136,4 +143,17 @@ export function normalizeAnswerReviewStructureDraft(input: unknown): AnswerRevie
     stepByStepExplanation: normalizeArray(source.stepByStepExplanation),
     examAnswerHints: normalizeArray(source.examAnswerHints),
   };
+}
+
+/** Provider assertions become a personal finding only with exact submitted evidence. */
+export function groundAnswerReviewDiagnosis(draft: AnswerReviewStructureDraft, question: string, answer: string): AnswerReviewStructureDraft {
+  let status = draft.diagnosticStatus ?? "insufficient_evidence";
+  const questionQuote = draft.questionRequirementQuote?.trim() ?? "";
+  const answerQuote = draft.answerEvidenceQuote?.trim() ?? "";
+  const grounded = questionQuote.length >= 4 && question.includes(questionQuote) && answerQuote.length >= 4 && answer.includes(answerQuote) && draft.reviewedAnswerScope === "entire_submitted_answer";
+  if ((status === "finding" || status === "no_clear_gap") && !grounded) status = "insufficient_evidence";
+  if (status === "finding" && !draft.missingIssueCandidates.length && !draft.weakLogicPoint && !draft.weakParagraphPoint) status = "insufficient_evidence";
+  if (status !== "finding") return { ...draft, diagnosticStatus: status, missingIssueCandidates: [], weakLogicPoint: "", weakParagraphPoint: "", rewriteTarget: "", rewriteDraftSuggestion: "",
+    ...(!grounded ? { answerEvidenceQuote: undefined, questionRequirementQuote: undefined } : {}) };
+  return { ...draft, diagnosticStatus: status };
 }

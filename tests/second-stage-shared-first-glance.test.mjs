@@ -1,3 +1,4 @@
+import ts from "typescript";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -72,7 +73,7 @@ test("second-stage BiggestGap cards override the legacy heading without changing
   assert.match(todaySession, /label=\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}/);
   assert.match(todaySession, />오늘 학습 실행 · \{modeLabel\}</);
   assert.match(todaySession, />문단 다시쓰기 저장 화면으로 이동</);
-  assert.match(itemDetail, /biggestGapLabel=\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}/);
+  assert.match(itemDetail, /biggestGapLabel=\{note\.sameSessionRepairConfirmed \? "교정 전 간극" : REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}/);
   assert.match(itemLoading, /\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}과 다음 복습 기록/);
   assert.match(actionCard, /V3ActionLine label=\{REVIEW_OS_LEARNER_LANGUAGE\.biggestGap\}/);
 });
@@ -137,4 +138,21 @@ test("S2 remains presentation-only and preserves later hard gates", () => {
 
   const sources = [...sharedRoutes.values()].join("\n");
   assert.doesNotMatch(sources, /완전 정복|합격 확정|합격 보장|공식 채점 결과/);
+});
+
+test("Today task links retain each second-stage subject when the page defaults to another subject",()=>{
+  const page=read("app/app/page.tsx");
+  const start=page.indexOf("  const resolveTaskHref = ");
+  const end=page.indexOf("\n  const primaryHref",start);
+  assert.ok(start>=0&&end>start);
+  const compiled=ts.transpileModule(page.slice(start,end),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
+  const resolve=new Function("mode","normalizeSubjectForMode","selectedSubjectQuery",compiled+";return resolveTaskHref;")(
+    "second",(subject)=>subject||"감정평가실무",encodeURIComponent("감정평가실무"));
+  for(const subject of ["감정평가이론","감정평가 및 보상법규"]){
+    for(const [hrefKind,route] of [["capture","capture"],["write","write"],["items","notes"],["review","review"],["session","session"]]){
+      const url=new URL(resolve({subject,primary_cta:{hrefKind}}),"http://localhost");
+      assert.equal(url.pathname,"/app/"+route);
+      assert.equal(url.searchParams.get("subject"),subject);
+    }
+  }
 });
