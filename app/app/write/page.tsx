@@ -12,15 +12,16 @@ import {
 import { WrongAnswerCaptureForm } from "@/components/review-os/capture-form";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
-import { resolveAppraisalMode } from "@/lib/review-os/appraisal";
+import { normalizeSubjectForMode, resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 
 type PageProps = {
-  searchParams?: Promise<{ mode?: string }>;
+  searchParams?: Promise<{ mode?: string; subject?: string }>;
 };
 
 export default async function ReviewOsWritePage({ searchParams }: PageProps) {
-  const modeParam = (await searchParams)?.mode;
+  const query = await searchParams;
+  const modeParam = query?.mode;
   const { session, access, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/write", modeParam));
   if (access.status !== "allowed") return <ReviewOsAccessState access={access} embedded />;
   if (!session.userId) return null;
@@ -31,6 +32,10 @@ export default async function ReviewOsWritePage({ searchParams }: PageProps) {
   if (mode !== "second") {
     redirect(`/app/capture?mode=${mode}`);
   }
+
+  const initialSubject = query?.subject !== undefined
+    ? normalizeSubjectForMode(query.subject, mode)
+    : isOwnerPcTheoryEnabled() ? "감정평가이론" : undefined;
 
   return (
     <div
@@ -64,7 +69,7 @@ export default async function ReviewOsWritePage({ searchParams }: PageProps) {
             mode={mode}
             labelledBy="write-page-title"
             workflow="second-write"
-            initialSubject={isOwnerPcTheoryEnabled() ? "감정평가이론" : undefined}
+            initialSubject={initialSubject}
             initialPreferredSubjects={profile?.preferredSubjects}
           />
         </div>

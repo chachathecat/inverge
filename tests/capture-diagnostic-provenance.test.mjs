@@ -24,7 +24,24 @@ test("deferred reference is a completed choice, never completed comparison", () 
   assert.equal(hasSecondWriteReferenceStep({correctAnswer:"",referenceAnswerAddedAfterProduction:false,referenceComparisonStatus:"deferred"}),true);
 });
 
-test("both real Owner entry pages hydrate an existing Theory draft and preserve it through explicit source-only storage", {timeout:120000}, async () => {
+test("write entry consumes the task subject before Owner or profile fallback",async()=>{
+  for(const ownerTheoryEnabled of [false,true]){
+    const app=productionHarness(memoryTransport().execute,{overrides:({session})=>({
+      "@/lib/owner-study/owner-pc-theory":{isOwnerPcTheoryEnabled:()=>ownerTheoryEnabled},
+      "@/lib/review-os/server":{buildReviewOsReturnTo:x=>x,getReviewOsServerContext:async()=>({session,access:{status:"allowed"},profile:{preferredSubjects:["감정평가 및 보상법규"]}})},
+      "next/navigation":{redirect(){throw new Error("unexpected redirect")}},
+    })});
+    const findForm=node=>{if(!React.isValidElement(node))return null;if(node.type?.name==="WrongAnswerCaptureForm")return node;for(const child of React.Children.toArray(node.props.children)){const found=findForm(child);if(found)return found;}return null;};
+    for(const subject of ["감정평가실무","감정평가이론","감정평가 및 보상법규","invalid",undefined]){
+      const tree=await app.load("app/app/write/page.tsx").default({searchParams:Promise.resolve({mode:"second",...(subject===undefined?{}:{subject})})});
+      const form=findForm(tree);assert.ok(form);
+      assert.equal(form.props.initialSubject,subject==="invalid"?"감정평가실무":subject??(ownerTheoryEnabled?"감정평가이론":undefined));
+      assert.deepEqual(form.props.initialPreferredSubjects,["감정평가 및 보상법규"]);
+    }
+  }
+});
+
+test("Owner entry page props and controlled hydration preserve an existing Theory draft through source-only storage", {timeout:120000}, async () => {
   const store=memoryTransport(); Object.assign(store.tables,{study_profiles:[],action_seeds:[],study_logs:[]});
   const app=productionHarness(store.execute,{env:{ALPHA_ADMIN_EMAILS:"owner@localhost.test",WCV_C2R_C_T_OWNER_EMAILS:"owner@localhost.test"},overrides:({load,session})=>({
     "@/lib/owner-study/owner-pc-theory":{isOwnerPcTheoryEnabled:()=>true},
@@ -39,6 +56,9 @@ test("both real Owner entry pages hydrate an existing Theory draft and preserve 
     const form=findForm(tree); assert.ok(form); assert.equal(form.props.textOnly,true); assert.equal(form.props.initialSubject,"감정평가이론"); assert.equal(form.props.ownerCaptureRepairEnabled,true); assert.deepEqual(form.props.ownerCaptureRepairSubjects,["appraisal_theory"]);
     entries.set(`/app/${route}`,{props:form.props,html:renderToString(form)});
   }
+  const otherSubjectTree=await app.load("app/app/write/page.tsx").default({searchParams:Promise.resolve({mode:"second",subject:"감정평가 및 보상법규"})});
+  const otherSubjectForm=findForm(otherSubjectTree);assert.equal(otherSubjectForm.props.initialSubject,"감정평가 및 보상법규");
+  entries.set("/controlled-write-law-entry",{props:otherSubjectForm.props,html:renderToString(otherSubjectForm)});
   const bundle=await build({stdin:{contents:`import React from 'react';import {hydrateRoot,createRoot} from 'react-dom/client';import {WrongAnswerCaptureForm} from './components/review-os/capture-form';import {App1CaptureRepairLoop} from './components/owner-study/app1-capture-repair-loop';const root=document.getElementById('root');if(window.captureProps)hydrateRoot(root,React.createElement(WrongAnswerCaptureForm,window.captureProps),{onRecoverableError:e=>{window.hydrationErrors.push(e.message)}});else createRoot(root).render(React.createElement(App1CaptureRepairLoop,{ownerTheoryMode:true,ownerScope:${JSON.stringify(OWNER_ID)},itemId:new URLSearchParams(location.search).get('itemId'),availableSubjects:['appraisal_theory']}));`,resolveDir:process.cwd(),loader:"tsx"},bundle:true,write:false,platform:"browser",format:"iife",jsx:"automatic",define:{"process.env.NODE_ENV":'"production"'},logLevel:"silent",plugins:[{name:"navigation",setup(b){
     b.onResolve({filter:/^next\/navigation$/},()=>({path:"navigation",namespace:"fake"}));b.onResolve({filter:/^next\/link$/},()=>({path:"link",namespace:"fake"}));
     b.onLoad({filter:/navigation/,namespace:"fake"},()=>({contents:'export function useRouter(){return {push:href=>location.assign(href),refresh(){}}}export function usePathname(){return location.pathname}export function useSearchParams(){return new URLSearchParams(location.search)}',loader:"js"}));
@@ -64,8 +84,8 @@ test("both real Owner entry pages hydrate an existing Theory draft and preserve 
     await context.route("**/*",route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
     await context.addInitScript(({key,raw})=>{if(!localStorage.getItem(key))localStorage.setItem(key,raw);},{key:draftKey,raw:JSON.stringify(draft)});
     const page=await context.newPage();page.on("pageerror",error=>errors.push(error.message));
-    for(const route of ["write","capture"]){
-      await page.goto(`${origin}/app/${route}?mode=second`);
+    for(const route of ["app/write","app/capture","controlled-write-law-entry"]){
+      await page.goto(`${origin}/${route}?mode=second`);
       await page.locator("[data-owner-analysis-preparation]").waitFor();
       assert.deepEqual(await page.evaluate(()=>window.hydrationErrors),[]);
       assert.equal(await page.getByLabel("분석할 문제",{exact:true}).inputValue(),draft.rawQuestionText);

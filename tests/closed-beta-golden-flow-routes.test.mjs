@@ -306,7 +306,7 @@ test("Today and empty states use capture for generic input while preserving spec
   assert.equal(todayPage.includes("오늘 할 일이 아직 없습니다."), true, "Today empty state should explain why it may be empty");
   assert.equal(todayPage.includes("오늘 한 것을 하나 올리면 다음 행동이 만들어집니다."), true, "Today empty state should guide learners back to capture");
   assert.equal(todayPage.includes("data-visible-primary-task-cap={TODAY_PLAN_MAX_PRIMARY_TASKS}"), true, "Today should keep max 3 primary plan tasks");
-  assert.equal(todayPage.includes('if (hrefKind === "write") return `/app/write?mode=second&subject=${selectedSubjectQuery}`;'), true, "specialized write tasks should remain available");
+  assert.equal(todayPage.includes('if (hrefKind === "write") return `/app/write?mode=second&subject=${taskSubjectQuery}`;'), true, "specialized write tasks should preserve their own subject");
   assert.equal(reviewQueue.includes('router.push("/app/capture?mode=second")'), true, "second-mode empty review state should return to capture");
   assert.equal(reviewQueue.includes('router.push("/app/capture?mode=first")'), true, "first-mode empty review state should preserve its capture route");
   assert.equal(reviewPage.includes("학습 노트에서 만든 다시쓰기 후보를 오늘 복습으로 이어갑니다."), true, "Review page should explain the page purpose");
