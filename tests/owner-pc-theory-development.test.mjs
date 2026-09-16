@@ -60,3 +60,22 @@ test("a changed or foreign extension fails closed without reserving a call",asyn
  }
  assert.equal((await readTheoryBudget(f.root,f.settings)).usedReservations,6);
 });
+
+test("development status keeps shared spend but never links a personal source from the other database",async()=>{
+ const {default:ts}=await import("typescript");const {runInNewContext}=await import("node:vm");
+ const source=await readFile(new URL("../lib/owner-study/owner-pc-theory.ts",import.meta.url),"utf8");
+ const compiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,esModuleInterop:true}}).outputText;
+ const personalId="dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+ const shared={connectionPending:false,usedReservations:6,reservedMicros:6*policy.reservationMicros,remainingMicros:policy.budgetMicros-6*policy.reservationMicros,remainingCalls:8,caseId:personalId,developmentUsedCalls:5};
+ for(const development of [false,true]){
+  const output={exports:{}};
+  const modules={"server-only":{},"node:path":path,"node:fs/promises":{readFile:async()=>"{}"},"./owner-pc-theory-budget.mjs":{
+   validateTheorySettings:x=>x,readTheoryDevelopmentApproval:async()=>({}),readTheoryDevelopmentCallLimit:async()=>7,readTheoryBudget:async()=>shared,
+  }};
+  runInNewContext(compiled,{module:output,exports:output.exports,require:name=>{assert.ok(Object.hasOwn(modules,name));return modules[name];},process:{platform:"win32",env:{INVERGE_OWNER_PC_THEORY_ENABLED:"true",INVERGE_OWNER_PC_THEORY_DEVELOPMENT_ENABLED:String(development),NODE_ENV:"development",NEXT_PUBLIC_SUPABASE_URL:development?"http://127.0.0.1:55431":"http://127.0.0.1:55421",LOCALAPPDATA:"synthetic-private"}}});
+  const status=await output.exports.ownerTheoryStatus();
+  assert.equal(status.ready,true);assert.equal(status.caseId,development?null:personalId);
+  assert.equal(status.remainingCalls,development?2:8);assert.equal(status.reservedMicros,shared.reservedMicros);assert.equal(status.remainingMicros,shared.remainingMicros);
+  assert.equal(shared.caseId,personalId,"display projection must not rewrite the personal binding");
+ }
+});
