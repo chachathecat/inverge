@@ -1,3 +1,4 @@
+import { readCaptureReviewProvenance, isCaptureFunctionalTest, isUnanalyzedCaptureRecord } from "./capture-review-provenance";
 import "server-only";
 
 import crypto from "node:crypto";
@@ -1632,6 +1633,11 @@ export class ReviewOsService {
     email: string | null,
     input: WrongAnswerItemInput,
   ) {
+    const provenanceFields = input.extractionPayload?.user_confirmed_fields;
+    if (provenanceFields && Object.hasOwn(provenanceFields, "capture_review_provenance") &&
+      !readCaptureReviewProvenance(input.extractionPayload)) {
+      throw new Error("review-os:invalid-capture-review-provenance");
+    }
     if (isClientAuthoredApp1Persistence(input)) {
       throw new App1ServerAuthorityError(
         "APP1_PERSISTENCE_COMMAND_INVALID",
@@ -1654,6 +1660,9 @@ export class ReviewOsService {
             sourceItemId: command.sourceItemId,
             expectedSubject: command.primaryGap.subject,
           });
+          if (isCaptureFunctionalTest(detail.item.rawPayload)) {
+            throw new App1ServerAuthorityError("APP1_PERSISTENCE_COMMAND_INVALID");
+          }
           try {
             return Object.freeze({
               input: authorizeApp1PersistenceCommand({
@@ -1798,6 +1807,18 @@ export class ReviewOsService {
       dedupeKey,
     );
     if (existing) {
+      const incomingProvenance = readCaptureReviewProvenance(normalizedInput.extractionPayload);
+      const existingProvenance = readCaptureReviewProvenance(existing.rawPayload);
+      if (incomingProvenance || existingProvenance) {
+        const sameSource = incomingProvenance && existingProvenance &&
+          incomingProvenance.version === existingProvenance.version &&
+          incomingProvenance.diagnosis === existingProvenance.diagnosis &&
+          incomingProvenance.referenceComparison === existingProvenance.referenceComparison &&
+          incomingProvenance.learningMaterial === existingProvenance.learningMaterial &&
+          (normalizedInput.issueRecall ?? "") === (existing.rawPayload.issue_recall ?? "") &&
+          (normalizedInput.outlineDraft ?? "") === (existing.rawPayload.outline_draft ?? "");
+        if (!sameSource) throw new Error("review-os:capture-source-provenance-conflict");
+      }
       if (replayAuthority) {
         const plan = parseApp1ReplayPlan(
           existing.rawPayload[APP1_REPLAY_SNAPSHOT_KEY],
@@ -1827,6 +1848,21 @@ export class ReviewOsService {
     locks.set(userId, true);
 
     try {
+      if (mode === "second" && (isUnanalyzedCaptureRecord(input.extractionPayload) || isCaptureFunctionalTest(input.extractionPayload))) {
+        // An explicit source-only save is not evidence of a weakness, recurrence or learning.
+        const sourceOnlyInput = { ...normalizedInput, userReasonText: undefined, userReasonPreset: undefined };
+        const item = await reviewOsRepository.insertWrongAnswerItem(userId, sourceOnlyInput, {
+          user_confirmed_fields: input.extractionPayload?.user_confirmed_fields,
+          raw_ocr_text: input.rawQuestionText ?? "", mode, subjectLabel: normalizedInput.subjectLabel,
+          issue_recall: input.issueRecall ?? null, outline_draft: input.outlineDraft ?? null,
+          production_before_comparison: input.productionBeforeComparison ?? false,
+          reference_answer_added_after_production: input.referenceAnswerAddedAfterProduction ?? false,
+          created_from_capture: true, capture_intent: "save", biggest_gap: null,
+          rewrite_completed: false,
+        }, { learningEvidenceExcluded: true, diagnosisStatus: "not_analyzed" });
+        if (!item) throw new Error("review-os-item-missing-after-insert");
+        return { item, deduped: false };
+      }
       const artifacts = await generateWrongAnswerArtifacts(normalizedInput);
       const recurrenceInput = {
         examName: normalizedInput.examName,

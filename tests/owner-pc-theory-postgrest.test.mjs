@@ -69,7 +69,7 @@ test("Owner Theory uses exact additive SQL, actual PostgREST/RLS and budgeted Ca
     return Response.json({candidates:[{finishReason:"STOP",content:{parts:[{text:JSON.stringify(draft)}]}}]});
   })}});
   assert.equal(providerCalls,2);assert.equal((await readTheoryBudget(budgetRoot,settings)).usedReservations,2);
-  assert.equal(sql("select count(*) from review_queue_items"),"2", "preserve Capture review plus the saved correction review");
+  assert.equal(sql("select count(*) from review_queue_items"),"1", "unanalyzed Capture creates no review; only the saved correction has a review");
   assert.equal(sql(`select count(*) from review_queue_items where source_submission_id=${literal(evidence.savedId)}`),"1", "exact saved correction has one canonical review");
   assert.equal(sql("select count(*) from wrong_answer_items"),"3");
   assert.ok(evidence);

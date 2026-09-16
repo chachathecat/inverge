@@ -343,10 +343,14 @@ export function buildApp1StructureSummary(
   });
 }
 
-function resolveAnchor(detail: WrongAnswerDetail): Pick<
+function resolveAnchor(detail: WrongAnswerDetail, draft: AnswerReviewStructureDraft): Pick<
   App1PrimaryGap,
   "anchor" | "anchorKind"
 > {
+  const quote = draft.answerEvidenceQuote?.trim();
+  if (quote && quote.length >= 4 && quote.length <= 120 && getApp1LearnerAnswer(detail).includes(quote)) {
+    return { anchor: `AI가 선택한 답안 구절: 「${quote}」`, anchorKind: "exact" };
+  }
   const fields = exactConfirmedFields(detail);
   const exactAnchor = scalarText(
     fields?.exact_anchor ?? fields?.answer_anchor ?? fields?.calculation_step_anchor,
@@ -381,7 +385,7 @@ export function buildApp1PrimaryGap(
   draft: AnswerReviewStructureDraft,
 ): App1PrimaryGap {
   const quality = buildAnswerReviewQualityView(draft);
-  const anchor = resolveAnchor(detail);
+  const anchor = resolveAnchor(detail, draft);
   return Object.freeze({
     subject: scalarText(detail.item.subjectLabel),
     ...anchor,

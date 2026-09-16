@@ -21,6 +21,7 @@ import {
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  isApp1InitialAnalysisEligible,
   isApp1PersistedInitialAnalysisEligible,
   isApp1SubjectAuthorized,
   type App1TrustedRepairSubject,
@@ -63,7 +64,8 @@ import { extractFirstExamFiveChoicesFromText } from "@/lib/review-os/first-ox-en
 import { pushLocalLearnerAnalyticsEvent } from "@/lib/review-os/local-analytics";
 import { resolveReviewSchedule } from "@/lib/review-os/scheduling";
 import { REVIEW_OS_LEARNER_LANGUAGE } from "@/lib/review-os/learner-language";
-import { hasSecondWriteReferenceStep } from "@/lib/review-os/second-write-reference-step";
+import { type CaptureDiagnosticSource, type CaptureLearningMaterial, type CaptureReviewProvenance } from "@/lib/review-os/capture-review-provenance";
+import { secondWriteReferenceStatus, type SecondWriteReferenceStatus, hasSecondWriteReferenceStep } from "@/lib/review-os/second-write-reference-step";
 import type { FailureAwarePersistenceEvidence, FailureAwareStateEvidence } from "@/lib/review-os/failure-aware-state";
 import type { TrustProvenanceEvidence, TrustProvenanceSourceKind } from "@/lib/review-os/trust-provenance";
 import {
@@ -213,7 +215,7 @@ const CAPTURE_STAGE_CONTEXT: Record<
   },
   "second-gap": {
     eyebrow: `세부 작업 5/6 · ${REVIEW_OS_LEARNER_LANGUAGE.biggestGap}`,
-    now: `비교 결과에서 ${REVIEW_OS_LEARNER_LANGUAGE.biggestGap} 하나를 정합니다.`,
+    now: "AI 분석 전입니다. 직접 보완할 부분을 적거나 승인된 분석으로 이어갈 수 있습니다.",
     why: "한 번에 하나를 고르면 다음 답안에서 바로 실행할 수 있습니다.",
     result: "선택한 약점을 반영해 한 문단을 다시 씁니다.",
   },
@@ -330,6 +332,9 @@ type DraftState = {
   productionBeforeComparison: boolean;
   referenceAnswerAddedAfterProduction: boolean;
   biggestGap: string;
+  diagnosticSource?: CaptureDiagnosticSource;
+  learningMaterial?: CaptureLearningMaterial;
+  referenceComparisonStatus?: SecondWriteReferenceStatus;
   rawOcrText?: string;
   rawExtractionJson?: Record<string, unknown>;
   normalizedDraft?: ExtractionDraft;
@@ -393,17 +398,6 @@ function firstDefaults(subject: string) {
     formula: template.coreFormula,
     comparison: template.comparisonPoint,
     reason: template.defaultReason,
-  };
-}
-
-function secondDefaults(subject: string) {
-  const template = getSecondSubjectTemplate(subject);
-  return {
-    structure: template.structure,
-    issue: template.commonGaps[0] ?? "핵심 쟁점 누락",
-    sentence: template.biggestGapGuidance,
-    rewrite: template.rewriteGuidance,
-    caseSummary: `${template.detailLine} ${template.structure}`,
   };
 }
 
@@ -604,7 +598,7 @@ export function WrongAnswerCaptureForm({
       userAnswer: "",
       userReasonText:
         rewriteContext?.biggestGap ??
-        (mode === "second" ? secondDefaults(resolvedInitialSubject).issue : firstDefaults(resolvedInitialSubject).reason),
+        (mode === "second" ? "" : firstDefaults(resolvedInitialSubject).reason),
       userReasonPreset: "",
       confidence: "중간",
       timeSpentSeconds: "",
@@ -612,19 +606,22 @@ export function WrongAnswerCaptureForm({
       keyConcepts: firstDefaults(resolvedInitialSubject).concepts,
       coreFormula: firstDefaults(resolvedInitialSubject).formula,
       comparisonPoint: firstDefaults(resolvedInitialSubject).comparison,
-      missingIssue: rewriteContext?.biggestGap ?? secondDefaults(resolvedInitialSubject).issue,
-      weakStructurePoint: secondDefaults(resolvedInitialSubject).structure,
-      weakApplicationSentence: secondDefaults(resolvedInitialSubject).sentence,
-      rewriteInstruction: rewriteContext?.rewriteInstruction ?? secondDefaults(resolvedInitialSubject).rewrite,
-      referenceStructure: secondDefaults(resolvedInitialSubject).structure,
+      missingIssue: rewriteContext?.biggestGap ?? "",
+      weakStructurePoint: "",
+      weakApplicationSentence: "",
+      rewriteInstruction: rewriteContext?.rewriteInstruction ?? "",
+      referenceStructure: "",
       myAnswerSummary: rewriteContext?.myAnswerSummary ?? "",
       rewriteParagraph: "",
-      caseSummary: secondDefaults(resolvedInitialSubject).caseSummary,
+      caseSummary: "",
       issueRecall: "",
       outlineDraft: "",
       productionBeforeComparison: Boolean(rewriteContext),
       referenceAnswerAddedAfterProduction: Boolean(rewriteContext),
-      biggestGap: rewriteContext?.biggestGap ?? secondDefaults(resolvedInitialSubject).issue,
+      biggestGap: rewriteContext?.biggestGap ?? "",
+      diagnosticSource: rewriteContext ? "previous_record" : "not_analyzed",
+      learningMaterial: "learner_input",
+      referenceComparisonStatus: rewriteContext ? "compared" : "not_started",
       rawOcrText: "",
       rawExtractionJson: {},
       normalizedDraft: undefined,
@@ -637,16 +634,22 @@ export function WrongAnswerCaptureForm({
       ocrConfirmedByLearner: false,
     };
   }
-  const [form, setForm] = useState<DraftState>(() => {
-    const saved = loadReviewOsDraft<DraftState>(storageKey);
-    if (saved) {
-      return {
-        ...saved,
+  const [form, setForm] = useState<DraftState>(createInitialDraftState);
+  const [draftReady, setDraftReady] = useState(false);
+  // Match the server's first render, then restore the device draft without writing it.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const saved = loadReviewOsDraft<DraftState>({ userId, feature: "capture-draft", entityId: mode });
+      if (saved) setForm((initial) => ({ ...initial, ...saved,
         subjectLabel: normalizeSubjectForMode(saved.subjectLabel, mode),
-      };
-    }
-    return createInitialDraftState();
-  });
+        diagnosticSource: saved.diagnosticSource ?? "not_analyzed",
+        referenceComparisonStatus: secondWriteReferenceStatus(saved),
+        referenceAnswerAddedAfterProduction: secondWriteReferenceStatus(saved) === "compared",
+      }));
+      setDraftReady(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [userId, mode]);
   const ownerCaptureRepairSubjectEnabled =
     ownerCaptureRepairEnabled &&
     mode === "second" &&
@@ -712,8 +715,21 @@ export function WrongAnswerCaptureForm({
   const currentCaptureStep = getCaptureStep(stage, mode);
   const currentSecondWriteStep = getSecondWriteStepNumber(stage);
   const currentCaptureFlowSteps = mode === "second" ? SECOND_CAPTURE_FLOW_STEPS : CAPTURE_FLOW_STEPS;
-  const currentCaptureStageContext = getCaptureStageContext(stage, mode, Boolean(rewriteContext));
   const secondModeReferenceStepComplete = hasSecondModeReferenceStep(form);
+  const referenceStatus = secondWriteReferenceStatus(form);
+  const ownerAnalysisEntry = textOnly && ownerCaptureRepairSubjectEnabled && !rewriteContext;
+  const ownerAnalysisReady = ownerAnalysisEntry && isApp1InitialAnalysisEligible({
+    questionText: form.rawQuestionText, answerText: form.userAnswer,
+    referenceText: form.correctAnswer, sourceType: form.sourceType,
+    ocrConfirmedByLearner: form.sourceType === "text" || form.ocrConfirmedByLearner,
+    lowConfidenceFlag: form.lowConfidenceFlag, hasManualCorrection: form.hasManualCorrection,
+  });
+  const ownerAnalysisPanelOpen = ownerAnalysisEntry && ["second-gap", "confirm"].includes(stage);
+  const currentCaptureStageContext = ownerAnalysisPanelOpen ? {
+    eyebrow: "분석 준비", now: "보존된 입력을 확인한 뒤 분석 화면으로 이어갑니다.",
+    why: "분석 전 문구를 개인 감점 진단으로 사용하지 않습니다.",
+    result: "입력만 보관합니다. AI 전송은 다음 화면에서 직접 선택합니다.",
+  } : getCaptureStageContext(stage, mode, Boolean(rewriteContext));
   const captureStageHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const announcedCaptureStageRef = useRef<CaptureStage>(stage);
   useEffect(() => {
@@ -734,6 +750,7 @@ export function WrongAnswerCaptureForm({
   }, [error]);
   useEffect(() => {
     if (!secondWriteEnabled) return;
+    if (ownerAnalysisEntry) return;
 
     const nextStage =
       stage === "second-reference" && form.userAnswer.trim().length < 8
@@ -748,7 +765,17 @@ export function WrongAnswerCaptureForm({
 
     const timeout = window.setTimeout(() => setStage(nextStage), 0);
     return () => window.clearTimeout(timeout);
-  }, [secondWriteEnabled, stage, form.userAnswer, secondModeReferenceStepComplete, form.biggestGap]);
+  }, [secondWriteEnabled, stage, form.userAnswer, secondModeReferenceStepComplete, form.biggestGap, ownerAnalysisEntry]);
+
+  const restoredOwnerDraftRef = useRef(false);
+  useEffect(() => {
+    if (!draftReady || restoredOwnerDraftRef.current) return;
+    restoredOwnerDraftRef.current = true;
+    if (ownerAnalysisReady && !rewriteContext) {
+      const timer = window.setTimeout(() => setStage("second-gap"), 0);
+      return () => window.clearTimeout(timer);
+    }
+  }, [draftReady, ownerAnalysisReady, rewriteContext]);
 
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
@@ -821,28 +848,28 @@ export function WrongAnswerCaptureForm({
     extractionEditRevisionRef.current += 1;
     setForm((prev) => {
       const first = firstDefaults(value);
-      const second = secondDefaults(value);
       return persist({
         ...prev,
         subjectLabel: value,
         keyConcepts: mode === "first" ? first.concepts : prev.keyConcepts,
         coreFormula: mode === "first" ? first.formula : prev.coreFormula,
         comparisonPoint: mode === "first" ? first.comparison : prev.comparisonPoint,
-        userReasonText: mode === "first" ? first.reason : second.issue,
-        missingIssue: mode === "second" ? second.issue : prev.missingIssue,
-        weakStructurePoint: mode === "second" ? second.structure : prev.weakStructurePoint,
-        weakApplicationSentence: mode === "second" ? second.sentence : prev.weakApplicationSentence,
-        rewriteInstruction: mode === "second" ? second.rewrite : prev.rewriteInstruction,
-        referenceStructure: mode === "second" ? second.structure : prev.referenceStructure,
-        caseSummary: mode === "second" ? second.caseSummary : prev.caseSummary,
+        userReasonText: mode === "first" ? first.reason : "",
+        diagnosticSource: "not_analyzed",
+        biggestGap: mode === "second" ? "" : prev.biggestGap,
+        missingIssue: mode === "second" ? "" : prev.missingIssue,
+        weakStructurePoint: mode === "second" ? "" : prev.weakStructurePoint,
+        weakApplicationSentence: mode === "second" ? "" : prev.weakApplicationSentence,
+        rewriteInstruction: mode === "second" ? "" : prev.rewriteInstruction,
+        referenceStructure: mode === "second" ? "" : prev.referenceStructure,
+        caseSummary: mode === "second" ? "" : prev.caseSummary,
       });
     });
   }
 
   function buildStructuredDraft(base: DraftState, sourceText = base.rawQuestionText) {
-    const subject = pickSubject(sourceText, config.subjects, base.subjectLabel || resolvedInitialSubject);
+    const subject = textOnly ? base.subjectLabel || resolvedInitialSubject : pickSubject(sourceText, config.subjects, base.subjectLabel || resolvedInitialSubject);
     const first = firstDefaults(subject);
-    const second = secondDefaults(subject);
     return mode === "first"
       ? {
           ...base,
@@ -866,14 +893,14 @@ export function WrongAnswerCaptureForm({
           rawQuestionText: sourceText || base.rawQuestionText,
           correctAnswer: base.correctAnswer || findField(sourceText, ["강의/교재 정리", "해설", "reference"]),
           userAnswer: base.userAnswer || findField(sourceText, ["내 답안", "답안", "my answer"]),
-          caseSummary: base.caseSummary || firstLine(sourceText, second.caseSummary),
-          referenceStructure: base.referenceStructure || second.structure,
+          caseSummary: base.caseSummary || firstLine(sourceText, ""),
+          referenceStructure: base.referenceStructure,
           myAnswerSummary: base.myAnswerSummary || (base.userAnswer ? firstLine(base.userAnswer, "내 답안 요약") : ""),
-          missingIssue: base.missingIssue || second.issue,
-          weakStructurePoint: base.weakStructurePoint || second.structure,
-          weakApplicationSentence: base.weakApplicationSentence || second.sentence,
-          rewriteInstruction: base.rewriteInstruction || second.rewrite,
-          userReasonText: base.userReasonText || second.issue,
+          missingIssue: base.missingIssue,
+          weakStructurePoint: base.weakStructurePoint,
+          weakApplicationSentence: base.weakApplicationSentence,
+          rewriteInstruction: base.rewriteInstruction,
+          userReasonText: base.userReasonText,
           productionBeforeComparison: true,
           nextReviewDate: base.nextReviewDate || getDefaultNextReviewDate(mode),
         };
@@ -970,6 +997,12 @@ export function WrongAnswerCaptureForm({
 
   async function generateStructuredDraft(sourceText = form.rawQuestionText) {
     const text = sourceText.trim();
+    if (textOnly) {
+      // Owner text input already is text: keep its selected subject and do not infer a diagnosis.
+      setForm((prev) => persist(buildStructuredDraft(prev, sourceText)));
+      setStage("preview");
+      return;
+    }
     if (!text) {
       setForm((prev) => persist(buildStructuredDraft(prev, sourceText)));
       setStage("preview");
@@ -1614,6 +1647,59 @@ export function WrongAnswerCaptureForm({
     }
   }
 
+  async function saveOwnerAnalysisInput() {
+    if (submitting || !ownerAnalysisReady) return;
+    setSubmitting(true);
+    setError("");
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 30_000);
+    try {
+      const provenance: CaptureReviewProvenance = {
+        version: "capture_review_provenance.v1", diagnosis: "not_analyzed",
+        referenceComparison: referenceStatus,
+        learningMaterial: form.learningMaterial ?? "learner_input",
+      };
+      const operation = resolveCaptureSaveOperation(form);
+      const response = await fetch("/api/os/items", {
+        method: "POST", signal: controller.signal, headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          examName: getModeLabel(mode), subjectLabel: form.subjectLabel,
+          sourceType: form.sourceType, sourceLabel: form.sourceLabel || undefined,
+          problemTitle: form.problemTitle || undefined, problemIdentifier: form.problemIdentifier || undefined,
+          rawQuestionText: form.rawQuestionText, rawAnswerText: form.userAnswer,
+          userAnswer: form.userAnswer, correctAnswer: form.correctAnswer || "-",
+          issueRecall: form.issueRecall, outlineDraft: form.outlineDraft,
+          confidence: form.confidence, productionBeforeComparison: form.productionBeforeComparison,
+          referenceAnswerAddedAfterProduction: referenceStatus === "compared",
+          captureIntent: "save", createdFromCapture: true,
+          extractionPayload: { user_confirmed_fields: {
+            subject: form.subjectLabel, subjectLabel: form.subjectLabel, examMode: mode,
+            sourceType: form.sourceType, pageCount: form.pageCount ?? 0,
+            ocrConfirmedByLearner: form.sourceType === "text" || Boolean(form.ocrConfirmedByLearner),
+            lowConfidenceFlag: Boolean(form.lowConfidenceFlag), hasManualCorrection: Boolean(form.hasManualCorrection),
+            capture_review_provenance: provenance,
+            ...buildCapturePersistenceMetadata(operation),
+          } },
+        }),
+      });
+      const result = await response.json() as { ok?: boolean; item?: { id: string; updatedAt?: string; rawPayload?: Record<string, unknown> }; error?: string };
+      if (!response.ok || !result.ok || !result.item?.id || !result.item.updatedAt) {
+        if (result.error === "review-os:capture-source-provenance-conflict") {
+          throw new Error("같은 문제·답안의 기존 기록과 자료 성격 또는 쟁점·목차가 다릅니다. 기존 기록을 덮어쓰지 않았으며 현재 초안은 그대로 남아 있습니다.");
+        }
+        throw new Error("분석용 입력 보관을 완료하지 못했습니다. 기기 초안은 그대로 남아 있습니다.");
+      }
+      if (!buildDurableCapturePersistenceReceipt(result.item, operation)) {
+        throw new Error("보관된 입력과 현재 초안의 저장 영수증이 일치하지 않습니다. 초안은 보존됩니다.");
+      }
+      settleCaptureSaveOperation(operation);
+      // Keep the full working draft, including issue/outline and old unattributed notes.
+      router.push(`/app/capture/repair?itemId=${encodeURIComponent(result.item.id)}`);
+    } catch (saveError) {
+      setError(controller.signal.aborted ? "입력 보관 응답을 확인하지 못했습니다. 초안은 유지되며, 자동으로 재시도하지 않습니다." : saveError instanceof Error ? saveError.message : "입력 보관 실패 · 초안은 유지됩니다.");
+    } finally { window.clearTimeout(timeout); setSubmitting(false); }
+  }
+
   async function saveCaptureAfterConfirmation(destination: "session" | "first-ox" = "session") {
     setSubmitting(true);
     setError("");
@@ -1708,6 +1794,10 @@ export function WrongAnswerCaptureForm({
             normalized_draft: form.normalizedDraft ?? null,
             user_confirmed_fields: {
               subjectLabel: form.subjectLabel,
+              capture_review_provenance: mode === "second" ? {
+                version: "capture_review_provenance.v1", diagnosis: form.diagnosticSource ?? "not_analyzed",
+                referenceComparison: referenceStatus, learningMaterial: form.learningMaterial ?? "learner_input",
+              } : undefined,
               correctAnswer: form.correctAnswer,
               userAnswer: form.userAnswer,
               userReasonText: form.userReasonText,
@@ -1881,6 +1971,8 @@ export function WrongAnswerCaptureForm({
       </details>
     );
 
+  if (!draftReady) return <p role="status" data-capture-draft-loading>이 기기의 초안을 불러오는 중입니다.</p>;
+
   return (
     <form
       className={`space-y-4 overflow-x-hidden pb-28 sm:space-y-6 sm:pb-0 ${mode === "second" ? "v3-capture-form" : ""}`}
@@ -1903,7 +1995,7 @@ export function WrongAnswerCaptureForm({
             className="v3-type-label text-[var(--color-text-secondary)]"
             data-s232e-second-write-position={stage}
           >
-            다시쓰기 진행 · {SECOND_WRITE_STAGE_POSITION[stage] ?? "현재 작업"}
+            다시쓰기 진행 · {ownerAnalysisPanelOpen ? "분석 준비" : SECOND_WRITE_STAGE_POSITION[stage] ?? "현재 작업"}
           </p>
           <ol
             className="mt-3 grid grid-cols-3 gap-1.5 sm:grid-cols-6 sm:gap-2"
@@ -1912,10 +2004,10 @@ export function WrongAnswerCaptureForm({
           >
             {SECOND_WRITE_FLOW_STEPS.map((item) => {
               const isCurrent = currentSecondWriteStep === item.position;
-              const isComplete =
+              const isComplete = (item.position !== 4 || referenceStatus === "compared") && (
                 (currentSecondWriteStep !== null && item.position < currentSecondWriteStep) ||
                 stage === "confirm" ||
-                stage === "saved-plan";
+                stage === "saved-plan");
               return (
                 <li
                   key={item.stage}
@@ -1929,11 +2021,12 @@ export function WrongAnswerCaptureForm({
                   aria-current={isCurrent ? "step" : undefined}
                   data-s232e-second-write-progress-step={item.position}
                   data-s232e-second-write-stage={item.stage}
+                  data-reference-comparison={item.position === 4 ? referenceStatus : undefined}
                 >
                   <span className="v3-type-label-strong block tabular-nums" aria-hidden="true">
                     {item.position}/6
                   </span>
-                  <span className="v3-type-caption ko-keep mt-1 block">{item.label}</span>
+                  <span className="v3-type-caption ko-keep mt-1 block">{item.position === 5 && ownerAnalysisEntry ? "분석 준비" : item.label}{item.position === 4 && referenceStatus === "deferred" ? " · 미룸" : ""}</span>
                 </li>
               );
             })}
@@ -2052,6 +2145,10 @@ export function WrongAnswerCaptureForm({
             resetDraft();
           }}
           />
+        ) : ownerAnalysisPanelOpen ? (
+          <OwnerAnalysisPreparationPanel form={form} update={update} referenceStatus={referenceStatus} ready={ownerAnalysisReady}
+            onPrepare={() => void saveOwnerAnalysisInput()}
+            onEdit={() => setStage("second-answer")} />
         ) : rewriteContext && mode === "second" ? (
           <>
           <RewriteContextPanel
@@ -2113,14 +2210,18 @@ export function WrongAnswerCaptureForm({
             <SecondReferencePanel
               reference={form.correctAnswer}
               onChange={(value) => update("correctAnswer", value)}
-              onNext={() => { update("referenceAnswerAddedAfterProduction", true); setStage("second-gap"); }}
+              onNext={() => { update("referenceAnswerAddedAfterProduction", true); update("referenceComparisonStatus", "compared"); setStage("second-gap"); }}
+              onDefer={() => { update("referenceAnswerAddedAfterProduction", false); update("referenceComparisonStatus", "deferred"); setStage("second-gap"); }}
             />
           ) : null}
           {stage === "second-gap" ? (
             <SecondGapPanel
               subject={form.subjectLabel}
               biggestGap={form.biggestGap}
+              diagnosticSource={form.diagnosticSource ?? "not_analyzed"}
+              referenceStatus={referenceStatus}
               onChange={(value) => {
+                update("diagnosticSource", "self_assessment");
                 update("biggestGap", value);
                 update("missingIssue", value);
                 update("userReasonText", value);
@@ -2241,13 +2342,17 @@ export function WrongAnswerCaptureForm({
             />
           ) : null}
           {mode === "second" && stage === "second-reference" ? (
-            <SecondReferencePanel reference={form.correctAnswer} onChange={(value) => update("correctAnswer", value)} onNext={() => { update("referenceAnswerAddedAfterProduction", true); setStage("second-gap"); }} />
+            <SecondReferencePanel reference={form.correctAnswer} onChange={(value) => update("correctAnswer", value)} onNext={() => { update("referenceAnswerAddedAfterProduction", true); update("referenceComparisonStatus", "compared"); setStage("second-gap"); }}
+              onDefer={() => { update("referenceAnswerAddedAfterProduction", false); update("referenceComparisonStatus", "deferred"); setStage("second-gap"); }} />
           ) : null}
           {mode === "second" && stage === "second-gap" ? (
             <SecondGapPanel
               subject={form.subjectLabel}
               biggestGap={form.biggestGap}
+              diagnosticSource={form.diagnosticSource ?? "not_analyzed"}
+              referenceStatus={referenceStatus}
               onChange={(value) => {
+                update("diagnosticSource", "self_assessment");
                 update("biggestGap", value);
                 update("missingIssue", value);
                 update("userReasonText", value);
@@ -2274,7 +2379,7 @@ export function WrongAnswerCaptureForm({
         </p>
       ) : null}
 
-      {!savedConfirmation && !hideGlobalFooterActions && currentCaptureStep !== 1 ? (
+      {!savedConfirmation && !ownerAnalysisPanelOpen && !hideGlobalFooterActions && currentCaptureStep !== 1 ? (
         <BottomPrimaryAction secondary={footerSecondary}>
         <div className="flex w-full flex-col gap-3 sm:flex-row">
           {rewriteContext && mode === "second" ? (
@@ -3762,14 +3867,51 @@ function SecondAnswerPanel({
   );
 }
 
+function OwnerAnalysisPreparationPanel({ form, update, referenceStatus, ready, onPrepare, onEdit }: {
+  form: DraftState;
+  update: <K extends keyof DraftState>(key: K, value: DraftState[K]) => void;
+  referenceStatus: SecondWriteReferenceStatus;
+  ready: boolean;
+  onPrepare: () => void;
+  onEdit: () => void;
+}) {
+  return <section className="space-y-4 rounded-[var(--v3-radius-panel)] border border-[var(--color-border-default)] p-4 sm:p-5" data-owner-analysis-preparation>
+    <h3 className="v3-type-section">이론 AI 분석 준비 · 아직 분석하지 않았습니다</h3>
+    <p>기존 문제·쟁점·목차·답안을 이어받았습니다. 기본 예시나 이전 초안 문구는 개인 진단으로 사용하지 않습니다.</p>
+    <p data-owner-reference-status={referenceStatus}>{referenceStatus === "compared" ? "참고 비교: 사용자 확인" : "참고 비교: 미완료 · 분석에 참고 정리를 제공하지 않아도 됩니다."}</p>
+    <label className="block space-y-2"><span>분석할 문제</span><Textarea aria-label="분석할 문제" value={form.rawQuestionText} onChange={event => update("rawQuestionText", event.target.value)} /></label>
+    <label className="block space-y-2"><span>분석할 답안</span><Textarea aria-label="분석할 답안" value={form.userAnswer} onChange={event => update("userAnswer", event.target.value)} className="min-h-48" /></label>
+    <label className="block space-y-2"><span>이번 입력의 성격</span>
+      <select className="block min-h-11 rounded border px-3" value={form.learningMaterial ?? "learner_input"} onChange={event => update("learningMaterial", event.target.value as CaptureLearningMaterial)}>
+        <option value="learner_input">학습자 입력 · 독립 수행 여부 미검증</option>
+        <option value="ai_example_functional_test">AI 예시를 사용한 기능시험 · 학습성과 아님</option>
+      </select>
+    </label>
+    <details className="quiet-disclosure"><summary className="cursor-pointer py-3">보존된 쟁점·목차·이전 메모</summary>
+      <p className="whitespace-pre-wrap">쟁점: {form.issueRecall || "미입력"}</p>
+      <p className="whitespace-pre-wrap">목차: {form.outlineDraft || "미입력"}</p>
+      <p className="whitespace-pre-wrap">이전 초안 메모 · 진단 아님: {form.biggestGap || "없음"}</p>
+    </details>
+    <p>AI 미검토 학습보조입니다. 사람 검토 아님 · 공식 채점 아님. 다음 화면의 분석 버튼을 직접 눌러야 선택한 문제·답안을 Gemini로 전송합니다.</p>
+    <p>이 단계에서는 입력만 보관하며 감점 진단·복습 완료·학습성과를 만들지 않습니다.</p>
+    {!ready ? <p role="status">문제와 답안을 충분히 입력하고, 필요한 텍스트 확인을 마치면 계속할 수 있습니다.</p> : null}
+    <div className="flex flex-wrap gap-3">
+      <V3ActionButton type="button" disabled={!ready} onClick={onPrepare} data-owner-prepare-analysis>입력 보관 후 분석 화면 열기</V3ActionButton>
+      <V3ActionButton type="button" tone="quiet" onClick={onEdit}>답안 작성으로 돌아가기</V3ActionButton>
+    </div>
+  </section>;
+}
+
 function SecondReferencePanel({
   reference,
   onChange,
   onNext,
+  onDefer,
 }: {
   reference: string;
   onChange: (value: string) => void;
   onNext: () => void;
+  onDefer: () => void;
 }) {
   return (
     <section
@@ -3792,7 +3934,7 @@ function SecondReferencePanel({
         <V3ActionButton type="button" disabled={reference.trim().length < 4} onClick={onNext} data-s232e-second-write-primary-action="4">
           다음: {REVIEW_OS_LEARNER_LANGUAGE.biggestGap}
         </V3ActionButton>
-        <V3ActionButton type="button" tone="quiet" onClick={onNext} data-s232e-second-write-secondary-action="defer-reference">
+        <V3ActionButton type="button" tone="quiet" onClick={onDefer} data-s232e-second-write-secondary-action="defer-reference">
           강의/교재 정리는 나중에 확인
         </V3ActionButton>
       </div>
@@ -3803,11 +3945,15 @@ function SecondReferencePanel({
 function SecondGapPanel({
   subject,
   biggestGap,
+  diagnosticSource,
+  referenceStatus,
   onChange,
   onNext,
 }: {
   subject: string;
   biggestGap: string;
+  diagnosticSource: CaptureDiagnosticSource;
+  referenceStatus: SecondWriteReferenceStatus;
   onChange: (value: string) => void;
   onNext: () => void;
 }) {
@@ -3819,16 +3965,15 @@ function SecondGapPanel({
       data-s232e-second-write-panel="5"
     >
       <p className="v3-type-caption text-[var(--color-text-brand)]" data-controller-label={`Step 5. ${REVIEW_OS_LEARNER_LANGUAGE.biggestGap}`}>다시쓰기 · 5/6 · {REVIEW_OS_LEARNER_LANGUAGE.biggestGap}</p>
-      <h3 id="second-write-step-5-title" className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">오늘은 {REVIEW_OS_LEARNER_LANGUAGE.biggestGap} 하나만 고칩니다.</h3>
+      <h3 id="second-write-step-5-title" className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">AI 분석 전 · 직접 보완할 부분을 정합니다.</h3>
       <details className="quiet-disclosure mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-3" data-s224v-secondary-diagnostics><summary className="v3-type-caption inline-flex min-h-11 cursor-pointer items-center text-[var(--color-text-secondary)]">왜 이 순서인가요?</summary><p className="v3-type-label ko-keep mt-2 text-[var(--color-text-secondary)]">{template.biggestGapGuidance}</p></details>
       <div className="mt-4">
-        <BiggestGap
-          gap={biggestGap.trim() || template.commonGaps[0]}
-          evidence="비교 결과에서 다음 문단을 바꿀 약점 하나만 남깁니다."
-          type="MissingLink"
-          density="Compact"
-          label={REVIEW_OS_LEARNER_LANGUAGE.biggestGap}
-        />
+        <p className="v3-type-body" data-second-diagnostic-source={diagnosticSource}>
+          {diagnosticSource === "self_assessment" ? "사용자 자기평가 · AI 진단이나 검증 결과가 아닙니다."
+            : "아직 AI 분석 결과가 없습니다. 이전 초안 문구는 진단 근거로 사용하지 않습니다."}
+        </p>
+        <p className="v3-type-caption mt-2">{referenceStatus === "compared" ? "참고 정리 비교를 선택했습니다." : "참고 비교 미완료 · 확인을 미뤘습니다."}</p>
+        <p className="v3-type-caption mt-2">일반 예시 · 개인 진단 아님: {template.commonGaps[0]}</p>
       </div>
       <label className="mt-4 block space-y-2">
         <span className="v3-type-label text-[var(--color-text-primary)]">보강할 논점 1개</span>

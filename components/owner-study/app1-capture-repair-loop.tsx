@@ -32,6 +32,7 @@ import {
   resolvePendingCaptureSaveOperation,
   type PendingCaptureSaveOperation,
 } from "@/lib/review-os/capture-persistence-controller";
+import { isCaptureFunctionalTest } from "@/lib/review-os/capture-review-provenance";
 import type { WrongAnswerDetail } from "@/lib/review-os/types";
 
 type TrustedRepairSubject =
@@ -755,14 +756,19 @@ export function App1CaptureRepairLoop({
         </V3Surface>
       ) : null}
 
+      {isCaptureFunctionalTest(detail?.item.rawPayload) ? <p role="status" data-app1-functional-test>AI 예시 기능시험입니다. AI 결과는 독립 실력·학습성과가 아니며, 학습 기록·복습으로 저장하지 않습니다.</p> : null}
+
       {phase === "evidence_review" && gap ? (
         <V3Surface className="space-y-5" data-app1-evidence-review>
           <div>
-            <p className="v3-type-caption text-[var(--color-text-brand)]">4. Evidence Review</p>
+            <p className="v3-type-caption text-[var(--color-text-brand)]">4. Evidence Review · AI 미검토 결과</p>
             <h2 className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">
               지금 고칠 연결 1개
             </h2>
           </div>
+          <p className="v3-type-caption" data-app1-evidence-source>입력한 답안에 대한 AI 검토 의견입니다. 사람 검토·공식 채점이 아닙니다.</p>
+          {gap.anchorKind !== "exact" ? <p data-app1-evidence-unavailable>답안의 정확한 근거 구절은 확인되지 않았습니다. 아래 전체 답안과 직접 대조해 주세요.</p> : null}
+          <details className="quiet-disclosure"><summary>분석에 사용한 답안 확인</summary><p className="whitespace-pre-wrap">{detail ? getApp1LearnerAnswer(detail) : ""}</p></details>
           <div data-app1-primary-gap-count="1">
             <BiggestGap
               headingId="app1-primary-gap"
@@ -868,7 +874,7 @@ export function App1CaptureRepairLoop({
             </V3ActionButton>
           ) : verification.state === "repair_confirmed_for_this_session" &&
             verificationReceipt ? (
-            <V3ActionButton type="button" onClick={() => void saveRepair()} data-app1-save-repair>
+            <V3ActionButton type="button" onClick={() => void saveRepair()} disabled={isCaptureFunctionalTest(detail?.item.rawPayload)} data-app1-save-repair>
               복구 결과 저장하고 다음 복습 만들기
             </V3ActionButton>
           ) : null}
