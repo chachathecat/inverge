@@ -636,6 +636,7 @@ export function WrongAnswerCaptureForm({
   }
   const [form, setForm] = useState<DraftState>(createInitialDraftState);
   const [draftReady, setDraftReady] = useState(false);
+  const [uploadedPages, setUploadedPages] = useState<UploadedPage[]>(() => form.capturePages ?? []);
   // Match the server's first render, then restore the device draft without writing it.
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -671,7 +672,6 @@ export function WrongAnswerCaptureForm({
   const [extractError, setExtractError] = useState("");
   const [savedConfirmation, setSavedConfirmation] = useState<SavedCaptureConfirmation | null>(null);
   const [extractionState, setExtractionState] = useState<ExtractionState>("idle");
-  const [uploadedPages, setUploadedPages] = useState<UploadedPage[]>(() => form.capturePages ?? []);
   const pendingCaptureSaveRef = useRef<PendingCaptureSaveOperation | null>(null);
   const extractionEditRevisionRef = useRef(0);
   const extractionRequestRevisionRef = useRef(0);
