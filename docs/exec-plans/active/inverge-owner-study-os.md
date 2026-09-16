@@ -26,6 +26,11 @@ analysis button without provider calls. Isolated PostgreSQL/PostgREST/RLS and
 Capture-to-repair/reconnect/Review/Today regression passes. Final native checks
 and clean exact-head review remain required before protected squash and PC
 runtime update. The actual Owner analysis remains a manual action.
+The first exact-head review found that initial AI analysis could still emit a
+learning signal for functional-test sources. The API now derives exclusion
+from the authorized stored source, and a real API regression proves zero
+functional-test signals alongside an ordinary-input positive control. Existing
+stage/footer checks are preserved, and hydrated photo draft pages are restored.
 
 ## Theory request recovery after #940 / #941
 

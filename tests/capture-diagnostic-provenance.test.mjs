@@ -134,3 +134,20 @@ test("provenance replay preserves the exact source and refuses reclassification 
   assert.equal(store.tables.wrong_answer_items.length,before+1);
   assert.equal(store.tables.review_queue_items.length,0);assert.equal(store.tables.learning_signal_events.length,0);
 });
+
+
+test("real initial-analysis API excludes functional tests from learning signals but retains ordinary analysis signals",async()=>{
+  const modelDraft={questionSummary:"시장가치 판단의 조건을 설명하는 합성 문제",coreConcepts:["시장가치","시장 노출"],requiredIssues:"시장 조건과 개별 사정의 구분",userAnswerSummary:"시장 노출 조건을 설명했으나 개별 사정과 연결이 약함",userAnswerStructure:"정의와 논거",referenceStructure:"참고자료 미제공",strengths:["시장 노출 조건을 제시함"],missingIssueCandidates:["개별 사정과 시장 조건의 적용 연결이 부족함"],weakParagraphPoint:"개별 사정을 시장 일반의 조건과 구분하는 문장을 작성하세요.",weakLogicPoint:"정의에서 사례 적용으로 연결이 필요함",rewriteTarget:"사례 적용 문장",nextAction:"개별 사정과 시장 조건을 구분해 한 문장으로 작성하세요."};
+  for(const learningMaterial of ["ai_example_functional_test","learner_input"]){
+    const seed=seedRows();seed.wrong_answer_items[0].raw_payload.user_confirmed_fields.capture_review_provenance={...provenance,learningMaterial};
+    const store=memoryTransport(seed);let calls=0;
+    const app=productionHarness(store.execute,{overrides:()=>({"@/lib/evaluate/gemini":{isGeminiConfigured:()=>true,GeminiEnvError:class extends Error{},GeminiStructureParseError:class extends Error{},isGeminiQuotaExceededError:()=>false,structureAnswerReviewWithGemini:async()=>{calls++;return modelDraft;}}})});
+    const body=new FormData();body.set("requestPurpose","app1_initial_analysis");body.set("sourceItemId",SOURCE_ID);body.set("examMode","second");body.set("subject","감정평가이론");
+    const response=await app.load("app/api/answer-review/structure/route").POST(new Request("http://localhost/api/answer-review/structure",{method:"POST",body}));
+    const result=await response.json();assert.equal(response.status,200);assert.ok(calls>=1);assert.ok(result.analysisBinding);
+    assert.equal(result.learningSignalStatus,learningMaterial==="ai_example_functional_test"?"skipped":"saved");
+    assert.equal(store.tables.learning_signal_events.length,learningMaterial==="ai_example_functional_test"?0:1);
+    if(learningMaterial==="ai_example_functional_test")assert.equal(result.learningSignalSkipReason,"functional_test");
+    assert.equal(store.tables.review_queue_items.length,0);
+  }
+});
