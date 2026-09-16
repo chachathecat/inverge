@@ -1657,16 +1657,21 @@ export function evaluateApp1SameSessionRepair(input: Readonly<{
     evidenceQuote.length >= 4 && evidenceQuote.length <= 600 &&
     repairText.includes(evidenceQuote) &&
     isTargetSpecificPositiveEvidence(evidenceQuote, targetProfile);
-  const targetSpecificPositiveEvidence = groundedClearQuote || input.repairDraft.strengths.some(
-    (strength) => isTargetSpecificPositiveEvidence(strength, targetProfile),
-  );
+  const targetSpecificPositiveEvidence = input.repairDraft.diagnosticStatus === "no_clear_gap"
+    ? groundedClearQuote
+    : input.repairDraft.strengths.some(
+        (strength) => isTargetSpecificPositiveEvidence(strength, targetProfile),
+      );
   const targetSpecificConflict = [
     ...input.repairDraft.missingIssueCandidates,
     input.repairDraft.weakLogicPoint,
     input.repairDraft.weakParagraphPoint,
   ].some((candidate) => matchesRepairTarget(candidate, targetProfile));
   const evidencePolarities = new Set<"affirmative" | "negative">();
-  for (const evidence of [repairText, ...input.repairDraft.strengths]) {
+  const polarityEvidence = input.repairDraft.diagnosticStatus === "no_clear_gap"
+    ? [repairText, evidenceQuote]
+    : [repairText, ...input.repairDraft.strengths];
+  for (const evidence of polarityEvidence) {
     for (const polarity of repairEvidencePolarities(evidence, targetProfile)) {
       evidencePolarities.add(polarity);
     }

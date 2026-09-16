@@ -119,3 +119,19 @@ test("an asserted application and its denial remain contradictory despite a no-g
   const repairText = "소유자 B의 매각 조건과 인접 소유자 C의 편익이라는 사례 사실에는 시장가치 기준을 적용하므로 시장가치 결론이 도출되지만, 이 기준은 같은 사례에 적용되지 않는다고 연결했다.";
   assert.notEqual(checkRealRepair(repairText, { answerEvidenceQuote: repairText }).state, "repair_confirmed_for_this_session");
 });
+
+test("no-clear-gap requires its exact target quote even with a fabricated positive strength", () => {
+  const fabricated = realRepair.repairText.split(". ").at(-1).replace("소유자 B", "매도자 D");
+  assert.equal(realRepair.repairText.includes(fabricated), false);
+  const result = checkRealRepair(undefined, { strengths: [fabricated] });
+  assert.equal(result.state, "guided_path_needed");
+  assert.equal(result.masteryCreated, false);
+});
+
+test("a grounded no-gap correction ignores a fabricated strength polarity but still checks the learner body", () => {
+  const quote = realRepair.repairText.split(". ").at(-1);
+  const fabricated = quote.replace("충족하지 않으므로", "충족하므로").replace("채택할 수 없다는", "채택된다는");
+  assert.equal(realRepair.repairText.includes(fabricated), false);
+  assert.equal(checkRealRepair(undefined, { answerEvidenceQuote: quote, strengths: [fabricated] }).state, "repair_confirmed_for_this_session");
+  assert.notEqual(checkRealRepair(realRepair.repairText + " " + fabricated, { answerEvidenceQuote: quote, strengths: [] }).state, "repair_confirmed_for_this_session");
+});
