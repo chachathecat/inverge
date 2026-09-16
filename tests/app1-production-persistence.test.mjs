@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import crypto from "node:crypto";
+import { mkdtemp } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { THEORY_POLICY, initializeTheoryBudget, generateOwnerTheory, readTheoryBudget } from "../lib/owner-study/owner-pc-theory-budget.mjs";
 import { verifyApp1SavedRecordBrowser } from "./fixtures/app1-saved-record-browser.mjs";
 import { memoryTransport, productionHarness, completedQueueRetryScenario, OWNER_ID, NOW, RAW_MARKER } from "./fixtures/app1-production-persistence-harness.mjs";
 
@@ -233,3 +237,22 @@ test("ordinary review policy still uses accumulated history", () => {
   assert.equal(input.recurrenceCount, 3);
   assert.throws(() => scheduler.resolveApp1FirstRecurrenceD1Schedule({ ...input, nextReviewDateOverride: null, reviewUnitRecurrenceCount: 2 }), /first-recurrence-required/);
 });
+
+
+for (const requestRecovery of ["headers", "body"]) {
+  test(`2차 stalled ${requestRecovery} retain repair, replay one save, reconnect to Review and Today`, {timeout:120_000}, async()=>{
+    const store=memoryTransport();Object.assign(store.tables,{study_profiles:[],action_seeds:[],study_logs:[]});
+    const base=await mkdtemp(path.join(os.tmpdir(),"owner-theory-recovery-")),budgetRoot=path.join(base,"budget");
+    const settings={version:THEORY_POLICY.version,model:THEORY_POLICY.model,ownerId:OWNER_ID,projectId:"synthetic-project",apiKey:"synthetic-never-provider-key",paidProjectVerified:true,dataSharingEnabled:false,verifiedAt:new Date().toISOString(),verificationEvidenceSha256:"a".repeat(64)};
+    await initializeTheoryBudget(budgetRoot,settings);let providerCalls=0;
+    await verifyApp1SavedRecordBrowser(store.execute,{requestRecovery,ownerTheory:{generate:(authority,request,draft)=>generateOwnerTheory(budgetRoot,settings,authority,request,async()=>{
+      providerCalls++;
+      assert.equal((await readTheoryBudget(budgetRoot,settings)).usedReservations,providerCalls);
+      return Response.json({candidates:[{finishReason:"STOP",content:{parts:[{text:JSON.stringify(draft)}]}}]});
+    })}});
+    const budget=await readTheoryBudget(budgetRoot,settings);
+    assert.equal(providerCalls,4,"two deliberate analyses and two deliberate verifications only");
+    assert.equal(budget.usedReservations,4,"lost responses keep their reservations");
+    assert.equal(budget.remainingMicros,THEORY_POLICY.budgetMicros-4*THEORY_POLICY.reservationMicros);
+  });
+}

@@ -1,5 +1,25 @@
 # Inverge Owner Study OS
 
+## Theory request recovery after #940 / #941
+
+The existing PC writer continues from merged #940 (`514098a14934`). Its
+provider connection, private installation and cumulative USD 5 budget are
+reused. The running Owner input remains available while this branch works
+only with isolated synthetic data. No new login, key, provider probe, budget
+installation, personal DB mutation or legal-collection scope is included.
+
+A real-browser stalled response reproduces indefinite waiting in the existing
+repair loop. Bound the item read, analysis, correction verification, save and
+post-save Queue read, including unfinished JSON. Preserve manual repair text,
+the exact pending save command and server authority. Only explicit clicks
+retry. Unknown provider/save outcomes retain their existing reservation and
+cannot become success; a known saved record keeps its link when Queue lookup
+fails. The existing API/browser flow proves reconnect, Review and Today after
+header/body faults. Local related regressions pass 69/69, typecheck passes,
+and component lint has no errors (one pre-existing navigation warning). The
+actual disposable PostgreSQL/PostgREST/RLS plus authenticated synthetic browser
+flow passes. Required final CI and exact-head review remain mandatory.
+
 ## PC Theory connection probe after #938 / #939
 
 Continue the existing Goal and single PC writer from merged #938. The Owner

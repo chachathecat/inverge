@@ -107,6 +107,32 @@ class App1StructureRequestError extends Error {
   }
 }
 
+class App1RequestTimeoutError extends Error {
+  constructor() {
+    super("응답 대기가 길어져 결과를 확인하지 못했습니다. 입력은 유지됩니다. 기존 요청은 서버에서 계속 처리될 수 있습니다.");
+    this.name = "App1RequestTimeoutError";
+  }
+}
+
+/** Bound headers AND body reads; never replay a provider call or a save automatically. */
+async function readApp1Response(url: string, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { ...init, signal: controller.signal });
+    const payload: unknown = await response.json().catch((error: unknown) => {
+      if (controller.signal.aborted) throw error;
+      return null;
+    });
+    return { response, payload };
+  } catch (error) {
+    if (controller.signal.aborted) throw new App1RequestTimeoutError();
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
 async function sha256Text(value: string) {
   const bytes = new TextEncoder().encode(value);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
@@ -153,11 +179,11 @@ async function requestStructure(
       authority.persistenceWorkRevisionId,
     );
   }
-  const response = await fetch("/api/answer-review/structure", {
+  const { response, payload: rawPayload } = await readApp1Response("/api/answer-review/structure", {
     method: "POST",
     body: formData,
-  });
-  const payload = (await response.json().catch(() => null)) as
+  }, 90_000);
+  const payload = rawPayload as
     | {
         ok: true;
         draft: unknown;
@@ -222,11 +248,11 @@ export function App1CaptureRepairLoop({
       setPhase("loading");
       setError(null);
       try {
-        const response = await fetch(`/api/os/items/${encodeURIComponent(itemId)}`, {
+        const { response, payload: rawPayload } = await readApp1Response(`/api/os/items/${encodeURIComponent(itemId)}`, {
           method: "GET",
           cache: "no-store",
-        });
-        const payload = (await response.json().catch(() => null)) as
+        }, 15_000);
+        const payload = rawPayload as
           | { ok: true; detail: WrongAnswerDetail | null }
           | { ok: false; error?: string }
           | null;
@@ -322,7 +348,7 @@ export function App1CaptureRepairLoop({
         enterAuthorityRequired();
         return;
       }
-      setError(ANALYSIS_FAILURE_MESSAGE);
+      setError(analysisError instanceof App1RequestTimeoutError ? analysisError.message : ANALYSIS_FAILURE_MESSAGE);
       setPhase("structure_confirmation");
     }
   }
@@ -423,7 +449,7 @@ export function App1CaptureRepairLoop({
       setVerification(preliminary);
       setVerificationReceipt(null);
       pendingSaveRef.current = null;
-      setError(VERIFICATION_FAILURE_MESSAGE);
+      setError(verificationError instanceof App1RequestTimeoutError ? verificationError.message : VERIFICATION_FAILURE_MESSAGE);
       setPhase("repair_verification");
     }
   }
@@ -497,12 +523,14 @@ export function App1CaptureRepairLoop({
         persistenceOperationId: pending.binding.operationId,
         persistenceWorkRevisionId: pending.binding.workRevisionId,
       };
-      const response = await fetch("/api/os/items", {
+      // Preserve pendingSaveRef on an unknown response; explicit replay uses the
+      // same server-authorized command even if the first request already committed.
+      const { response, payload: rawPayload } = await readApp1Response("/api/os/items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
-      });
-      const payload = (await response.json().catch(() => null)) as
+      }, 30_000);
+      const payload = rawPayload as
         | {
             ok: true;
             deduped?: boolean;
@@ -577,11 +605,12 @@ export function App1CaptureRepairLoop({
       }
       let queueReceipt: App1NextReviewReceipt | null = null;
       try {
-        const itemResponse = await fetch(
+        const { response: itemResponse, payload: rawItemPayload } = await readApp1Response(
           `/api/os/items/${encodeURIComponent(payload.item.id)}`,
           { method: "GET", cache: "no-store" },
+          15_000,
         );
-        const itemPayload = (await itemResponse.json().catch(() => null)) as
+        const itemPayload = rawItemPayload as
           | { ok: true; detail: WrongAnswerDetail | null }
           | { ok: false }
           | null;

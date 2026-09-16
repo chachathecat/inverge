@@ -10,7 +10,7 @@ import { productionHarness, OWNER_ID, SOURCE_ID, NOW } from "./app1-production-p
 // Existing Capture source + real repair UI, API, authority, service, repository,
 // saved-item, Review and Today pages. Only auth/model/clock/storage transport are
 // synthetic. Never loads the Owner's account, environment or personal database.
-export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, captureInput = false, ownerTheory = null, actionTimeout = 15_000 } = {}) {
+export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, captureInput = false, ownerTheory = null, actionTimeout = 15_000, requestRecovery = null } = {}) {
   const repairText = "임대료 미납 사실을 계약 해지 논거의 요건에 연결하여 계약 종료 결론을 도출했습니다.";
   const draft = {
     questionSummary: "합성 문제 구조", coreConcepts: ["정의", "논거", "적용"], requiredIssues: "정의, 논거, 적용",
@@ -21,7 +21,10 @@ export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, ca
     caution: "합성 학습 보조 초안", plainExplanation: "한 연결 보강", keyTermExplanations: [], stepByStepExplanation: [], examAnswerHints: [],
   };
   let origin, browser, page, savedId, sourceId = SOURCE_ID, modelCalls = 0;
-  const failures = [], external = [], writes = [], reads = [];
+  const failures = [], external = [], writes = [], reads = [], interrupted = [], saveCommands = [];
+  let fault = null;
+  const armFault = kind => new Promise(resolve => { fault = { kind, resolve }; });
+  const expireWait = async (handled, ms) => { await handled; await page.clock.fastForward(ms + 1); };
   const app = productionHarness(execute, { env: ownerTheory ? {ALPHA_ADMIN_EMAILS:"owner@localhost.test",WCV_C2R_C_T_OWNER_EMAILS:"owner@localhost.test"} : {}, overrides: ({ load, session }) => ({
     ...(ownerTheory ? {"@/lib/owner-study/owner-pc-theory": {
       isOwnerPcTheoryEnabled: () => true, OwnerTheoryError,
@@ -61,6 +64,12 @@ export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, ca
       if (url.pathname === "/app/capture/repair" || url.pathname === "/app/capture") { res.writeHead(200,{"content-type":"text/html; charset=utf-8","cache-control":"no-store"});res.end('<!doctype html><html lang="ko"><meta charset="utf-8"><title>합성 2차 연결 검증</title><div id="root"></div><script src="/entry.js"></script></html>');return; }
       const chunks=[];for await (const chunk of req) chunks.push(chunk);
       const request = new Request(url, {method:req.method,headers:req.headers,...(req.method === "GET" ? {} : {body:Buffer.concat(chunks)})});
+      let operation = req.method === "GET" && url.pathname.startsWith("/api/os/items/") ? "read" : null;
+      if (url.pathname === "/api/answer-review/structure") operation = (await request.clone().formData()).get("requestPurpose") === "repair_verification" ? "verify" : "analyze";
+      if (req.method === "POST" && url.pathname === "/api/os/items") {
+        const command = await request.clone().json();
+        if (command.commandVersion === "App1VerifiedRepairPersistenceCommandV1") { operation = "save"; saveCommands.push(command); }
+      }
       let response;
       if (req.method === "POST") {
         writes.push(url.pathname);
@@ -79,6 +88,11 @@ export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, ca
       }
       if (!response) {res.writeHead(404).end();return;}
       if(response.status>=400) failures.push(`${req.method} ${url.pathname}: ${response.status} ${await response.clone().text()}`);
+      if (fault && (fault.kind === operation || (["load", "queue"].includes(fault.kind) && operation === "read"))) {
+        const active = fault; fault = null; interrupted.push(active.kind);
+        if (requestRecovery === "body") { res.writeHead(200,{"content-type":"application/json"});res.write('{"ok":'); }
+        active.resolve();return; // Backend already completed; intentionally lose its response.
+      }
       res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));
     } catch(error) { failures.push(error.stack);res.writeHead(500).end("synthetic-route-failed"); }
   });
@@ -89,7 +103,9 @@ export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, ca
     await context.route("**/*",route=>{if(new URL(route.request().url()).origin!==origin){external.push(route.request().url());return route.abort();}return route.continue();});
     page=await context.newPage();page.setDefaultTimeout(actionTimeout);page.setDefaultNavigationTimeout(actionTimeout);page.on("pageerror",e=>failures.push(e.stack));
     await page.addInitScript(() => { window.process = {env:{NODE_ENV:"production"}}; });
-    await page.clock.setFixedTime(new Date(NOW));
+    if (requestRecovery) await page.clock.install({time:new Date(NOW)});
+    else await page.clock.setFixedTime(new Date(NOW));
+    const loadFault = requestRecovery ? armFault("load") : null;
     if (captureInput) {
       await page.goto(`${origin}/app/capture?mode=second`);
       if (!ownerTheory) {
@@ -115,6 +131,11 @@ export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, ca
       sourceId=new URL(page.url()).searchParams.get("itemId");
       assert.ok(sourceId);assert.notEqual(sourceId,SOURCE_ID);
     } else await page.goto(`${origin}/app/capture/repair?itemId=${sourceId}`);
+    if (requestRecovery) {
+      await expireWait(loadFault,15_000);
+      await page.locator('[data-app1-error]').waitFor();assert.equal(modelCalls,0);
+      await page.reload();await page.getByRole("button",{name:ownerTheory ? "선택한 문제·답안을 Gemini로 보내 분석" : "이 내용으로 분석",exact:true}).waitFor();
+    }
     if(ownerTheory) {
       assert.equal(modelCalls,0,"page loads and local Capture do not call Gemini");
       const body=new FormData();body.set("requestPurpose","app1_initial_analysis");body.set("sourceItemId",sourceId);body.set("examMode","second");body.set("subject","감정평가이론");
@@ -122,14 +143,35 @@ export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, ca
       assert.equal(denied.status,403,"missing explicit selected-text consent fails before provider");
       assert.equal(modelCalls,0);
     }
-    await page.getByRole("button",{name:ownerTheory ? "선택한 문제·답안을 Gemini로 보내 분석" : "이 내용으로 분석",exact:true}).click();
+    const analysisButton=page.getByRole("button",{name:ownerTheory ? "선택한 문제·답안을 Gemini로 보내 분석" : "이 내용으로 분석",exact:true});
+    if (requestRecovery) {
+      const stalled=armFault("analyze");await analysisButton.click();await expireWait(stalled,90_000);
+      await page.locator('[data-app1-error]').waitFor();assert.equal(writes.filter(p=>p==="/api/answer-review/structure").length,1,"timeout never automatically repeats analysis");
+      assert.equal(await page.getByRole("button",{name:"직접 복구하기",exact:true}).count(),0);
+    }
+    await analysisButton.click();
     await page.getByRole("button",{name:"직접 복구하기",exact:true}).click();
     await page.getByLabel("내 복구 입력").fill(repairText);
+    if (requestRecovery) {
+      const before=writes.filter(p=>p==="/api/answer-review/structure").length,stalled=armFault("verify");await page.getByRole("button",{name:"복구 확인",exact:true}).click();await expireWait(stalled,90_000);
+      await page.locator('[data-app1-error]').waitFor();assert.equal(writes.filter(p=>p==="/api/answer-review/structure").length,before+1,"timeout never automatically repeats verification");
+      assert.equal(await page.getByRole("button",{name:"복구 결과 저장하고 다음 복습 만들기",exact:true}).count(),0);
+      await page.getByRole("button",{name:"직접 복구 다시 시도",exact:true}).click();assert.equal(await page.getByLabel("내 복구 입력").inputValue(),repairText);
+    }
     await page.getByRole("button",{name:"복구 확인",exact:true}).click();
-    await page.getByRole("button",{name:"복구 결과 저장하고 다음 복습 만들기",exact:true}).click();
-    await page.locator('[data-app1-queue-receipt="valid"]').waitFor();
+    const saveButton=page.getByRole("button",{name:"복구 결과 저장하고 다음 복습 만들기",exact:true});
+    if (requestRecovery) {
+      await saveButton.waitFor();
+      const before=modelCalls,stalled=armFault("save");await saveButton.click();await expireWait(stalled,30_000);
+      await page.locator('[data-app1-error]').waitFor();assert.equal(saveCommands.length,1,"no automatic save replay");
+      assert.equal(modelCalls,before);assert.equal(await page.locator('[data-app1-queue-receipt="valid"]').count(),0);
+      const queueFault=armFault("queue");await saveButton.click();await expireWait(queueFault,15_000);
+      await page.locator('[data-app1-saved-without-queue]').waitFor();assert.equal(saveCommands.length,2);
+      assert.deepEqual(saveCommands[1],saveCommands[0],"unknown committed save reuses the exact existing idempotent command");
+      assert.deepEqual(interrupted,["load","analyze","verify","save","queue"]);
+    } else {await saveButton.click();await page.locator('[data-app1-queue-receipt="valid"]').waitFor();}
     assert.ok(savedId);assert.notEqual(savedId,sourceId);
-    await page.getByRole("link",{name:"저장한 교정 기록 확인",exact:true}).click();
+    await page.getByRole("link",{name:requestRecovery ? "저장 기록 확인" : "저장한 교정 기록 확인",exact:true}).click();
     assert.equal(page.url(),`${origin}/app/items/${savedId}?mode=second`);
     const savedUrl=page.url();await page.reload();assert.equal(page.url(),savedUrl);
     assert.match(await page.locator("body").innerText(),/감정평가이론/);
@@ -148,7 +190,7 @@ export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, ca
     assert.ok(await page.locator(`a[href*="${savedId}"]`).count(), "Today links the exact saved correction");
     assert.deepEqual(await app.repository.listReviewQueue(OWNER_ID,100),before);
     assert.equal((await app.repository.listWrongAnswerItems(OWNER_ID,100)).length,captureInput?3:2);
-    assert.equal(writes.filter(p=>p==="/api/os/items").length,captureInput?2:1);
+    assert.equal(writes.filter(p=>p==="/api/os/items").length,(captureInput?2:1)+(requestRecovery?1:0));
     assert.ok(modelCalls>=2);assert.ok(reads.includes(sourceId));assert.ok(reads.includes(savedId));
     assert.deepEqual(failures,[]);assert.deepEqual(external,[]);
     return {savedId,sourceId,modelCalls};
