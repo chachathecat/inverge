@@ -3,13 +3,13 @@
 
 ## 2026-09-16 actual Theory app validation
 
-Actual isolated Gemini run: weak answer → finding; improved answer → no clear gap; paraphrase → inconsistent omission; corrected answer → no clear gap but lexical confirmation rejected it. Five of six development calls are permanently reserved. Fix exact quotes, definite negative conclusions and premise/application classification; unsupported confirmation stays honest. The fifth result exposed incidental “paragraph” action wording being treated as a separate defect. A dev-server refresh then lost its UI-only analysis state; preserve the tab draft and revalidate the original server signature on reconnect, without reissuing authority or calling Gemini. A stable local optimized build uses the same explicitly approved isolated Windows/account/database binding; no hosted Production activation. Policy V2 retains source/revision seals, closed target evidence, conflict checks and no-mastery boundaries. Actual-model save/review completion is still unconfirmed. The Owner explicitly approved seven total development calls, including the existing five, with the same permanent USD 5 cap and one additional reservation of at most USD 0.337613. Append one bound approval without rewriting the original ledger or personal binding; two calls remain, including retries. Dedicated issue #947 is approved for PR #946 only; parent #772/#883 remain open. Actual model save/review, fresh native checks and independent review remain required before protected squash and PC update.
+The seven-call amendment was applied append-only to the existing permanent USD 5 ledger. At 84dfbd72, the last two actual Gemini calls produced a grounded weak-answer finding and a no-clear-gap correction with same-session confirmation. Real authenticated API/SQL save created one repair record, one note and one review; an identical save returned the same item, and browser reload re-read the persisted correction. No development calls remain. The paraphrase omission prompt fix has controlled coverage but no paid re-test. Actual readback exposed the original gap being mislabeled as still outstanding: project the server-saved same-session result separately and continue to the existing review queue, preserving original data. Review completion/Today, final native checks and independent exact-head review remain required before the authorized protected squash and PC update. PR #946 closes only #947; #772/#883 remain open.
 
 Reuse merged #945 / 224a35c8 and the same PC writer. Apply the post909 A/B/C
 root-cause continuation exception; keep native checks, exact-head independent
 review and protected squash. Preserve the live personal draft and binding.
 The Owner authorizes one original synthetic Theory question, at most three
-answer sources and six total development analysis/verification/retry calls,
+answer sources and seven total development analysis/verification/retry calls,
 from the existing permanent USD 5 ledger including all prior/unknown spend.
 Use actual Next.js menus, Supabase Auth and isolated PostgreSQL/PostgREST,
 without replacing internal requests with successful mocks. Keep incomplete/

@@ -209,3 +209,43 @@ test("learning readers page beyond many excluded records without hiding older re
   store.tables.wrong_answer_items.unshift(row(999,{exam_name:"감정평가사 1차",created_at:"2026-09-06T10:01:00.000Z"}));
   assert.equal((await service.listWrongAnswerItems(OWNER_ID,app.session.email,1,"second"))[0].examName,"감정평가사 2차");
 });
+
+test("saved same-session repair readback keeps the original gap historical and continues to review", async()=>{
+  const store=memoryTransport();
+  const app=productionHarness(store.execute,{overrides:()=>({
+    "next/link":({children,href,...props})=>React.createElement("a",{...props,href},children),
+    "next/navigation":{useSearchParams:()=>new URLSearchParams("mode=second"),usePathname:()=>"/app/items/synthetic"},
+  })});
+  const saved=await app.save(await app.command("confirmed-readback"));
+  assert.equal(saved.status,200);
+  const detail=await app.repository.getWrongAnswerDetail(OWNER_ID,saved.body.item.id);
+  const source=await app.repository.getWrongAnswerDetail(OWNER_ID,SOURCE_ID);
+  const notes=app.load("lib/review-os/study-note");
+  const note=notes.buildDetailStudyNote(detail);
+  const comparison=notes.buildRewriteComparisonNote(detail,note,source);
+  assert.equal(note.sameSessionRepairConfirmed,true);
+  assert.equal(comparison.sameSessionRepairConfirmed,true);
+  assert.equal(comparison.sourceGap,detail.item.rawPayload.rewrite_source_gap);
+  assert.ok(!comparison.remainingNextGap.includes(detail.item.rawPayload.aiDraft.weakStructurePoint));
+  assert.match(comparison.improvement,/같은 세션/);
+  assert.match(note.nextAction,/복습/);
+  assert.doesNotMatch(note.summary,/먼저 보강할 지점/);
+  const {StudyLedgerDetail}=app.load("components/learner/study-ledger-ui");
+  const html=renderToString(React.createElement(StudyLedgerDetail,{
+    itemId:detail.item.id,title:"합성 교정",subject:"감정평가이론",createdAt:detail.item.createdAt,savedAt:detail.item.updatedAt,
+    biggestGap:comparison.sourceGap,biggestGapLabel:"교정 전 간극",nextAction:note.nextAction,coreLine:note.coreLine,keyTerms:[],
+    learnerExcerpt:detail.item.userAnswer,nextReviewDate:note.nextReviewDate,recurrenceText:note.recurrenceText,
+    reviewQueueCount:1,learnerConfirmed:true,completed:true,comparison,reviewHref:"/app/review?mode=second",
+  }));
+  assert.match(html,/교정 확인 범위/);
+  assert.match(html,/복습 큐에서 다시 확인하기/);
+  assert.doesNotMatch(html,/아직 남은 간극|남은 감점 원인|문단 한 번 더 다듬기/);
+  for(const [key,value] of [["app1_same_session_only",false],["app1_mastery_created",true],["app1_transfer_created",true],["app1_contract_version","foreign"],["app1_source_item_id","foreign"]]){
+    const changed=structuredClone(detail);
+    changed.item.rawPayload.user_confirmed_fields[key]=value;
+    assert.equal(notes.buildDetailStudyNote(changed).sameSessionRepairConfirmed,false,key);
+  }
+  const ordinary=structuredClone(detail);
+  delete ordinary.item.rawPayload.user_confirmed_fields.app1_verification_state;
+  assert.equal(notes.buildRewriteComparisonNote(ordinary,notes.buildDetailStudyNote(ordinary),source).sameSessionRepairConfirmed,false);
+});

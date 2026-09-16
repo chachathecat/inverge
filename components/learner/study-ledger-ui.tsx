@@ -8,6 +8,7 @@ import { adaptLegacyTrustSignals } from "@/lib/review-os/trust-provenance";
 export type LearningState = "scheduled" | "attention" | "ready" | "completed";
 
 export type StudyLedgerComparison = {
+  sameSessionRepairConfirmed?: boolean;
   sourceGap: string;
   previousParagraph: string;
   sourceAnswerSummary: string;
@@ -256,7 +257,7 @@ function buildLedgerStateEvidence({
 
 function normalizedExcerpt(value?: string | null) {
   const excerpt = value?.trim();
-  return excerpt || null;
+  return excerpt && excerpt !== "-" ? excerpt : null;
 }
 
 export function StateChip({
@@ -535,7 +536,7 @@ export function RewriteComparisonPanel({
           <dd className="ko-keep mt-2 text-sm leading-6 text-[var(--text-primary)]">{comparison.sourceGap}</dd>
         </div>
         <div>
-          <dt className="text-xs font-semibold text-[var(--text-secondary)]">아직 남은 간극</dt>
+          <dt className="text-xs font-semibold text-[var(--text-secondary)]">{comparison.sameSessionRepairConfirmed ? "교정 확인 범위" : "아직 남은 간극"}</dt>
           <dd className="ko-keep mt-2 text-sm leading-6 text-[var(--text-primary)]">{comparison.remainingNextGap}</dd>
         </div>
       </dl>
@@ -735,12 +736,16 @@ export function StudyLedgerDetail({
   // distinct-day retrieval successes, the evidence-backed state stays
   // conservative: unverified or recovering.
   const stateChipState: StateChipState = state === "attention" ? "Unverified" : "Recovering";
-  const stateEvidence = buildLedgerStateEvidence({ state, reviewQueueCount, nextReviewDate });
+  const sameSessionRepairConfirmed = comparison?.sameSessionRepairConfirmed === true;
+  const stateEvidence = sameSessionRepairConfirmed
+    ? `같은 세션 교정 확인 · 다음 복습 ${nextReviewDate}`
+    : buildLedgerStateEvidence({ state, reviewQueueCount, nextReviewDate });
   const stateChipEvidence: StateChipEvidence = stateChipState === "Unverified"
     ? { state: "Unverified", basis: "missing-confirmation", detail: stateEvidence }
     : { state: "Recovering", basis: "recovery-observed", detail: stateEvidence };
-  const actionHref =
-    "/app/capture?mode=second&rewriteFrom=" + encodeURIComponent(rewriteFromItemId ?? itemId);
+  const actionHref = sameSessionRepairConfirmed
+    ? reviewHref ?? "/app/review?mode=second"
+    : "/app/capture?mode=second&rewriteFrom=" + encodeURIComponent(rewriteFromItemId ?? itemId);
   const visibleTerms = keyTerms.filter(Boolean).slice(0, 5);
   const learnerEvidence = normalizedExcerpt(learnerExcerpt);
   const referenceEvidence = normalizedExcerpt(referenceExcerpt);
@@ -865,8 +870,10 @@ export function StudyLedgerDetail({
               responsive
               state="Ready"
               href={actionHref}
-              label={completed ? "문단 한 번 더 다듬기" : "10분 문단 다시쓰기"}
-              status={biggestGapLabel
+              label={sameSessionRepairConfirmed ? "복습 큐에서 다시 확인하기" : completed ? "문단 한 번 더 다듬기" : "10분 문단 다시쓰기"}
+              status={sameSessionRepairConfirmed
+                ? "저장된 교정문을 다음 복습에서 다시 확인합니다."
+                : biggestGapLabel
                 ? completed
                   ? "남은 감점 원인 하나만 다시 확인합니다."
                   : `${biggestGapLabel} 하나만 보강합니다.`
