@@ -640,12 +640,15 @@ export function WrongAnswerCaptureForm({
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const saved = loadReviewOsDraft<DraftState>({ userId, feature: "capture-draft", entityId: mode });
-      if (saved) setForm((initial) => ({ ...initial, ...saved,
+      if (saved) {
+        setUploadedPages(saved.capturePages ?? []);
+        setForm((initial) => ({ ...initial, ...saved,
         subjectLabel: normalizeSubjectForMode(saved.subjectLabel, mode),
         diagnosticSource: saved.diagnosticSource ?? "not_analyzed",
         referenceComparisonStatus: secondWriteReferenceStatus(saved),
         referenceAnswerAddedAfterProduction: secondWriteReferenceStatus(saved) === "compared",
       }));
+      }
       setDraftReady(true);
     }, 0);
     return () => window.clearTimeout(timer);
@@ -711,7 +714,6 @@ export function WrongAnswerCaptureForm({
     "second-reference",
     "second-gap",
   ]);
-  const hideGlobalFooterActions = mode === "second" && secondModeHiddenFooterStages.has(stage);
   const currentCaptureStep = getCaptureStep(stage, mode);
   const currentSecondWriteStep = getSecondWriteStepNumber(stage);
   const currentCaptureFlowSteps = mode === "second" ? SECOND_CAPTURE_FLOW_STEPS : CAPTURE_FLOW_STEPS;
@@ -725,6 +727,8 @@ export function WrongAnswerCaptureForm({
     lowConfidenceFlag: form.lowConfidenceFlag, hasManualCorrection: form.hasManualCorrection,
   });
   const ownerAnalysisPanelOpen = ownerAnalysisEntry && ["second-gap", "confirm"].includes(stage);
+  if (ownerAnalysisEntry) secondModeHiddenFooterStages.add("confirm");
+  const hideGlobalFooterActions = mode === "second" && secondModeHiddenFooterStages.has(stage);
   const currentCaptureStageContext = ownerAnalysisPanelOpen ? {
     eyebrow: "분석 준비", now: "보존된 입력을 확인한 뒤 분석 화면으로 이어갑니다.",
     why: "분석 전 문구를 개인 감점 진단으로 사용하지 않습니다.",
@@ -2210,7 +2214,7 @@ export function WrongAnswerCaptureForm({
             <SecondReferencePanel
               reference={form.correctAnswer}
               onChange={(value) => update("correctAnswer", value)}
-              onNext={() => { update("referenceAnswerAddedAfterProduction", true); update("referenceComparisonStatus", "compared"); setStage("second-gap"); }}
+              onNext={() => { update("referenceComparisonStatus", "compared"); update("referenceAnswerAddedAfterProduction", true); setStage("second-gap"); }}
               onDefer={() => { update("referenceAnswerAddedAfterProduction", false); update("referenceComparisonStatus", "deferred"); setStage("second-gap"); }}
             />
           ) : null}
@@ -2342,7 +2346,7 @@ export function WrongAnswerCaptureForm({
             />
           ) : null}
           {mode === "second" && stage === "second-reference" ? (
-            <SecondReferencePanel reference={form.correctAnswer} onChange={(value) => update("correctAnswer", value)} onNext={() => { update("referenceAnswerAddedAfterProduction", true); update("referenceComparisonStatus", "compared"); setStage("second-gap"); }}
+            <SecondReferencePanel reference={form.correctAnswer} onChange={(value) => update("correctAnswer", value)} onNext={() => { update("referenceComparisonStatus", "compared"); update("referenceAnswerAddedAfterProduction", true); setStage("second-gap"); }}
               onDefer={() => { update("referenceAnswerAddedAfterProduction", false); update("referenceComparisonStatus", "deferred"); setStage("second-gap"); }} />
           ) : null}
           {mode === "second" && stage === "second-gap" ? (
@@ -2379,7 +2383,7 @@ export function WrongAnswerCaptureForm({
         </p>
       ) : null}
 
-      {!savedConfirmation && !ownerAnalysisPanelOpen && !hideGlobalFooterActions && currentCaptureStep !== 1 ? (
+      {!savedConfirmation && !hideGlobalFooterActions && currentCaptureStep !== 1 ? (
         <BottomPrimaryAction secondary={footerSecondary}>
         <div className="flex w-full flex-col gap-3 sm:flex-row">
           {rewriteContext && mode === "second" ? (
