@@ -275,7 +275,7 @@ test("S232F.1 total save failure is memory-only, retryable, and excludes every s
   assert.match(capture, /data-capture-work-lock=\{submitting \? "locked" : "editable"\}/);
   assert.match(capture, /disabled=\{submitting\}/);
   assert.match(capture, /resolvePendingCaptureSaveOperation/);
-  assert.equal((capture.match(/settleCaptureSaveOperation\(operation\)/g) ?? []).length, 2);
+  assert.equal((capture.match(/settleCaptureSaveOperation\(operation\)/g) ?? []).length, 3);
   assert.equal((capture.match(/buildCaptureDedupeConflictEvidence\(result\.item, operation\)/g) ?? []).length, 2);
   assert.match(capture, /data-capture-dedupe-conflict/);
   assert.match(capture, /학습 노트에서 기존 기록 확인/);
@@ -301,7 +301,7 @@ test("S232F.1 total save failure is memory-only, retryable, and excludes every s
   assert.match(previewFooter, /disabled=\{submitting\}/);
   assert.match(capture, /if \(stage === "saved-plan"\) return;/);
   assert.match(capture, /buildCapturePersistenceMetadata\(operation\)/);
-  assert.equal((capture.match(/buildCapturePersistenceMetadata\(operation\)/g) ?? []).length, 2);
+  assert.equal((capture.match(/buildCapturePersistenceMetadata\(operation\)/g) ?? []).length, 3);
   assert.match(capture, /buildDurableCapturePersistenceReceipt\(result\.item, operation\)/);
   assert.equal((capture.match(/const persistenceEvidence = buildDurableCapturePersistenceReceipt\(result\.item, operation\)/g) ?? []).length, 2);
   assert.equal((capture.match(/if \(!persistenceEvidence\)/g) ?? []).length, 2);

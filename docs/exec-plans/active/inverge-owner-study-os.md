@@ -1,5 +1,32 @@
 # Inverge Owner Study OS
 
+## Owner Theory diagnostic provenance after merged #942
+
+Continue the existing PC writer and Goal from merged #942 (`3e20f3ca`).
+The Owner reported `/app/write?mode=second` showing a template as a personal
+weakness and deferred reference comparison as completed. Preserve the live
+question, issue recall, outline and answer in the existing private device draft;
+this material is explicitly an AI-example functional test, not independent
+learning evidence. No paid call, key/config change, budget reset or personal DB
+change is part of this repair.
+
+Both existing entry routes carry the same Owner Theory gate. Hydrate a matching
+initial render before restoring the draft, preserve the chosen subject in text
+input, and hand off only explicitly stored source input to the existing APP1
+analysis screen. Templates, self-assessment, pending analysis and AI output are
+separate. Reference deferral remains incomplete comparison. AI evidence quotes
+must occur in the submitted answer; missing exact evidence stays explicit.
+Pending input creates no note, weakness signal or review. A functional-test
+source cannot mint a learning repair. Dedupe provenance conflicts fail closed;
+the frozen repository access code and its tests remain unchanged.
+
+The real synthetic browser regression covers both route props, SSR hydration,
+restored input, editing, explicit source-only persistence and the enabled manual
+analysis button without provider calls. Isolated PostgreSQL/PostgREST/RLS and
+Capture-to-repair/reconnect/Review/Today regression passes. Final native checks
+and clean exact-head review remain required before protected squash and PC
+runtime update. The actual Owner analysis remains a manual action.
+
 ## Theory request recovery after #940 / #941
 
 The existing PC writer continues from merged #940 (`514098a14934`). Its

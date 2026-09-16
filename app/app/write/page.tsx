@@ -1,3 +1,5 @@
+import { isOwnerPcTheoryEnabled } from "@/lib/owner-study/owner-pc-theory";
+import { isTrustedRepairEnabled, trustedRepairAuthorizedSubjects } from "@/lib/review-os/trusted-repair-access";
 import { redirect } from "next/navigation";
 
 import {
@@ -24,6 +26,8 @@ export default async function ReviewOsWritePage({ searchParams }: PageProps) {
   if (!session.userId) return null;
 
   const mode = resolveAppraisalMode(profile, modeParam);
+  const ownerCaptureRepairSubjects = mode === "second" && isTrustedRepairEnabled()
+    ? trustedRepairAuthorizedSubjects(session.email) : [];
   if (mode !== "second") {
     redirect(`/app/capture?mode=${mode}`);
   }
@@ -53,6 +57,9 @@ export default async function ReviewOsWritePage({ searchParams }: PageProps) {
         />
         <div>
           <WrongAnswerCaptureForm
+            textOnly={mode === "second" && isOwnerPcTheoryEnabled()}
+            ownerCaptureRepairEnabled={ownerCaptureRepairSubjects.length > 0}
+            ownerCaptureRepairSubjects={ownerCaptureRepairSubjects}
             userId={session.userId}
             mode={mode}
             labelledBy="write-page-title"
