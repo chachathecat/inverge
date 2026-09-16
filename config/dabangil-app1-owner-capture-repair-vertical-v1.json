@@ -98,7 +98,7 @@
     "analysisBindingReceipt": "App1AnalysisBindingReceiptV1",
     "verificationEvaluatedByServer": true,
     "verificationReceipt": "App1RepairVerificationReceiptV1",
-    "verificationPolicyVersion": "App1SameSessionRepairPolicyV1",
+    "verificationPolicyVersion": "App1SameSessionRepairPolicyV2",
     "analysisBindingLifetimeSeconds": 900,
     "verificationReceiptLifetimeSeconds": 300,
     "signingAlgorithm": "HMAC-SHA256",

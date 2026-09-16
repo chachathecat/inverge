@@ -522,7 +522,7 @@ const APP1_REPAIR_SUBSTANTIVE_AFFIRMATIVE_PREDICATES = Object.freeze([
   "해당하",
   "성립하",
   "성립되",
-  "적용하",
+  // Applying a criterion is an operation, not an affirmative outcome.
   "적용되",
 ] as const);
 const APP1_REPAIR_DISCUSSION_ONLY_CUES = Object.freeze([
@@ -544,7 +544,12 @@ const APP1_REPAIR_DISCUSSION_ONLY_CUES = Object.freeze([
   "되도록",
   "되면",
   "할수",
-  "가능",
+  "될수",
+  "가능하다",
+  "가능합니다",
+  "가능할",
+  "가능성",
+  "가능하면",
 ] as const);
 const APP1_REPAIR_TARGET_DISPLACEMENT_CUES = Object.freeze([
   "다른",
@@ -1285,7 +1290,12 @@ function includesAny(identity: string, values: readonly string[]) {
 }
 
 function hasUnresolvedRepairMetacommentary(value: string) {
-  const identity = normalizedIdentity(value);
+  // A definite negative conclusion (e.g. cannot adopt a price) is not a
+  // promise to repair later. Study actions such as 보강할 수 없다 stay blocked.
+  const identity = normalizedIdentity(value).replace(
+    /(?:채택|인정|적용|성립|평가|해당)(?:할|될)수없(?:습니다|으므로|어|다고|는|다(?!면))/gu,
+    "확정적부정결론",
+  );
   return (
     includesAny(identity, APP1_REPAIR_UNRESOLVED_CUES) ||
     includesAny(identity, APP1_REPAIR_UNRESOLVED_METACOMMENTARY) ||
@@ -1638,7 +1648,13 @@ export function evaluateApp1SameSessionRepair(input: Readonly<{
     repairText,
     targetProfile,
   );
-  const targetSpecificPositiveEvidence = input.repairDraft.strengths.some(
+  const evidenceQuote = input.repairDraft.answerEvidenceQuote?.trim() ?? "";
+  const groundedClearQuote = input.repairDraft.diagnosticStatus === "no_clear_gap" &&
+    input.repairDraft.reviewedAnswerScope === "entire_submitted_answer" &&
+    evidenceQuote.length >= 4 && evidenceQuote.length <= 600 &&
+    repairText.includes(evidenceQuote) &&
+    isTargetSpecificPositiveEvidence(evidenceQuote, targetProfile);
+  const targetSpecificPositiveEvidence = groundedClearQuote || input.repairDraft.strengths.some(
     (strength) => isTargetSpecificPositiveEvidence(strength, targetProfile),
   );
   const targetSpecificConflict = [
@@ -1653,6 +1669,16 @@ export function evaluateApp1SameSessionRepair(input: Readonly<{
     }
   }
   const contradictoryTargetPolarity = evidencePolarities.size > 1;
+  if (
+    input.repairDraft.diagnosticStatus === "no_clear_gap" &&
+    (!learnerSupportsTarget || !targetSpecificPositiveEvidence || contradictoryTargetPolarity)
+  ) {
+    return result(
+      "guided_path_needed",
+      "AI 검토에서는 명백한 보완점을 찾지 못했지만, 교정 대상의 근거 연결을 자동 확인하지 못했습니다. 미보완으로 단정하거나 성공 기록으로 저장하지 않습니다.",
+      observedGap,
+    );
+  }
   if (
     !learnerSupportsTarget ||
     !targetSpecificPositiveEvidence ||

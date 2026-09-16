@@ -20,3 +20,45 @@ test("ordinary non-Owner App1 never signs a non-finding or saves its learning si
   if(value!=="no_clear_gap"){const verify=await post("repair_verification",{answerText:a,analysisBinding:positive.analysisBinding,primaryGap:JSON.stringify(positive.primaryGap),persistenceOperationId:crypto.randomUUID(),persistenceWorkRevisionId:crypto.randomUUID()});assert.equal(verify.verificationReceipt,undefined);assert.equal(verify.verification,undefined);}
  }
 });
+
+
+import { readFileSync } from "node:fs";
+import { evaluateApp1SameSessionRepair } from "../lib/owner-study/app1-capture-repair-view-model.ts";
+const realRepair = JSON.parse(readFileSync(new URL("./fixtures/theory-real-repair-regression.json", import.meta.url), "utf8"));
+function checkRealRepair(repairText = realRepair.repairText, patch = {}) {
+  return evaluateApp1SameSessionRepair({ detail: realRepair.detail, requestedGap: realRepair.requestedGap,
+    repairText, repairDraft: { ...realRepair.actualRepairDraft, ...patch } });
+}
+test("real model no-clear-gap with an incomplete evidence quote reports a validator limit, not an invented omission", () => {
+  const result = checkRealRepair();
+  assert.equal(result.state, "guided_path_needed");
+  assert.match(result.reason, /자동 확인하지 못했습니다/u);
+  assert.equal(result.masteryCreated, false);
+});
+test("a controlled exact quote of the reconstructed negative conclusion can confirm only this session", () => {
+  const quote = realRepair.repairText.split(". ").at(-1);
+  const normalized = normalizeAnswerReviewStructureDraft({ ...realRepair.actualRepairDraft, answerEvidenceQuote: quote });
+  assert.equal(normalized.answerEvidenceQuote, quote);
+  assert.ok(quote.length > 120);
+  const result = checkRealRepair(undefined, normalized);
+  assert.equal(result.state, "repair_confirmed_for_this_session");
+  assert.equal(result.sameSessionOnly, true);
+  assert.equal(result.masteryCreated, false);
+  assert.equal(result.transferCreated, false);
+});
+test("no-clear-gap cannot bless fabricated quotes, unsupported text or missing reviewed scope", () => {
+  for (const patch of [
+    { answerEvidenceQuote: realRepair.repairText + " 존재하지 않는 문장" },
+    { answerEvidenceQuote: realRepair.repairText, reviewedAnswerScope: undefined },
+  ]) assert.notEqual(checkRealRepair(undefined, patch).state, "repair_confirmed_for_this_session");
+  assert.notEqual(checkRealRepair(realRepair.detail.item.userAnswer, { answerEvidenceQuote: realRepair.repairText }).state, "repair_confirmed_for_this_session");
+});
+test("modal promises, an inability to repair, and contradictory outcomes stay unconfirmed", () => {
+  const target = realRepair.repairText.split(". ").at(-1);
+  for (const repairText of [
+    target + " 사례 사실과 기준의 연결은 아직 보강할 수 없다.",
+    target.replace("채택할 수 없다는", "채택할 수 없다면 가능한"),
+    target.replace("도출된다", "도출될 수 있다"),
+    target + " " + target.replace("충족하지 않으므로", "충족하므로").replace("채택할 수 없다는", "채택된다는"),
+  ]) assert.notEqual(checkRealRepair(repairText, { answerEvidenceQuote: repairText }).state, "repair_confirmed_for_this_session", repairText);
+});

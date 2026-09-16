@@ -3,6 +3,8 @@
 
 ## 2026-09-16 actual Theory app validation
 
+Actual isolated Gemini run: weak answer → finding; improved answer → no clear gap; paraphrase → inconsistent omission; corrected answer → no clear gap but lexical confirmation rejected it. Four of six development calls are permanently reserved. Fix evidence quoting, definite negative conclusions, and honest validator-limit handling before the remaining two calls. Policy V2 keeps source/revision seals, closed target evidence, conflict checks and no-mastery boundaries. Actual-model completion remains pending; controlled-response regressions are not paid-model acceptance.
+
 Reuse merged #945 / 224a35c8 and the same PC writer. Apply the post909 A/B/C
 root-cause continuation exception; keep native checks, exact-head independent
 review and protected squash. Preserve the live personal draft and binding.

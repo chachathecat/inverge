@@ -14,7 +14,7 @@ export const APP1_ANALYSIS_RECEIPT_VERSION =
 export const APP1_VERIFICATION_RECEIPT_VERSION =
   "App1RepairVerificationReceiptV1" as const;
 export const APP1_VERIFICATION_POLICY_VERSION =
-  "App1SameSessionRepairPolicyV1" as const;
+  "App1SameSessionRepairPolicyV2" as const;
 export const APP1_REPLAY_PLAN_SEAL_VERSION =
   "App1PostInsertReplayPlanSealV1" as const;
 export const APP1_ANALYSIS_BINDING_TTL_MS = 15 * 60 * 1_000;

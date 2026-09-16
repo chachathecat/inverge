@@ -126,7 +126,7 @@ export function normalizeAnswerReviewStructureDraft(input: unknown): AnswerRevie
     coreConcepts: normalizeArray(source.coreConcepts),
     requiredIssues: normalizeStringField("requiredIssues", source.requiredIssues),
     userAnswerSummary: normalizeStringField("userAnswerSummary", source.userAnswerSummary),
-    ...(typeof source.answerEvidenceQuote === "string" && source.answerEvidenceQuote.trim().length >= 4 && source.answerEvidenceQuote.trim().length <= 120
+    ...(typeof source.answerEvidenceQuote === "string" && source.answerEvidenceQuote.trim().length >= 4 && source.answerEvidenceQuote.trim().length <= 600
       ? { answerEvidenceQuote: source.answerEvidenceQuote.trim() } : {}),
     userAnswerStructure: normalizeStringField("userAnswerStructure", source.userAnswerStructure),
     referenceStructure: normalizeStringField("referenceStructure", source.referenceStructure),

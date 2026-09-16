@@ -207,9 +207,11 @@ export async function POST(request: Request) {
     // This exact approved Owner-PC request uses the permanent one-case budget,
     // not the commercial daily quota. No global admin override or tier mutation.
     if (session.userId && !ownerTheoryAuthority) await assertCanRunAnswerReview(session.userId);
-    const initialDraft = await structureAnswerReviewWithGemini({ ownerTheoryAuthority, questionFiles, answerFiles, referenceFiles, questionText, answerText, referenceText, explanationLevel });
+    const repairTarget = requestPurpose === "repair_verification" && app1PrimaryGap
+      ? { gap: app1PrimaryGap.gap, repairAction: app1PrimaryGap.repairAction } : undefined;
+    const initialDraft = await structureAnswerReviewWithGemini({ ownerTheoryAuthority, repairTarget, questionFiles, answerFiles, referenceFiles, questionText, answerText, referenceText, explanationLevel });
     const referenceGrounding = ownerTheoryAuthority ? { references: [], displayLabel: "선택한 이론 입력만 검토", promptContext: "" } : buildAnswerReviewReferenceGrounding({ examMode: mode, subject, questionText, answerText, referenceText, normalizedDraft: normalizeAnswerReviewStructureDraft(initialDraft) });
-    const draft = referenceGrounding.references.length > 0 ? await structureAnswerReviewWithGemini({ ownerTheoryAuthority, questionFiles, answerFiles, referenceFiles, questionText, answerText, referenceText, referenceGroundingContext: referenceGrounding.promptContext, explanationLevel }) : initialDraft;
+    const draft = referenceGrounding.references.length > 0 ? await structureAnswerReviewWithGemini({ ownerTheoryAuthority, repairTarget, questionFiles, answerFiles, referenceFiles, questionText, answerText, referenceText, referenceGroundingContext: referenceGrounding.promptContext, explanationLevel }) : initialDraft;
     const normalizedDraft = normalizeAnswerReviewStructureDraft(draft);
     const normalized = app1Detail ? groundAnswerReviewDiagnosis(normalizedDraft, questionText, answerText) : normalizedDraft;
     const analysisAuthority =
