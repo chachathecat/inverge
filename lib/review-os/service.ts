@@ -1,3 +1,5 @@
+import { assertSupabaseOperation, getSupabasePersistenceClient, requireSupabasePersistence } from "@/lib/supabase/persistence";
+import { readCaptureReviewProvenance, isCaptureFunctionalTest, isUnanalyzedCaptureRecord } from "./capture-review-provenance";
 import "server-only";
 
 import crypto from "node:crypto";
@@ -64,7 +66,7 @@ import {
   isSameKstDay,
   isOverdueDueAt,
 } from "@/lib/review-os/daily-study-state";
-import { reviewOsRepository } from "@/lib/review-os/repository";
+import { normalizePostgrestTimestamp, reviewOsRepository } from "@/lib/review-os/repository";
 import {
   resolveApp1FirstRecurrenceD1Schedule,
   resolveReviewSchedule,
@@ -102,6 +104,62 @@ import type {
 } from "@/lib/review-os/types";
 import { buildS233aQueueTodayLinkage } from "@/lib/review-os/s233a-queue-today";
 import type { S233aReviewRuntimeDependencies } from "@/lib/review-os/s233a-types";
+
+// Paginated learner reads map the selected rows without issuing a point read per item.
+function mapLearningSourceItem(
+  row: Record<string, unknown>,
+): WrongAnswerItemRecord {
+  return {
+    id: String(row.id),
+    userId: String(row.user_id),
+    examName: String(row.exam_name),
+    subjectLabel: String(row.subject_label),
+    sourceType: String(row.source_type) as WrongAnswerItemRecord["sourceType"],
+    sourceLabel:
+      typeof row.source_label === "string" ? row.source_label : undefined,
+    problemTitle:
+      typeof row.problem_title === "string" ? row.problem_title : undefined,
+    problemIdentifier:
+      typeof row.problem_identifier === "string"
+        ? row.problem_identifier
+        : undefined,
+    rawQuestionText:
+      typeof row.raw_question_text === "string"
+        ? row.raw_question_text
+        : undefined,
+    rawAnswerText:
+      typeof row.raw_answer_text === "string" ? row.raw_answer_text : undefined,
+    correctAnswer: String(row.correct_answer),
+    userAnswer: String(row.user_answer),
+    userReasonText:
+      typeof row.user_reason_text === "string"
+        ? row.user_reason_text
+        : undefined,
+    userReasonPreset:
+      typeof row.user_reason_preset === "string"
+        ? row.user_reason_preset
+        : undefined,
+    confidence: String(row.confidence) as WrongAnswerItemRecord["confidence"],
+    timeSpentSeconds:
+      typeof row.time_spent_seconds === "number"
+        ? row.time_spent_seconds
+        : null,
+    dedupeKey: String(row.dedupe_key),
+    processingStatus: String(
+      row.processing_status,
+    ) as WrongAnswerItemRecord["processingStatus"],
+    rawPayload:
+      typeof row.raw_payload === "object" && row.raw_payload
+        ? (row.raw_payload as Record<string, unknown>)
+        : {},
+    derivedPayload:
+      typeof row.derived_payload === "object" && row.derived_payload
+        ? (row.derived_payload as Record<string, unknown>)
+        : {},
+    createdAt: normalizePostgrestTimestamp(row.created_at),
+    updatedAt: normalizePostgrestTimestamp(row.updated_at),
+  };
+}
 
 const globalCache = globalThis as typeof globalThis & {
   __reviewOsGenerationLocks?: Map<string, boolean>;
@@ -1632,6 +1690,11 @@ export class ReviewOsService {
     email: string | null,
     input: WrongAnswerItemInput,
   ) {
+    const provenanceFields = input.extractionPayload?.user_confirmed_fields;
+    if (provenanceFields && Object.hasOwn(provenanceFields, "capture_review_provenance") &&
+      !readCaptureReviewProvenance(input.extractionPayload)) {
+      throw new Error("review-os:invalid-capture-review-provenance");
+    }
     if (isClientAuthoredApp1Persistence(input)) {
       throw new App1ServerAuthorityError(
         "APP1_PERSISTENCE_COMMAND_INVALID",
@@ -1654,6 +1717,9 @@ export class ReviewOsService {
             sourceItemId: command.sourceItemId,
             expectedSubject: command.primaryGap.subject,
           });
+          if (isCaptureFunctionalTest(detail.item.rawPayload)) {
+            throw new App1ServerAuthorityError("APP1_PERSISTENCE_COMMAND_INVALID");
+          }
           try {
             return Object.freeze({
               input: authorizeApp1PersistenceCommand({
@@ -1798,6 +1864,18 @@ export class ReviewOsService {
       dedupeKey,
     );
     if (existing) {
+      const incomingProvenance = readCaptureReviewProvenance(normalizedInput.extractionPayload);
+      const existingProvenance = readCaptureReviewProvenance(existing.rawPayload);
+      if (incomingProvenance || existingProvenance) {
+        const sameSource = incomingProvenance && existingProvenance &&
+          incomingProvenance.version === existingProvenance.version &&
+          incomingProvenance.diagnosis === existingProvenance.diagnosis &&
+          incomingProvenance.referenceComparison === existingProvenance.referenceComparison &&
+          incomingProvenance.learningMaterial === existingProvenance.learningMaterial &&
+          (normalizedInput.issueRecall ?? "") === (existing.rawPayload.issue_recall ?? "") &&
+          (normalizedInput.outlineDraft ?? "") === (existing.rawPayload.outline_draft ?? "");
+        if (!sameSource) throw new Error("review-os:capture-source-provenance-conflict");
+      }
       if (replayAuthority) {
         const plan = parseApp1ReplayPlan(
           existing.rawPayload[APP1_REPLAY_SNAPSHOT_KEY],
@@ -1827,6 +1905,21 @@ export class ReviewOsService {
     locks.set(userId, true);
 
     try {
+      if (mode === "second" && (isUnanalyzedCaptureRecord(input.extractionPayload) || isCaptureFunctionalTest(input.extractionPayload))) {
+        // An explicit source-only save is not evidence of a weakness, recurrence or learning.
+        const sourceOnlyInput = { ...normalizedInput, userReasonText: undefined, userReasonPreset: undefined };
+        const item = await reviewOsRepository.insertWrongAnswerItem(userId, sourceOnlyInput, {
+          user_confirmed_fields: input.extractionPayload?.user_confirmed_fields,
+          raw_ocr_text: input.rawQuestionText ?? "", mode, subjectLabel: normalizedInput.subjectLabel,
+          issue_recall: input.issueRecall ?? null, outline_draft: input.outlineDraft ?? null,
+          production_before_comparison: input.productionBeforeComparison ?? false,
+          reference_answer_added_after_production: input.referenceAnswerAddedAfterProduction ?? false,
+          created_from_capture: true, capture_intent: "save", biggest_gap: null,
+          rewrite_completed: false,
+        }, { learningEvidenceExcluded: true, diagnosisStatus: "not_analyzed" });
+        if (!item) throw new Error("review-os-item-missing-after-insert");
+        return { item, deduped: false };
+      }
       const artifacts = await generateWrongAnswerArtifacts(normalizedInput);
       const recurrenceInput = {
         examName: normalizedInput.examName,
@@ -2666,27 +2759,36 @@ export class ReviewOsService {
     }
   }
 
-  listWrongAnswerItems(userId: string, email: string | null, limit = 20) {
-    return this.ensureAccess(userId, email).then((access) =>
-      reviewOsRepository
-        .listWrongAnswerItems(userId, Math.max(limit + 20, limit))
-        .then((items) => {
-          const historyDays = getEntitlementLimit(
-            access.entitlementTier,
-          ).historyDays;
-          const cutoffMs = historyDays
-            ? Date.now() - historyDays * 86_400_000
-            : null;
-          return items
-            .filter((item) => !isSmokeSeedItem(item))
-            .filter((item) => {
-              if (!cutoffMs) return true;
-              const ts = Date.parse(item.createdAt);
-              return Number.isFinite(ts) && ts >= cutoffMs;
-            })
-            .slice(0, limit);
-        }),
-    );
+  private async listLearningSourceItems(userId: string, limit: number, examName?: string | null, cutoffMs?: number | null) {
+    requireSupabasePersistence(userId);
+    const client = getSupabasePersistenceClient();
+    if (!client) throw new Error("supabase-persistence-unavailable");
+    const wanted = Number.isFinite(limit) ? Math.max(0, Math.floor(limit)) : 20;
+    const items: WrongAnswerItemRecord[] = [];
+    const pageSize = 100;
+    for (let offset = 0; items.length < wanted; offset += pageSize) {
+      let query = client.from("wrong_answer_items")
+        .select("*")
+        .eq("user_id", userId);
+      if (examName) query = query.eq("exam_name", examName);
+      if (cutoffMs) query = query.gte("created_at", new Date(cutoffMs).toISOString());
+      const result = await query.order("created_at", { ascending: false })
+        .order("id", { ascending: false }).range(offset, offset + pageSize - 1);
+      assertSupabaseOperation("review-os.listLearningSourceItems", result);
+      const rows = (result.data ?? []) as Record<string, unknown>[];
+      const page = rows.map(mapLearningSourceItem).filter(item =>
+        !isCaptureFunctionalTest(item.rawPayload) && !isSmokeSeedItem(item));
+      items.push(...page.slice(0, wanted - items.length));
+      if (rows.length < pageSize) break;
+    }
+    return items;
+  }
+
+  async listWrongAnswerItems(userId: string, email: string | null, limit = 20, mode?: AppraisalMode) {
+    const access = await this.ensureAccess(userId, email);
+    const historyDays = getEntitlementLimit(access.entitlementTier).historyDays;
+    const cutoffMs = historyDays ? Date.now() - historyDays * 86_400_000 : null;
+    return this.listLearningSourceItems(userId, limit, mode ? getModeLabel(mode) : null, cutoffMs);
   }
 
   getWrongAnswerDetail(
@@ -2865,12 +2967,12 @@ export class ReviewOsService {
     await this.ensureAccess(userId, email);
     const [profile, rawItems, rawQueue, firstSignals] = await Promise.all([
       reviewOsRepository.getStudyProfile(userId),
-      reviewOsRepository.listWrongAnswerItems(userId, 120),
+      this.listLearningSourceItems(userId, 120, getModeLabel("first")),
       reviewOsRepository.listReviewQueue(userId, 80),
       reviewOsRepository.listLearningSignalEvents(userId, "first", 80),
     ]);
     const firstItems = rawItems.filter(
-      (item) => item.examName === "감정평가사 1차" && !isSmokeSeedItem(item),
+      (item) => item.examName === "감정평가사 1차" && !isSmokeSeedItem(item) && !isCaptureFunctionalTest(item.rawPayload),
     );
     const firstQueue = rawQueue.filter(
       (item) =>
@@ -2921,7 +3023,7 @@ export class ReviewOsService {
     await this.ensureAccess(userId, email);
     const [rawQueue, rawRecentItems] = await Promise.all([
       reviewOsRepository.listReviewQueue(userId, 30),
-      reviewOsRepository.listWrongAnswerItems(userId, 8),
+      this.listLearningSourceItems(userId, 8, preferredMode ? getModeLabel(preferredMode) : null),
     ]);
     const targetExamName = preferredMode ? getModeLabel(preferredMode) : null;
     const queue = targetExamName
@@ -2932,7 +3034,7 @@ export class ReviewOsService {
       : rawRecentItems;
     const visibleQueue = queue.filter((item) => !isSmokeSeedQueueItem(item));
     const visibleRecentItems = recentItems.filter(
-      (item) => !isSmokeSeedItem(item),
+      (item) => !isSmokeSeedItem(item) && !isCaptureFunctionalTest(item.rawPayload),
     );
     const focus = makeTodayFocus(
       visibleQueue,
@@ -2983,11 +3085,11 @@ export class ReviewOsService {
     const targetExamName = getModeLabel(preferredMode);
     const [rawQueue, rawItems] = await Promise.all([
       reviewOsRepository.listReviewQueue(userId, 30),
-      reviewOsRepository.listWrongAnswerItems(userId, 60),
+      this.listLearningSourceItems(userId, 60, targetExamName),
     ]);
     const queue = rawQueue.filter((item) => item.examName === targetExamName);
     const recentItems = rawItems.filter(
-      (item) => item.examName === targetExamName,
+      (item) => item.examName === targetExamName && !isCaptureFunctionalTest(item.rawPayload),
     );
     const plan = buildWeeklyPlan(queue, recentItems, preferredMode);
     await reviewOsRepository.insertActionSeed(userId, {
@@ -3052,8 +3154,8 @@ export class ReviewOsService {
     }
 
     const items = (
-      await reviewOsRepository.listWrongAnswerItems(userId, 70)
-    ).filter((item) => !isSmokeSeedItem(item));
+      await this.listLearningSourceItems(userId, 70)
+    ).filter((item) => !isSmokeSeedItem(item) && !isCaptureFunctionalTest(item.rawPayload));
     const recentWeekItems = items.filter(
       (item) => Date.now() - Date.parse(item.createdAt) <= 7 * 86_400_000,
     );
@@ -3241,7 +3343,7 @@ export class ReviewOsService {
     const modeLabel = getModeLabel(mode);
 
     const [items, queue, recentUsageEvents] = await Promise.all([
-      reviewOsRepository.listWrongAnswerItems(userId, 40),
+      this.listLearningSourceItems(userId, 40, modeLabel),
       reviewOsRepository.listReviewQueue(userId, 40),
       reviewOsRepository.listRecentUsageEventsByNames(
         userId,
@@ -3257,7 +3359,7 @@ export class ReviewOsService {
       ),
     ]);
 
-    const modeItems = items.filter((item) => item.examName === modeLabel);
+    const modeItems = items.filter((item) => item.examName === modeLabel && !isCaptureFunctionalTest(item.rawPayload));
     const modeQueue = queue.filter((item) => item.examName === modeLabel);
     const savedCaptureToday =
       modeItems.some((item) => isSameKstDay(item.createdAt, now)) ||
@@ -3337,7 +3439,7 @@ export class ReviewOsService {
   ) {
     await this.ensureAccess(userId, email);
     const [items, queue, learningSignals, recentStudyLog] = await Promise.all([
-      this.listWrongAnswerItems(userId, email, 1).catch(() => []),
+      this.listWrongAnswerItems(userId, email, 1, mode).catch(() => []),
       this.getReviewQueue(userId, email).catch(() => []),
       this.listLearningSignalEvents(userId, email, mode, 1).catch(() => []),
       this.getRecentStudyLog(userId, email, mode).catch(() => null),

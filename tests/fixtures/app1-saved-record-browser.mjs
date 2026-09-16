@@ -14,7 +14,7 @@ export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, ca
   const repairText = "임대료 미납 사실을 계약 해지 논거의 요건에 연결하여 계약 종료 결론을 도출했습니다.";
   const draft = {
     questionSummary: "합성 문제 구조", coreConcepts: ["정의", "논거", "적용"], requiredIssues: "정의, 논거, 적용",
-    userAnswerSummary: "논거에서 적용 연결이 약함", userAnswerStructure: "정의 → 논거", referenceStructure: "정의 → 논거 → 적용 → 결론",
+    answerEvidenceQuote: "임대료 미납 사실과 계약 해지 논거를 제시했다.", userAnswerSummary: "논거에서 적용 연결이 약함", userAnswerStructure: "정의 → 논거", referenceStructure: "정의 → 논거 → 적용 → 결론",
     strengths: ["정의와 핵심 논거가 확인됩니다."], missingIssueCandidates: ["사례 사실과 논거의 연결이 약합니다."],
     weakParagraphPoint: "사례 사실을 논거에 연결하는 한 문장을 직접 적으세요.", weakLogicPoint: "논거에서 사례로 이어지는 연결이 필요합니다.",
     rewriteTarget: "적용 연결 문장", rewriteDraftSuggestion: "직접 작성해야 합니다.", nextAction: "사실과 논거를 직접 연결하세요.",
@@ -120,6 +120,13 @@ export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, ca
         await page.locator(`[data-s232e-second-write-primary-action="${step}"]`).click();
       }
       await page.locator('[data-s232e-second-write-secondary-action="defer-reference"]').click();
+      if (ownerTheory) {
+        await page.locator("[data-owner-analysis-preparation]").waitFor();
+        assert.equal(await page.locator("[data-owner-reference-status]").getAttribute("data-owner-reference-status"),"deferred");
+        assert.equal(modelCalls,0);
+        assert.equal(writes.filter(p=>p==="/api/os/items").length,0);
+        await page.locator("[data-owner-prepare-analysis]").click();
+      } else {
       await page.locator('[data-s232e-second-write-panel="5"] textarea').fill("사례 사실과 논거의 적용 연결이 부족합니다.");
       await page.locator('[data-s232e-second-write-primary-action="5"]').click();
       await page.getByTestId("second-write-final-textarea").fill("임대료 미납 사실과 계약 해지 논거를 제시했다. 적용 연결이 부족했다.");
@@ -127,6 +134,7 @@ export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, ca
       await page.getByRole("combobox",{name:"2차 과목",exact:true}).selectOption("감정평가이론");
       assert.equal(writes.filter(p=>p==="/api/os/items").length,0,"final confirmation must not implicitly submit");
       await page.getByRole("button",{name:/^저장하고 .*에 반영$/}).click();
+      }
       await page.waitForURL("**/app/capture/repair?itemId=*");
       sourceId=new URL(page.url()).searchParams.get("itemId");
       assert.ok(sourceId);assert.notEqual(sourceId,SOURCE_ID);

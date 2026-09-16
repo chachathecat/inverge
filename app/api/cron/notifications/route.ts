@@ -1,3 +1,4 @@
+import { isCaptureFunctionalTest } from "@/lib/review-os/capture-review-provenance";
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -34,6 +35,19 @@ function cronAuthorized(request: Request) {
   return Boolean(secret && bearerToken(request) === secret);
 }
 
+async function findNotificationLearningItems(client: SupabaseClient, userId: string) {
+  const pageSize = 100;
+  for (let offset = 0; ; offset += pageSize) {
+    const result = await client.from("wrong_answer_items").select("id, raw_payload")
+      .eq("user_id", userId).order("created_at", { ascending: false })
+      .order("id", { ascending: false }).range(offset, offset + pageSize - 1);
+    if (result.error) return result;
+    const rows = (result.data ?? []) as Array<{ id: string; raw_payload?: unknown }>;
+    const eligible = rows.filter(item => !isCaptureFunctionalTest(item.raw_payload));
+    if (eligible.length > 0 || rows.length < pageSize) return { data: eligible, error: null };
+  }
+}
+
 async function buildPlanForUser(client: SupabaseClient, userId: string, notificationId: string) {
   const [queueResult, signalResult, itemResult] = await Promise.all([
     client
@@ -50,11 +64,7 @@ async function buildPlanForUser(client: SupabaseClient, userId: string, notifica
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(20),
-    client
-      .from("wrong_answer_items")
-      .select("id")
-      .eq("user_id", userId)
-      .limit(1),
+    findNotificationLearningItems(client, userId),
   ]);
   if (queueResult.error || signalResult.error || itemResult.error) return null;
 
@@ -78,7 +88,7 @@ async function buildPlanForUser(client: SupabaseClient, userId: string, notifica
     userId,
     reviewQueueItems,
     calculatorSignals,
-    hasTodayPlanSignal: reviewQueueItems.length > 0 || calculatorSignals.length > 0 || ((itemResult.data ?? []) as unknown[]).length > 0,
+    hasTodayPlanSignal: reviewQueueItems.length > 0 || calculatorSignals.length > 0 || ((itemResult.data ?? []) as Array<{ raw_payload?: unknown }>).some(item => !isCaptureFunctionalTest(item.raw_payload)),
     notificationId,
   });
 }

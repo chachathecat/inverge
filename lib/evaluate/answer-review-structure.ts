@@ -5,6 +5,7 @@ export type AnswerReviewStructureDraft = {
   coreConcepts: string[];
   requiredIssues: string;
   userAnswerSummary: string;
+  answerEvidenceQuote?: string;
   userAnswerStructure: string;
   referenceStructure: string;
   strengths: string[];
@@ -31,6 +32,7 @@ const STRING_FALLBACKS: Record<keyof AnswerReviewStructureDraft, string> = {
   coreConcepts: "",
   requiredIssues: "기준답안과 문제 요구를 더 입력하면 보강할 간극이 선명해집니다.",
   userAnswerSummary: "내 답안의 핵심을 한 줄로 정리해 주세요.",
+  answerEvidenceQuote: "",
   userAnswerStructure: "문단별 주장과 근거를 정리하면 구조 분석이 선명해집니다.",
   referenceStructure: "기준답안의 목차를 입력하면 비교가 정확해집니다.",
   strengths: "",
@@ -117,6 +119,8 @@ export function normalizeAnswerReviewStructureDraft(input: unknown): AnswerRevie
     coreConcepts: normalizeArray(source.coreConcepts),
     requiredIssues: normalizeStringField("requiredIssues", source.requiredIssues),
     userAnswerSummary: normalizeStringField("userAnswerSummary", source.userAnswerSummary),
+    ...(typeof source.answerEvidenceQuote === "string" && source.answerEvidenceQuote.trim().length >= 4 && source.answerEvidenceQuote.trim().length <= 120
+      ? { answerEvidenceQuote: source.answerEvidenceQuote.trim() } : {}),
     userAnswerStructure: normalizeStringField("userAnswerStructure", source.userAnswerStructure),
     referenceStructure: normalizeStringField("referenceStructure", source.referenceStructure),
     strengths: normalizeArray(source.strengths),

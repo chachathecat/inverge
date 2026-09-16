@@ -1,3 +1,4 @@
+import { isUnanalyzedCaptureRecord, isCaptureFunctionalTest } from "./capture-review-provenance";
 import { getAppraisalMode, parseAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildSecondAnswerRewriteSignal } from "@/lib/review-os/second-answer-rewrite";
 import { getSecondSubjectTemplate } from "@/lib/review-os/types";
@@ -71,6 +72,13 @@ export function buildNotebookPreview(item: WrongAnswerItemRecord, tag?: WrongAns
   const mode = parseAppraisalMode(typeof item.rawPayload?.mode === "string" ? item.rawPayload.mode : null) ?? getAppraisalMode(item.examName);
   const isSecond = mode === "second";
   const title = item.problemTitle ?? item.problemIdentifier ?? (isSecond ? "2차 교정노트" : "1차 오답노트");
+  if (isUnanalyzedCaptureRecord(item.rawPayload)) return {
+    mode, title, weakPoint: "AI 분석 전 · 진단 없음", keyTerms: [item.subjectLabel],
+    coreLine: "입력만 보관됐습니다. 답안의 강점·약점을 아직 분석하지 않았습니다.",
+    nextAction: "보관된 입력을 확인하고 AI 분석 여부를 직접 선택하세요.",
+    nextReviewDate: "복습 미생성", noteLabel: isCaptureFunctionalTest(item.rawPayload) ? "AI 예시 기능시험" : "분석 전 입력",
+    summaryLine: "입력 보관 · 비교·검증·학습성과 미생성", notebookLine: "개인 감점 진단이나 검증된 학습신호가 아닙니다.",
+  };
   const weakPoint = compact(
     getDraftString(item.rawPayload, isSecond ? "missingIssue" : "comparisonPoint") ??
       item.userReasonText ??
@@ -123,14 +131,15 @@ export function buildDetailStudyNote(detail: WrongAnswerDetail) {
   const primaryTag = detail.tags[0] ?? null;
   const preview = buildNotebookPreview(detail.item, primaryTag);
   const isSecond = preview.mode === "second";
+  const pendingAnalysis = isUnanalyzedCaptureRecord(detail.item.rawPayload);
   const summary = compact(
-    detail.note?.aiSummary ??
+    (pendingAnalysis ? preview.summaryLine : detail.note?.aiSummary) ??
       (isSecond
         ? "답안 비교 결과를 누락 논점, 구조, rewrite 지시로 정리했습니다."
         : "오답 원인을 핵심 키워드, 공식, 다음 복습 행동으로 정리했습니다.")
   );
   const noteCard = compact(
-    isSecond
+    pendingAnalysis ? preview.coreLine : isSecond
       ? (detail.note?.nextTryTip ?? `교정노트: ${preview.weakPoint}을 먼저 보강하고, 핵심 문장을 다시 씁니다.`)
       : (detail.note?.reviewCheckpoint ?? `오답노트: 정답 근거와 내가 고른 답의 차이를 5줄로 남깁니다.`)
   );
@@ -138,7 +147,7 @@ export function buildDetailStudyNote(detail: WrongAnswerDetail) {
   const weakStructurePoint = getDraftString(detail.item.rawPayload, "weakStructurePoint");
   const weakApplicationSentence = getDraftString(detail.item.rawPayload, "weakApplicationSentence");
   const comparisonPoint = getDraftString(detail.item.rawPayload, "comparisonPoint");
-  const rewriteSignal = isSecond
+  const rewriteSignal = isSecond && !pendingAnalysis
     ? buildSecondAnswerRewriteSignal({
         caseSummary: getDraftString(detail.item.rawPayload, "caseSummary") ?? undefined,
         myAnswerSummary: getDraftString(detail.item.rawPayload, "myAnswerSummary") ?? undefined,
@@ -169,7 +178,7 @@ export function buildDetailStudyNote(detail: WrongAnswerDetail) {
     comparisonPoint,
     noteCard,
     nextReviewDate: preview.nextReviewDate,
-    recurrenceText:
+    recurrenceText: pendingAnalysis ? "학습·반복 신호 미생성" :
       detail.recurrence && detail.recurrence.recurrenceCount > 1
         ? `${detail.recurrence.recurrenceCount}회 반복된 신호입니다.`
         : "첫 기록입니다. 다음 복습에서 반복 여부를 확인합니다.",
