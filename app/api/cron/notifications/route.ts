@@ -1,3 +1,4 @@
+import { isCaptureFunctionalTest } from "@/lib/review-os/capture-review-provenance";
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -52,9 +53,9 @@ async function buildPlanForUser(client: SupabaseClient, userId: string, notifica
       .limit(20),
     client
       .from("wrong_answer_items")
-      .select("id")
+      .select("id, raw_payload")
       .eq("user_id", userId)
-      .limit(1),
+      .limit(21),
   ]);
   if (queueResult.error || signalResult.error || itemResult.error) return null;
 
@@ -78,7 +79,7 @@ async function buildPlanForUser(client: SupabaseClient, userId: string, notifica
     userId,
     reviewQueueItems,
     calculatorSignals,
-    hasTodayPlanSignal: reviewQueueItems.length > 0 || calculatorSignals.length > 0 || ((itemResult.data ?? []) as unknown[]).length > 0,
+    hasTodayPlanSignal: reviewQueueItems.length > 0 || calculatorSignals.length > 0 || ((itemResult.data ?? []) as Array<{ raw_payload?: unknown }>).some(item => !isCaptureFunctionalTest(item.raw_payload)),
     notificationId,
   });
 }

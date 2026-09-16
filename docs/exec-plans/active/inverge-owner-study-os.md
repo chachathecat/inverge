@@ -2,6 +2,14 @@
 
 ## Owner Theory diagnostic provenance after merged #942
 
+PR #944 was closed unmerged after its two source corrections. Its second
+review found that ordinary item readers could still count functional-test
+source rows as activity or meaningful learning. A bounded replacement starts
+from refreshed main, preserving that branch and the live PC draft. Exclude
+functional-test rows from learner lists, daily activity, Today, weekly plans
+and summaries while keeping the exact source addressable for explicit analysis.
+A real-service regression includes ordinary learner-input positive controls.
+
 Continue the existing PC writer and Goal from merged #942 (`3e20f3ca`).
 The Owner reported `/app/write?mode=second` showing a template as a personal
 weakness and deferred reference comparison as completed. Preserve the live

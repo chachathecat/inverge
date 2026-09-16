@@ -2714,7 +2714,7 @@ export class ReviewOsService {
             ? Date.now() - historyDays * 86_400_000
             : null;
           return items
-            .filter((item) => !isSmokeSeedItem(item))
+            .filter((item) => !isSmokeSeedItem(item) && !isCaptureFunctionalTest(item.rawPayload))
             .filter((item) => {
               if (!cutoffMs) return true;
               const ts = Date.parse(item.createdAt);
@@ -2906,7 +2906,7 @@ export class ReviewOsService {
       reviewOsRepository.listLearningSignalEvents(userId, "first", 80),
     ]);
     const firstItems = rawItems.filter(
-      (item) => item.examName === "감정평가사 1차" && !isSmokeSeedItem(item),
+      (item) => item.examName === "감정평가사 1차" && !isSmokeSeedItem(item) && !isCaptureFunctionalTest(item.rawPayload),
     );
     const firstQueue = rawQueue.filter(
       (item) =>
@@ -2968,7 +2968,7 @@ export class ReviewOsService {
       : rawRecentItems;
     const visibleQueue = queue.filter((item) => !isSmokeSeedQueueItem(item));
     const visibleRecentItems = recentItems.filter(
-      (item) => !isSmokeSeedItem(item),
+      (item) => !isSmokeSeedItem(item) && !isCaptureFunctionalTest(item.rawPayload),
     );
     const focus = makeTodayFocus(
       visibleQueue,
@@ -3023,7 +3023,7 @@ export class ReviewOsService {
     ]);
     const queue = rawQueue.filter((item) => item.examName === targetExamName);
     const recentItems = rawItems.filter(
-      (item) => item.examName === targetExamName,
+      (item) => item.examName === targetExamName && !isCaptureFunctionalTest(item.rawPayload),
     );
     const plan = buildWeeklyPlan(queue, recentItems, preferredMode);
     await reviewOsRepository.insertActionSeed(userId, {
@@ -3089,7 +3089,7 @@ export class ReviewOsService {
 
     const items = (
       await reviewOsRepository.listWrongAnswerItems(userId, 70)
-    ).filter((item) => !isSmokeSeedItem(item));
+    ).filter((item) => !isSmokeSeedItem(item) && !isCaptureFunctionalTest(item.rawPayload));
     const recentWeekItems = items.filter(
       (item) => Date.now() - Date.parse(item.createdAt) <= 7 * 86_400_000,
     );
@@ -3293,7 +3293,7 @@ export class ReviewOsService {
       ),
     ]);
 
-    const modeItems = items.filter((item) => item.examName === modeLabel);
+    const modeItems = items.filter((item) => item.examName === modeLabel && !isCaptureFunctionalTest(item.rawPayload));
     const modeQueue = queue.filter((item) => item.examName === modeLabel);
     const savedCaptureToday =
       modeItems.some((item) => isSameKstDay(item.createdAt, now)) ||

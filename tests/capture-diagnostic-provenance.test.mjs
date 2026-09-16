@@ -151,3 +151,28 @@ test("real initial-analysis API excludes functional tests from learning signals 
     assert.equal(store.tables.review_queue_items.length,0);
   }
 });
+
+
+test("functional-test source stays addressable but never enters activity, meaningful-data, Today or weekly readers",async()=>{
+  const store=memoryTransport();store.tables.wrong_answer_items=[];store.tables.study_logs=[];store.tables.study_profiles=[];store.tables.action_seeds=[];store.tables.weekly_learning_summaries=[];
+  const app=productionHarness(store.execute);const service=app.load("lib/review-os/service").reviewOsService;
+  const args=[OWNER_ID,app.session.email,"second"];
+  const beforeToday=await service.getTodayFocus(...args),beforeWeek=await service.getWeeklyPlan(...args);
+  const input={examName:"감정평가사 2차",subjectLabel:"감정평가이론",sourceType:"text",rawQuestionText:draft.rawQuestionText,userAnswer:draft.userAnswer,correctAnswer:"-",extractionPayload:{user_confirmed_fields:{capture_review_provenance:provenance}}};
+  const saved=await service.createWrongAnswerItem(OWNER_ID,app.session.email,input);
+  assert.ok(await service.getWrongAnswerDetail(OWNER_ID,app.session.email,saved.item.id),"explicit analysis can still read the preserved source");
+  assert.deepEqual(await service.listWrongAnswerItems(OWNER_ID,app.session.email),[]);
+  assert.equal(await service.hasMeaningfulLearningData(...args),false);
+  const activity=await service.getDailyStudyActivity(...args);
+  for(const field of ["savedCaptureToday","studiedToday","savedToday","completedToday"])assert.equal(activity[field],false,field);
+  assert.equal(activity.currentGentleStreak,0);
+  assert.deepEqual(await service.getTodayFocus(...args),beforeToday);
+  assert.deepEqual(await service.getWeeklyPlan(...args),beforeWeek);
+  assert.equal(await service.getWeeklySummary(OWNER_ID,app.session.email),null);
+  assert.equal(store.tables.learning_signal_events.length,0);assert.equal(store.tables.review_queue_items.length,0);
+  const ordinary=structuredClone(input);ordinary.rawQuestionText+=" 일반 학습자 기록 대조군";ordinary.extractionPayload.user_confirmed_fields.capture_review_provenance.learningMaterial="learner_input";
+  await service.createWrongAnswerItem(OWNER_ID,app.session.email,ordinary);
+  assert.equal((await service.listWrongAnswerItems(OWNER_ID,app.session.email)).length,1);
+  assert.equal(await service.hasMeaningfulLearningData(...args),true);
+  assert.equal((await service.getDailyStudyActivity(...args)).savedCaptureToday,true);
+});
