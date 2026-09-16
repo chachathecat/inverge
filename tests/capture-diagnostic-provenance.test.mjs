@@ -188,6 +188,11 @@ test("learning readers page beyond many excluded records without hiding older re
   const store=memoryTransport(seed),app=productionHarness(store.execute);const service=app.load("lib/review-os/service").reviewOsService;
   const list=await service.listWrongAnswerItems(OWNER_ID,app.session.email,20);
   assert.equal(list.length,20);assert.ok(list.every(item=>!item.rawPayload.user_confirmed_fields?.capture_review_provenance));
+  const listQueries=app.calls.filter(q=>q.table==="wrong_answer_items");
+  assert.equal(listQueries.length,3,"one query per page, no per-item hydration queries");
+  assert.deepEqual(listQueries.map(q=>q.range),[[0,99],[100,199],[200,299]]);
+  const repository=app.load("lib/review-os/repository").reviewOsRepository;
+  for(const item of [list[0],list.at(-1)])assert.deepEqual(item,await repository.getWrongAnswerItem(OWNER_ID,item.id),"page mapping preserves the established item shape");
   assert.equal(await service.hasMeaningfulLearningData(OWNER_ID,app.session.email,"second"),true);
   assert.equal((await service.getDailyStudyActivity(OWNER_ID,app.session.email,"second")).savedCaptureToday,true);
   assert.ok(app.calls.some(q=>q.table==="wrong_answer_items"&&q.range?.[0]>=200));

@@ -1,3 +1,4 @@
+<!-- 2026-09-16 PR #945 second source correction: exact-head review identified per-item reads in paginated learner lists and an APP1 repair-skip source contract regression. Map selected page rows locally with established timestamp normalization; regression proves three queries for 230 rows and mapper parity. Preserve repair-verification skip precedence while keeping functional-test signal exclusion. Personal runtime/data/provider remain untouched pending final checks/review. -->
 # Inverge Owner Study OS
 
 ## Owner Theory diagnostic provenance after merged #942

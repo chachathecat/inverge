@@ -66,7 +66,7 @@ import {
   isSameKstDay,
   isOverdueDueAt,
 } from "@/lib/review-os/daily-study-state";
-import { reviewOsRepository } from "@/lib/review-os/repository";
+import { normalizePostgrestTimestamp, reviewOsRepository } from "@/lib/review-os/repository";
 import {
   resolveApp1FirstRecurrenceD1Schedule,
   resolveReviewSchedule,
@@ -104,6 +104,62 @@ import type {
 } from "@/lib/review-os/types";
 import { buildS233aQueueTodayLinkage } from "@/lib/review-os/s233a-queue-today";
 import type { S233aReviewRuntimeDependencies } from "@/lib/review-os/s233a-types";
+
+// Paginated learner reads map the selected rows without issuing a point read per item.
+function mapLearningSourceItem(
+  row: Record<string, unknown>,
+): WrongAnswerItemRecord {
+  return {
+    id: String(row.id),
+    userId: String(row.user_id),
+    examName: String(row.exam_name),
+    subjectLabel: String(row.subject_label),
+    sourceType: String(row.source_type) as WrongAnswerItemRecord["sourceType"],
+    sourceLabel:
+      typeof row.source_label === "string" ? row.source_label : undefined,
+    problemTitle:
+      typeof row.problem_title === "string" ? row.problem_title : undefined,
+    problemIdentifier:
+      typeof row.problem_identifier === "string"
+        ? row.problem_identifier
+        : undefined,
+    rawQuestionText:
+      typeof row.raw_question_text === "string"
+        ? row.raw_question_text
+        : undefined,
+    rawAnswerText:
+      typeof row.raw_answer_text === "string" ? row.raw_answer_text : undefined,
+    correctAnswer: String(row.correct_answer),
+    userAnswer: String(row.user_answer),
+    userReasonText:
+      typeof row.user_reason_text === "string"
+        ? row.user_reason_text
+        : undefined,
+    userReasonPreset:
+      typeof row.user_reason_preset === "string"
+        ? row.user_reason_preset
+        : undefined,
+    confidence: String(row.confidence) as WrongAnswerItemRecord["confidence"],
+    timeSpentSeconds:
+      typeof row.time_spent_seconds === "number"
+        ? row.time_spent_seconds
+        : null,
+    dedupeKey: String(row.dedupe_key),
+    processingStatus: String(
+      row.processing_status,
+    ) as WrongAnswerItemRecord["processingStatus"],
+    rawPayload:
+      typeof row.raw_payload === "object" && row.raw_payload
+        ? (row.raw_payload as Record<string, unknown>)
+        : {},
+    derivedPayload:
+      typeof row.derived_payload === "object" && row.derived_payload
+        ? (row.derived_payload as Record<string, unknown>)
+        : {},
+    createdAt: normalizePostgrestTimestamp(row.created_at),
+    updatedAt: normalizePostgrestTimestamp(row.updated_at),
+  };
+}
 
 const globalCache = globalThis as typeof globalThis & {
   __reviewOsGenerationLocks?: Map<string, boolean>;
@@ -2712,7 +2768,7 @@ export class ReviewOsService {
     const pageSize = 100;
     for (let offset = 0; items.length < wanted; offset += pageSize) {
       let query = client.from("wrong_answer_items")
-        .select("id, source_label, problem_title, raw_question_text, raw_answer_text, raw_payload")
+        .select("*")
         .eq("user_id", userId);
       if (examName) query = query.eq("exam_name", examName);
       if (cutoffMs) query = query.gte("created_at", new Date(cutoffMs).toISOString());
@@ -2720,16 +2776,9 @@ export class ReviewOsService {
         .order("id", { ascending: false }).range(offset, offset + pageSize - 1);
       assertSupabaseOperation("review-os.listLearningSourceItems", result);
       const rows = (result.data ?? []) as Record<string, unknown>[];
-      const ids = rows.filter(row => !isCaptureFunctionalTest(row.raw_payload) && !isSmokeSeedItem({
-        sourceLabel: typeof row.source_label === "string" ? row.source_label : undefined,
-        problemTitle: typeof row.problem_title === "string" ? row.problem_title : undefined,
-        rawQuestionText: typeof row.raw_question_text === "string" ? row.raw_question_text : undefined,
-        rawAnswerText: typeof row.raw_answer_text === "string" ? row.raw_answer_text : undefined,
-      })).slice(0, wanted - items.length).map(row => String(row.id));
-      // Keep the existing user-scoped item mapper and access boundary unchanged.
-      const page = await Promise.all(ids.map(id => reviewOsRepository.getWrongAnswerItem(userId, id)));
-      items.push(...page.filter((item): item is WrongAnswerItemRecord => Boolean(item) &&
-        !isCaptureFunctionalTest(item!.rawPayload) && !isSmokeSeedItem(item!)));
+      const page = rows.map(mapLearningSourceItem).filter(item =>
+        !isCaptureFunctionalTest(item.rawPayload) && !isSmokeSeedItem(item));
+      items.push(...page.slice(0, wanted - items.length));
       if (rows.length < pageSize) break;
     }
     return items;

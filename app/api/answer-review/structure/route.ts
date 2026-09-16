@@ -240,9 +240,8 @@ export async function POST(request: Request) {
           })
         : null;
     let learningSignalStatus: "saved" | "skipped" | "failed" = "skipped";
-    const learningSignalSkipReason = app1Detail && isCaptureFunctionalTest(app1Detail.item.rawPayload)
-      ? "functional_test"
-      : requestPurpose === "repair_verification" ? "repair_verification" : undefined;
+    const learningSignalSkipReason = requestPurpose === "repair_verification" ? "repair_verification"
+      : app1Detail && isCaptureFunctionalTest(app1Detail.item.rawPayload) ? "functional_test" : undefined;
     const skipReason = learningSignalSkipReason ?? shouldSkipLearningSignalSave(normalized);
     if (session.userId && session.email && requestPurpose !== "repair_verification" && !skipReason) {
       try { await reviewOsService.createLearningSignalEvent(session.userId, session.email, buildAnswerReviewLearningSignalInput({ examMode: mode, subjectInput: subject, answerSourceType: answerFiles.length > 0 ? "file" : "text", normalizedDraft: normalized })); learningSignalStatus = "saved"; }
