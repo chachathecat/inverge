@@ -15,9 +15,9 @@ export function readCaptureReviewProvenance(rawPayload: unknown): CaptureReviewP
   if (!value || typeof value !== "object") return null;
   const p = value as Record<string, unknown>;
   if (Object.keys(p).length !== 4 || p.version !== "capture_review_provenance.v1" ||
-    !["not_analyzed", "self_assessment", "previous_record"].includes(String(p.diagnosis)) ||
-    !["not_started", "deferred", "compared"].includes(String(p.referenceComparison)) ||
-    !["learner_input", "ai_example_functional_test"].includes(String(p.learningMaterial))) return null;
+    (typeof p.diagnosis !== "string" || !["not_analyzed", "self_assessment", "previous_record"].includes(p.diagnosis)) ||
+    (typeof p.referenceComparison !== "string" || !["not_started", "deferred", "compared"].includes(p.referenceComparison)) ||
+    (typeof p.learningMaterial !== "string" || !["learner_input", "ai_example_functional_test"].includes(p.learningMaterial))) return null;
   return p as CaptureReviewProvenance;
 }
 

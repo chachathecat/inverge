@@ -1,3 +1,4 @@
+import { assertSupabaseOperation, getSupabasePersistenceClient, requireSupabasePersistence } from "@/lib/supabase/persistence";
 import { readCaptureReviewProvenance, isCaptureFunctionalTest, isUnanalyzedCaptureRecord } from "./capture-review-provenance";
 import "server-only";
 
@@ -2702,27 +2703,43 @@ export class ReviewOsService {
     }
   }
 
-  listWrongAnswerItems(userId: string, email: string | null, limit = 20) {
-    return this.ensureAccess(userId, email).then((access) =>
-      reviewOsRepository
-        .listWrongAnswerItems(userId, Math.max(limit + 20, limit))
-        .then((items) => {
-          const historyDays = getEntitlementLimit(
-            access.entitlementTier,
-          ).historyDays;
-          const cutoffMs = historyDays
-            ? Date.now() - historyDays * 86_400_000
-            : null;
-          return items
-            .filter((item) => !isSmokeSeedItem(item) && !isCaptureFunctionalTest(item.rawPayload))
-            .filter((item) => {
-              if (!cutoffMs) return true;
-              const ts = Date.parse(item.createdAt);
-              return Number.isFinite(ts) && ts >= cutoffMs;
-            })
-            .slice(0, limit);
-        }),
-    );
+  private async listLearningSourceItems(userId: string, limit: number, examName?: string | null, cutoffMs?: number | null) {
+    requireSupabasePersistence(userId);
+    const client = getSupabasePersistenceClient();
+    if (!client) throw new Error("supabase-persistence-unavailable");
+    const wanted = Number.isFinite(limit) ? Math.max(0, Math.floor(limit)) : 20;
+    const items: WrongAnswerItemRecord[] = [];
+    const pageSize = 100;
+    for (let offset = 0; items.length < wanted; offset += pageSize) {
+      let query = client.from("wrong_answer_items")
+        .select("id, source_label, problem_title, raw_question_text, raw_answer_text, raw_payload")
+        .eq("user_id", userId);
+      if (examName) query = query.eq("exam_name", examName);
+      if (cutoffMs) query = query.gte("created_at", new Date(cutoffMs).toISOString());
+      const result = await query.order("created_at", { ascending: false })
+        .order("id", { ascending: false }).range(offset, offset + pageSize - 1);
+      assertSupabaseOperation("review-os.listLearningSourceItems", result);
+      const rows = (result.data ?? []) as Record<string, unknown>[];
+      const ids = rows.filter(row => !isCaptureFunctionalTest(row.raw_payload) && !isSmokeSeedItem({
+        sourceLabel: typeof row.source_label === "string" ? row.source_label : undefined,
+        problemTitle: typeof row.problem_title === "string" ? row.problem_title : undefined,
+        rawQuestionText: typeof row.raw_question_text === "string" ? row.raw_question_text : undefined,
+        rawAnswerText: typeof row.raw_answer_text === "string" ? row.raw_answer_text : undefined,
+      })).slice(0, wanted - items.length).map(row => String(row.id));
+      // Keep the existing user-scoped item mapper and access boundary unchanged.
+      const page = await Promise.all(ids.map(id => reviewOsRepository.getWrongAnswerItem(userId, id)));
+      items.push(...page.filter((item): item is WrongAnswerItemRecord => Boolean(item) &&
+        !isCaptureFunctionalTest(item!.rawPayload) && !isSmokeSeedItem(item!)));
+      if (rows.length < pageSize) break;
+    }
+    return items;
+  }
+
+  async listWrongAnswerItems(userId: string, email: string | null, limit = 20, mode?: AppraisalMode) {
+    const access = await this.ensureAccess(userId, email);
+    const historyDays = getEntitlementLimit(access.entitlementTier).historyDays;
+    const cutoffMs = historyDays ? Date.now() - historyDays * 86_400_000 : null;
+    return this.listLearningSourceItems(userId, limit, mode ? getModeLabel(mode) : null, cutoffMs);
   }
 
   getWrongAnswerDetail(
@@ -2901,7 +2918,7 @@ export class ReviewOsService {
     await this.ensureAccess(userId, email);
     const [profile, rawItems, rawQueue, firstSignals] = await Promise.all([
       reviewOsRepository.getStudyProfile(userId),
-      reviewOsRepository.listWrongAnswerItems(userId, 120),
+      this.listLearningSourceItems(userId, 120, getModeLabel("first")),
       reviewOsRepository.listReviewQueue(userId, 80),
       reviewOsRepository.listLearningSignalEvents(userId, "first", 80),
     ]);
@@ -2957,7 +2974,7 @@ export class ReviewOsService {
     await this.ensureAccess(userId, email);
     const [rawQueue, rawRecentItems] = await Promise.all([
       reviewOsRepository.listReviewQueue(userId, 30),
-      reviewOsRepository.listWrongAnswerItems(userId, 8),
+      this.listLearningSourceItems(userId, 8, preferredMode ? getModeLabel(preferredMode) : null),
     ]);
     const targetExamName = preferredMode ? getModeLabel(preferredMode) : null;
     const queue = targetExamName
@@ -3019,7 +3036,7 @@ export class ReviewOsService {
     const targetExamName = getModeLabel(preferredMode);
     const [rawQueue, rawItems] = await Promise.all([
       reviewOsRepository.listReviewQueue(userId, 30),
-      reviewOsRepository.listWrongAnswerItems(userId, 60),
+      this.listLearningSourceItems(userId, 60, targetExamName),
     ]);
     const queue = rawQueue.filter((item) => item.examName === targetExamName);
     const recentItems = rawItems.filter(
@@ -3088,7 +3105,7 @@ export class ReviewOsService {
     }
 
     const items = (
-      await reviewOsRepository.listWrongAnswerItems(userId, 70)
+      await this.listLearningSourceItems(userId, 70)
     ).filter((item) => !isSmokeSeedItem(item) && !isCaptureFunctionalTest(item.rawPayload));
     const recentWeekItems = items.filter(
       (item) => Date.now() - Date.parse(item.createdAt) <= 7 * 86_400_000,
@@ -3277,7 +3294,7 @@ export class ReviewOsService {
     const modeLabel = getModeLabel(mode);
 
     const [items, queue, recentUsageEvents] = await Promise.all([
-      reviewOsRepository.listWrongAnswerItems(userId, 40),
+      this.listLearningSourceItems(userId, 40, modeLabel),
       reviewOsRepository.listReviewQueue(userId, 40),
       reviewOsRepository.listRecentUsageEventsByNames(
         userId,
@@ -3373,7 +3390,7 @@ export class ReviewOsService {
   ) {
     await this.ensureAccess(userId, email);
     const [items, queue, learningSignals, recentStudyLog] = await Promise.all([
-      this.listWrongAnswerItems(userId, email, 1).catch(() => []),
+      this.listWrongAnswerItems(userId, email, 1, mode).catch(() => []),
       this.getReviewQueue(userId, email).catch(() => []),
       this.listLearningSignalEvents(userId, email, mode, 1).catch(() => []),
       this.getRecentStudyLog(userId, email, mode).catch(() => null),

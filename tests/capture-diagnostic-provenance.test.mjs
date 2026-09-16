@@ -131,6 +131,7 @@ test("provenance replay preserves the exact source and refuses reclassification 
   await assert.rejects(save({...input,outlineDraft:"수정된 합성 목차"}),/capture-source-provenance-conflict/);
   await assert.rejects(save({...input,extractionPayload:{user_confirmed_fields:{capture_review_provenance:{...provenance,learningMaterial:"learner_input"}}}}),/capture-source-provenance-conflict/);
   await assert.rejects(save({...input,extractionPayload:{user_confirmed_fields:{capture_review_provenance:{...provenance,verified:true}}}}),/invalid-capture-review-provenance/);
+  await assert.rejects(save({...input,extractionPayload:{user_confirmed_fields:{capture_review_provenance:{...provenance,learningMaterial:["ai_example_functional_test"]}}}}),/invalid-capture-review-provenance/);
   assert.equal(store.tables.wrong_answer_items.length,before+1);
   assert.equal(store.tables.review_queue_items.length,0);assert.equal(store.tables.learning_signal_events.length,0);
 });
@@ -175,4 +176,22 @@ test("functional-test source stays addressable but never enters activity, meanin
   assert.equal((await service.listWrongAnswerItems(OWNER_ID,app.session.email)).length,1);
   assert.equal(await service.hasMeaningfulLearningData(...args),true);
   assert.equal((await service.getDailyStudyActivity(...args)).savedCaptureToday,true);
+});
+
+
+test("learning readers page beyond many excluded records without hiding older real records or another mode",async()=>{
+  const seed=seedRows(),template=seed.wrong_answer_items[0];
+  const row=(n,changes={})=>({...structuredClone(template),id:`eeeeeeee-eeee-4eee-8eee-${String(n).padStart(12,"0")}`,created_at:new Date(Date.parse("2026-09-06T10:00:00.000Z")-n*1000).toISOString(),...changes});
+  seed.wrong_answer_items=Array.from({length:205},(_,i)=>row(i,{raw_payload:{user_confirmed_fields:{capture_review_provenance:provenance}}}));
+  seed.wrong_answer_items.push(...Array.from({length:25},(_,i)=>row(300+i)));
+  seed.study_logs=[];seed.study_profiles=[];seed.action_seeds=[];seed.weekly_learning_summaries=[];
+  const store=memoryTransport(seed),app=productionHarness(store.execute);const service=app.load("lib/review-os/service").reviewOsService;
+  const list=await service.listWrongAnswerItems(OWNER_ID,app.session.email,20);
+  assert.equal(list.length,20);assert.ok(list.every(item=>!item.rawPayload.user_confirmed_fields?.capture_review_provenance));
+  assert.equal(await service.hasMeaningfulLearningData(OWNER_ID,app.session.email,"second"),true);
+  assert.equal((await service.getDailyStudyActivity(OWNER_ID,app.session.email,"second")).savedCaptureToday,true);
+  assert.ok(app.calls.some(q=>q.table==="wrong_answer_items"&&q.range?.[0]>=200));
+  assert.ok(app.calls.filter(q=>q.table==="wrong_answer_items").every(q=>q.filters.some(([field,op,value])=>field==="user_id"&&op==="eq"&&value===OWNER_ID)));
+  store.tables.wrong_answer_items.unshift(row(999,{exam_name:"감정평가사 1차",created_at:"2026-09-06T10:01:00.000Z"}));
+  assert.equal((await service.listWrongAnswerItems(OWNER_ID,app.session.email,1,"second"))[0].examName,"감정평가사 2차");
 });

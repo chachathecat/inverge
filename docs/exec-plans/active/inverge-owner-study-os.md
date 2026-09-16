@@ -9,6 +9,10 @@ from refreshed main, preserving that branch and the live PC draft. Exclude
 functional-test rows from learner lists, daily activity, Today, weekly plans
 and summaries while keeping the exact source addressable for explicit analysis.
 A real-service regression includes ordinary learner-input positive controls.
+The replacement review identified excluded rows consuming bounded list windows.
+User-scoped ordered pages now continue until eligible records are found, with
+mode/history filters before pagination and the existing item mapper unchanged.
+A 205-excluded-row regression proves older genuine records remain visible.
 
 Continue the existing PC writer and Goal from merged #942 (`3e20f3ca`).
 The Owner reported `/app/write?mode=second` showing a template as a personal
