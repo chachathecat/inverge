@@ -1,3 +1,4 @@
+import { isUnanalyzedCaptureRecord } from "./capture-review-provenance";
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
 
 export const LEARNING_AGENDA_EVENT_TYPES = [
@@ -62,6 +63,7 @@ const FORBIDDEN_AGENDA_FIELD_NAMES = [
 ];
 
 type AgendaWrongAnswerItem = {
+  rawPayload?: Record<string, unknown>;
   id?: string;
   examName?: string;
   subjectLabel?: string;
@@ -209,7 +211,8 @@ export function buildLearningAgendaEvents(input: BuildLearningAgendaEventsInput)
     const subject = safeString(item.subjectLabel);
     if (!itemId || !createdAt) continue;
 
-    if (item.createdFromCapture) {
+    const inputOnly = isUnanalyzedCaptureRecord(item.rawPayload);
+    if (item.createdFromCapture || inputOnly) {
       const captureEvent = normalizeEvent({
         id: `capture-saved-${itemId}`,
         type: "capture_saved",
@@ -221,6 +224,7 @@ export function buildLearningAgendaEvents(input: BuildLearningAgendaEventsInput)
       if (captureEvent) events.push(captureEvent);
     }
 
+    if (inputOnly) continue;
     const noteEvent = normalizeEvent({
       id: `note-created-${itemId}`,
       type: "note_created",

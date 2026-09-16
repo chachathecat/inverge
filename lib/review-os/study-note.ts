@@ -130,10 +130,10 @@ export function buildNotebookPreview(item: WrongAnswerItemRecord, tag?: WrongAns
     keyTerms,
     coreLine,
     nextAction,
-    nextReviewDate: getNextReviewDate(item.rawPayload),
+    nextReviewDate: sameSessionRepairConfirmed ? "복습 큐에서 일정 확인" : getNextReviewDate(item.rawPayload),
     noteLabel: sameSessionRepairConfirmed ? "같은 세션 교정 확인" : isSecond ? "교정노트" : "오답노트",
     summaryLine: sameSessionRepairConfirmed
-      ? "AI 미검토 학습보조 · 요청한 연결 1개를 같은 세션에서 확인했습니다. 다음 독립 복습은 아직 확인하지 않았습니다."
+      ? "AI 미검토 학습보조 · 요청한 연결 1개를 같은 세션에서 확인했습니다. 숙달이나 독립 복습 성과를 판정하는 결과가 아닙니다."
       : isSecond
       ? "답안에서 빠진 논점과 다음 rewrite 지시를 한 장으로 정리했습니다."
       : "오답 원인과 다음 복습 기준을 한 장으로 정리했습니다.",
@@ -150,6 +150,12 @@ export function buildDetailStudyNote(detail: WrongAnswerDetail) {
   const preview = buildNotebookPreview(detail.item, primaryTag);
   const isSecond = preview.mode === "second";
   const pendingAnalysis = isUnanalyzedCaptureRecord(detail.item.rawPayload);
+  const pendingDueTimes = detail.reviewQueue.map((row) => Date.parse(row.dueAt)).filter(Number.isFinite);
+  const nextReviewDate = preview.sameSessionRepairConfirmed
+    ? pendingDueTimes.length > 0
+      ? new Date(Math.min(...pendingDueTimes)).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" })
+      : "예약된 복습 없음"
+    : preview.nextReviewDate;
   const summary = compact(
     (pendingAnalysis || preview.sameSessionRepairConfirmed ? preview.summaryLine : detail.note?.aiSummary) ??
       (isSecond
@@ -195,7 +201,7 @@ export function buildDetailStudyNote(detail: WrongAnswerDetail) {
     casioUnsupportedMessage: rewriteSignal?.casioUnsupportedMessage ?? null,
     comparisonPoint,
     noteCard,
-    nextReviewDate: preview.nextReviewDate,
+    nextReviewDate,
     recurrenceText: pendingAnalysis ? "학습·반복 신호 미생성" :
       detail.recurrence && detail.recurrence.recurrenceCount > 1
         ? `${detail.recurrence.recurrenceCount}회 반복된 신호입니다.`

@@ -737,14 +737,15 @@ export function StudyLedgerDetail({
   // conservative: unverified or recovering.
   const stateChipState: StateChipState = state === "attention" ? "Unverified" : "Recovering";
   const sameSessionRepairConfirmed = comparison?.sameSessionRepairConfirmed === true;
+  const pendingConfirmedReview = sameSessionRepairConfirmed && reviewQueueCount > 0;
   const stateEvidence = sameSessionRepairConfirmed
-    ? `같은 세션 교정 확인 · 다음 복습 ${nextReviewDate}`
+    ? pendingConfirmedReview ? `같은 세션 교정 확인 · 다음 복습 ${nextReviewDate}` : "같은 세션 교정 확인 · 대기 중 복습 없음"
     : buildLedgerStateEvidence({ state, reviewQueueCount, nextReviewDate });
   const stateChipEvidence: StateChipEvidence = stateChipState === "Unverified"
     ? { state: "Unverified", basis: "missing-confirmation", detail: stateEvidence }
     : { state: "Recovering", basis: "recovery-observed", detail: stateEvidence };
   const actionHref = sameSessionRepairConfirmed
-    ? reviewHref ?? "/app/review?mode=second"
+    ? pendingConfirmedReview ? reviewHref ?? "/app/review?mode=second" : "/app?mode=second"
     : "/app/capture?mode=second&rewriteFrom=" + encodeURIComponent(rewriteFromItemId ?? itemId);
   const visibleTerms = keyTerms.filter(Boolean).slice(0, 5);
   const learnerEvidence = normalizedExcerpt(learnerExcerpt);
@@ -870,9 +871,9 @@ export function StudyLedgerDetail({
               responsive
               state="Ready"
               href={actionHref}
-              label={sameSessionRepairConfirmed ? "복습 큐에서 다시 확인하기" : completed ? "문단 한 번 더 다듬기" : "10분 문단 다시쓰기"}
+              label={sameSessionRepairConfirmed ? pendingConfirmedReview ? "복습 큐에서 다시 확인하기" : "오늘 할 일로 돌아가기" : completed ? "문단 한 번 더 다듬기" : "10분 문단 다시쓰기"}
               status={sameSessionRepairConfirmed
-                ? "저장된 교정문을 다음 복습에서 다시 확인합니다."
+                ? pendingConfirmedReview ? "저장된 교정문을 다음 복습에서 다시 확인합니다." : "교정 기록이 보존됐습니다. 오늘 할 일에서 다음 행동을 선택하세요."
                 : biggestGapLabel
                 ? completed
                   ? "남은 감점 원인 하나만 다시 확인합니다."

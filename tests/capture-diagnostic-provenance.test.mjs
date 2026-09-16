@@ -231,15 +231,25 @@ test("saved same-session repair readback keeps the original gap historical and c
   assert.match(note.nextAction,/복습/);
   assert.doesNotMatch(note.summary,/먼저 보강할 지점/);
   const {StudyLedgerDetail}=app.load("components/learner/study-ledger-ui");
-  const html=renderToString(React.createElement(StudyLedgerDetail,{
+  const ledgerProps={
     itemId:detail.item.id,title:"합성 교정",subject:"감정평가이론",createdAt:detail.item.createdAt,savedAt:detail.item.updatedAt,
     biggestGap:comparison.sourceGap,biggestGapLabel:"교정 전 간극",nextAction:note.nextAction,coreLine:note.coreLine,keyTerms:[],
     learnerExcerpt:detail.item.userAnswer,nextReviewDate:note.nextReviewDate,recurrenceText:note.recurrenceText,
     reviewQueueCount:1,learnerConfirmed:true,completed:true,comparison,reviewHref:"/app/review?mode=second",
-  }));
+  };
+  const html=renderToString(React.createElement(StudyLedgerDetail,ledgerProps));
   assert.match(html,/교정 확인 범위/);
   assert.match(html,/복습 큐에서 다시 확인하기/);
   assert.doesNotMatch(html,/아직 남은 간극|남은 감점 원인|문단 한 번 더 다듬기/);
+  const followUp=structuredClone(detail);
+  followUp.reviewQueue=[{...detail.reviewQueue[0],dueAt:"2026-09-19T19:00:00.000Z"}];
+  assert.equal(notes.buildDetailStudyNote(followUp).nextReviewDate,"2026-09-20");
+  const completed=structuredClone(detail);completed.reviewQueue=[];
+  assert.equal(notes.buildDetailStudyNote(completed).nextReviewDate,"예약된 복습 없음");
+  const emptyHtml=renderToString(React.createElement(StudyLedgerDetail,{...ledgerProps,reviewQueueCount:0,nextReviewDate:notes.buildDetailStudyNote(completed).nextReviewDate}));
+  assert.match(emptyHtml,/오늘 할 일로 돌아가기/);
+  assert.match(emptyHtml,/대기 중 복습 없음/);
+  assert.doesNotMatch(emptyHtml,/복습 큐에서 다시 확인하기|저장된 교정문을 다음 복습에서/);
   for(const [key,value] of [["app1_same_session_only",false],["app1_mastery_created",true],["app1_transfer_created",true],["app1_contract_version","foreign"],["app1_source_item_id","foreign"]]){
     const changed=structuredClone(detail);
     changed.item.rawPayload.user_confirmed_fields[key]=value;
@@ -248,4 +258,15 @@ test("saved same-session repair readback keeps the original gap historical and c
   const ordinary=structuredClone(detail);
   delete ordinary.item.rawPayload.user_confirmed_fields.app1_verification_state;
   assert.equal(notes.buildRewriteComparisonNote(ordinary,notes.buildDetailStudyNote(ordinary),source).sameSessionRepairConfirmed,false);
+});
+
+test("analysis-pending source is an input record, never a completed note in the learning agenda",()=>{
+  const app=productionHarness(memoryTransport().execute);
+  const agenda=app.load("lib/review-os/learning-agenda");
+  const events=agenda.buildLearningAgendaEvents({mode:"second",items:[{
+    id:SOURCE_ID,examName:"감정평가사 2차",subjectLabel:"감정평가이론",createdAt:"2026-09-16T00:00:00Z",
+    rawPayload:{privateText:"SYNTHETIC_SOURCE_ONLY_BODY",user_confirmed_fields:{capture_review_provenance:{...provenance,learningMaterial:"learner_input"}}},
+  }]});
+  assert.deepEqual(events.map(x=>x.type),["capture_saved"]);
+  assert.doesNotMatch(JSON.stringify(events),/SYNTHETIC_SOURCE_ONLY_BODY|note_created/);
 });

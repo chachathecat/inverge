@@ -248,7 +248,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
     );
   }
   const isFirstSetStart = mode === "first" && focus.nextActionType === "capture_now";
-  const selectedSubject = normalizeSubjectForMode(subjectParam, mode);
+  const selectedSubject = normalizeSubjectForMode(subjectParam ?? (mode === "second" ? todayPlanTasks[0]?.subject ?? queue[0]?.subjectLabel ?? items[0]?.subjectLabel : null), mode);
   const selectedFirstSubject = mode === "first" ? selectedSubject : normalizeSubjectForMode(null, "first");
   const selectedSubjectQuery = encodeURIComponent(selectedSubject);
   const firstSetHref = `/app/sets?mode=first&subject=${encodeURIComponent(selectedFirstSubject)}`;
@@ -272,10 +272,11 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   };
   const resolveTaskHref = (task: (typeof todayPlanTasks)[number]) => {
     const hrefKind = task.primary_cta.hrefKind;
-    if (hrefKind === "capture") return mode === "second" ? secondCaptureHref : firstCaptureHref;
-    if (hrefKind === "write") return `/app/write?mode=second&subject=${selectedSubjectQuery}`;
-    if (hrefKind === "items") return mode === "second" ? secondNotesHref : firstNotesHref;
-    if (hrefKind === "review") return mode === "second" ? secondReviewHref : firstReviewHref;
+    const taskSubjectQuery = mode === "second" ? encodeURIComponent(normalizeSubjectForMode(task.subject, mode)) : selectedSubjectQuery;
+    if (hrefKind === "capture") return mode === "second" ? `/app/capture?mode=second&subject=${taskSubjectQuery}` : firstCaptureHref;
+    if (hrefKind === "write") return `/app/write?mode=second&subject=${taskSubjectQuery}`;
+    if (hrefKind === "items") return mode === "second" ? `/app/notes?mode=second&subject=${taskSubjectQuery}` : firstNotesHref;
+    if (hrefKind === "review") return mode === "second" ? `/app/review?mode=second&subject=${taskSubjectQuery}` : firstReviewHref;
     if (hrefKind === "first_ox") return "/app/first/ox";
     if (hrefKind === "calculator_template") {
       if (task.task_type === "calculator_routine" && task.calculator_routine_recovery) {
@@ -289,7 +290,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         ? "/app/calculator?mode=second&context=practice&focus=casio"
         : "/app/calculator?mode=first&context=accounting&focus=accounting_template";
     }
-    return `/app/session?mode=${mode}&subject=${selectedSubjectQuery}`;
+    return `/app/session?mode=${mode}&subject=${taskSubjectQuery}`;
   };
 
   const primaryHref = todayPlan.hasPlan ? resolveTodayPlanHref(todayPlan.actionKind) : defaultPrimaryHref;
