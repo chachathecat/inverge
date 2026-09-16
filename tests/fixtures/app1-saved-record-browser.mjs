@@ -10,7 +10,7 @@ import { productionHarness, OWNER_ID, SOURCE_ID, NOW } from "./app1-production-p
 // Existing Capture source + real repair UI, API, authority, service, repository,
 // saved-item, Review and Today pages. Only auth/model/clock/storage transport are
 // synthetic. Never loads the Owner's account, environment or personal database.
-export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, captureInput = false, ownerTheory = null, actionTimeout = 15_000, requestRecovery = null } = {}) {
+export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, captureInput = false, ownerTheory = null, actionTimeout = 15_000, requestRecovery = null, resumeOnReload = false } = {}) {
   const repairText = "임대료 미납 사실을 계약 해지 논거의 요건에 연결하여 계약 종료 결론을 도출했습니다.";
   const draft = {
     diagnosticStatus: "finding", questionRequirementQuote: "계약 해지 논거를 설명하시오.", reviewedAnswerScope: "entire_submitted_answer",
@@ -161,6 +161,14 @@ export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, ca
     await analysisButton.click();
     await page.getByRole("button",{name:"직접 복구하기",exact:true}).click();
     await page.getByLabel("내 복구 입력").fill(repairText);
+    if (resumeOnReload) {
+      const before = modelCalls;
+      await page.waitForFunction(() => Object.keys(sessionStorage).some(key => key.startsWith("inverge:app1-resume:") && JSON.parse(sessionStorage.getItem(key)).repairText));
+      await page.reload();
+      await page.getByLabel("내 복구 입력").waitFor();
+      assert.equal(await page.getByLabel("내 복구 입력").inputValue(), repairText);
+      assert.equal(modelCalls, before, "reconnect validates the prior signature without another model call");
+    }
     if (requestRecovery) {
       const before=writes.filter(p=>p==="/api/answer-review/structure").length,stalled=armFault("verify");await page.getByRole("button",{name:"복구 확인",exact:true}).click();await expireWait(stalled,90_000);
       await page.locator('[data-app1-error]').waitFor();assert.equal(writes.filter(p=>p==="/api/answer-review/structure").length,before+1,"timeout never automatically repeats verification");

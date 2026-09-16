@@ -8,7 +8,7 @@ export { OwnerTheoryError } from "./owner-pc-theory-budget.mjs";
 export function isOwnerPcTheoryEnabled() { return process.env.INVERGE_OWNER_PC_THEORY_ENABLED === "true"; }
 function developmentEnabled() { return process.env.INVERGE_OWNER_PC_THEORY_DEVELOPMENT_ENABLED === "true"; }
 function root() {
-  if (!isOwnerPcTheoryEnabled() || process.platform !== "win32" || process.env.NODE_ENV !== "development" ||
+  if (!isOwnerPcTheoryEnabled() || process.platform !== "win32" || (process.env.NODE_ENV !== "development" && !(developmentEnabled() && process.env.NODE_ENV === "production")) ||
       process.env.VERCEL !== undefined || process.env.CI === "true" ||
       process.env.NEXT_PUBLIC_SUPABASE_URL !== (developmentEnabled() ? "http://127.0.0.1:55431" : "http://127.0.0.1:55421") || !process.env.LOCALAPPDATA)
     throw new OwnerTheoryError("OWNER_THEORY_LOCAL_ONLY");

@@ -33,6 +33,7 @@ import {
   type PendingCaptureSaveOperation,
 } from "@/lib/review-os/capture-persistence-controller";
 import { isCaptureFunctionalTest } from "@/lib/review-os/capture-review-provenance";
+import { app1ResumeDraftKey, readApp1ResumeDraft, writeApp1ResumeDraft } from "@/lib/owner-study/app1-resume-draft";
 import type { WrongAnswerDetail } from "@/lib/review-os/types";
 
 type TrustedRepairSubject =
@@ -241,11 +242,13 @@ export function App1CaptureRepairLoop({
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
   const pendingSaveRef = useRef<PendingCaptureSaveOperation | null>(null);
+  const restoredDraftKeyRef = useRef<string | null>(null);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
   const repairRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     let active = true;
+    restoredDraftKeyRef.current = null;
     const load = async () => {
       setPhase("loading");
       setError(null);
@@ -269,6 +272,34 @@ export function App1CaptureRepairLoop({
         }
         if (!active) return;
         setDetail(payload.detail);
+        let saved: ReturnType<typeof readApp1ResumeDraft> = null;
+        try { saved = readApp1ResumeDraft(window.sessionStorage, ownerScope, itemId); }
+        catch { setError("이 브라우저의 이전 초안을 읽지 못했습니다. 저장된 원문은 유지됩니다."); }
+        setDiagnosis(null);
+        setRepairText(saved?.repairText ?? "");
+        setGap(null); setAnalysisBinding(null); setVerification(null); setVerificationReceipt(null);
+        if (saved?.analysisBinding && saved.gap) {
+          const body = new FormData();
+          body.set("requestPurpose", "app1_resume_analysis"); body.set("examMode", "second");
+          body.set("subject", payload.detail.item.subjectLabel); body.set("sourceItemId", itemId);
+          body.set("analysisBinding", saved.analysisBinding); body.set("primaryGap", JSON.stringify(saved.gap));
+          try {
+            const resumed = await readApp1Response("/api/answer-review/structure", { method: "POST", body }, 15000);
+            if (!active) return;
+            const result = resumed.payload as { ok?: boolean; primaryGap?: App1PrimaryGap; analysisBinding?: string } | null;
+            if (resumed.response.ok && result?.ok && result.primaryGap && result.analysisBinding) {
+              setGap(result.primaryGap); setAnalysisBinding(result.analysisBinding);
+              restoredDraftKeyRef.current = app1ResumeDraftKey(ownerScope, itemId);
+              setPhase(saved.repairText ? "direct_repair" : "evidence_review");
+              return;
+            }
+            setError(AUTHORITY_EXPIRED_MESSAGE);
+          } catch {
+            if (!active) return;
+            setError("이전 분석 상태를 확인하지 못했습니다. 교정 초안은 보존했고 AI 요청은 다시 보내지 않았습니다.");
+          }
+        }
+        restoredDraftKeyRef.current = app1ResumeDraftKey(ownerScope, itemId);
         setPhase("structure_confirmation");
       } catch (loadError) {
         if (!active) return;
@@ -282,7 +313,24 @@ export function App1CaptureRepairLoop({
     return () => {
       active = false;
     };
-  }, [availableSubjects, itemId]);
+  }, [availableSubjects, itemId, ownerScope]);
+
+  useEffect(() => {
+    if (phase === "loading" || detail?.item.id !== itemId ||
+        restoredDraftKeyRef.current !== app1ResumeDraftKey(ownerScope, itemId)) return;
+    try {
+      if (["completed", "saved_without_queue", "saved_review_already_completed"].includes(phase)) {
+        window.sessionStorage.removeItem(app1ResumeDraftKey(ownerScope, itemId));
+      } else {
+        writeApp1ResumeDraft(window.sessionStorage, ownerScope, itemId, { repairText, gap, analysisBinding });
+      }
+    }
+    catch {
+      // Report a storage failure after this render; cancel a stale notification.
+      const timer = window.setTimeout(() => setError("이 브라우저에서 교정 초안을 보존하지 못했습니다. 화면을 닫기 전에 입력을 복사해 주세요."), 0);
+      return () => window.clearTimeout(timer);
+    }
+  }, [analysisBinding, detail, gap, itemId, ownerScope, phase, repairText]);
 
   useEffect(() => {
     if (phase === "loading") return;

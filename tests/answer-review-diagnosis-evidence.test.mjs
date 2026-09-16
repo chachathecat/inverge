@@ -23,7 +23,7 @@ test("ordinary non-Owner App1 never signs a non-finding or saves its learning si
 
 
 import { readFileSync } from "node:fs";
-import { evaluateApp1SameSessionRepair } from "../lib/owner-study/app1-capture-repair-view-model.ts";
+import { buildApp1PrimaryGap, evaluateApp1SameSessionRepair } from "../lib/owner-study/app1-capture-repair-view-model.ts";
 const realRepair = JSON.parse(readFileSync(new URL("./fixtures/theory-real-repair-regression.json", import.meta.url), "utf8"));
 function checkRealRepair(repairText = realRepair.repairText, patch = {}) {
   return evaluateApp1SameSessionRepair({ detail: realRepair.detail, requestedGap: realRepair.requestedGap,
@@ -61,4 +61,56 @@ test("modal promises, an inability to repair, and contradictory outcomes stay un
     target.replace("도출된다", "도출될 수 있다"),
     target + " " + target.replace("충족하지 않으므로", "충족하므로").replace("채택할 수 없다는", "채택된다는"),
   ]) assert.notEqual(checkRealRepair(repairText, { answerEvidenceQuote: repairText }).state, "repair_confirmed_for_this_session", repairText);
+});
+
+test("a premise-application defect does not acquire a paragraph-structure obligation from action prose", () => {
+  const result = evaluateApp1SameSessionRepair({ detail: realRepair.detail, requestedGap: realRepair.secondRequestedGap,
+    repairText: realRepair.repairText, repairDraft: { ...realRepair.actualRepairDraft, answerEvidenceQuote: realRepair.repairText } });
+  assert.equal(result.state, "repair_confirmed_for_this_session");
+});
+
+
+import { app1ResumeDraftKey, readApp1ResumeDraft, writeApp1ResumeDraft } from "../lib/owner-study/app1-resume-draft.ts";
+test("tab repair drafts isolate owners/items and preserve text without trusting local authority", () => {
+  const values = new Map(); const storage = { getItem: k => values.get(k) ?? null, setItem: (k,v) => values.set(k,v), removeItem: k => values.delete(k) };
+  const draft = { repairText: realRepair.repairText, analysisBinding: "untrusted-local-token", gap: realRepair.requestedGap };
+  writeApp1ResumeDraft(storage, "owner-one", SOURCE_ID, draft);
+  assert.deepEqual(readApp1ResumeDraft(storage, "owner-one", SOURCE_ID), draft);
+  assert.equal(readApp1ResumeDraft(storage, "owner-two", SOURCE_ID), null);
+  assert.equal(readApp1ResumeDraft(storage, "owner-one", crypto.randomUUID()), null);
+  values.set(app1ResumeDraftKey("owner-one", SOURCE_ID), '{"version":1}');
+  assert.equal(readApp1ResumeDraft(storage, "owner-one", SOURCE_ID), null);
+});
+test("analysis reconnect reuses a valid signature, creates no model call/signal, and rejects stale authority", async () => {
+  const store = memoryTransport();
+  const app = productionHarness(store.execute);
+  const command = await app.command("resume-check");
+  async function resume(runtime, overrides = {}) {
+    const body = new FormData();
+    for (const [key,value] of Object.entries({ requestPurpose: "app1_resume_analysis", examMode: "second", subject: "감정평가이론", sourceItemId: SOURCE_ID,
+      analysisBinding: command.analysisBinding, primaryGap: JSON.stringify(command.primaryGap), ...overrides })) body.set(key,value);
+    return runtime.load("app/api/answer-review/structure/route").POST(new Request("http://localhost/api/answer-review/structure", {method:"POST",body}));
+  }
+  const beforeSignals = store.tables.learning_signal_events.length;
+  const result = await resume(app);
+  assert.equal(result.status,200); assert.equal((await result.json()).analysisBinding,command.analysisBinding);
+  assert.equal(store.tables.learning_signal_events.length,beforeSignals);
+  assert.equal((await resume(app, { primaryGap: JSON.stringify({...command.primaryGap,gap:"tampered"}) })).status,400);
+  app.session.isAuthenticated = false; assert.equal((await resume(app)).status,401); app.session.isAuthenticated = true;
+  const expired = productionHarness(store.execute,{now:"2026-09-07T10:00:00.000Z"});
+  assert.equal((await resume(expired)).status,410);
+  store.tables.wrong_answer_items[0].user_answer += " changed source";
+  assert.equal((await resume(app)).status,400);
+});
+
+test("long exact finding quotes keep a bounded exact anchor instead of silently losing evidence", () => {
+  const gap = buildApp1PrimaryGap(realRepair.detail, { ...realRepair.actualRepairDraft, diagnosticStatus: "finding", answerEvidenceQuote: realRepair.detail.item.userAnswer });
+  assert.equal(gap.anchorKind, "exact");
+  assert.ok(gap.anchor.includes(realRepair.detail.item.userAnswer.slice(0,120)));
+  assert.ok(gap.anchor.length < 240);
+});
+
+test("an asserted application and its denial remain contradictory despite a no-gap model status", () => {
+  const repairText = "소유자 B의 매각 조건과 인접 소유자 C의 편익이라는 사례 사실에는 시장가치 기준을 적용하므로 시장가치 결론이 도출되지만, 이 기준은 같은 사례에 적용되지 않는다고 연결했다.";
+  assert.notEqual(checkRealRepair(repairText, { answerEvidenceQuote: repairText }).state, "repair_confirmed_for_this_session");
 });

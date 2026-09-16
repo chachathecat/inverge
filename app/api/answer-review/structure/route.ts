@@ -7,6 +7,7 @@ import { normalizeAnswerReviewStructureDraft, groundAnswerReviewDiagnosis, type 
 import { GeminiEnvError, GeminiStructureParseError, isGeminiQuotaExceededError, isGeminiConfigured, structureAnswerReviewWithGemini } from "@/lib/evaluate/gemini";
 import {
   assertApp1RepairVerificationRequestAuthority,
+  assertApp1ResumableAnalysisAuthority,
   assertApp1SigningAuthorityReady,
   createApp1AnalysisAuthority,
   createApp1RepairVerificationAuthority,
@@ -32,6 +33,7 @@ const INPUT_QUALITY_MESSAGE = "검토에 필요한 정보가 부족합니다. �
 const ANSWER_REVIEW_REQUEST_PURPOSES = [
   "learning_analysis",
   "app1_initial_analysis",
+  "app1_resume_analysis",
   "repair_verification",
 ] as const;
 type AnswerReviewRequestPurpose = (typeof ANSWER_REVIEW_REQUEST_PURPOSES)[number];
@@ -135,6 +137,21 @@ export async function POST(request: Request) {
         app1Detail.item.correctAnswer === "-"
           ? ""
           : app1Detail.item.correctAnswer;
+      if (requestPurpose === "app1_resume_analysis") {
+        const binding = singleFormString(formData, "analysisBinding");
+        const rawGap = singleFormString(formData, "primaryGap");
+        if (!binding || binding.length > 8192 || !rawGap || rawGap.length > 4096) {
+          return repairVerificationError(400, "INVALID_REPAIR_AUTHORITY");
+        }
+        let value: unknown;
+        try { value = JSON.parse(rawGap); }
+        catch { return repairVerificationError(400, "INVALID_REPAIR_AUTHORITY"); }
+        const primaryGap = parseApp1PrimaryGap(value);
+        assertApp1ResumableAnalysisAuthority({ userId: session.userId, detail: app1Detail,
+          primaryGap, analysisBinding: binding });
+        return NextResponse.json({ ok: true, primaryGap, analysisBinding: binding },
+          { headers: { "Cache-Control": "private, no-store" } });
+      }
       if (requestPurpose === "app1_initial_analysis") {
         answerText = getApp1LearnerAnswer(app1Detail);
       }

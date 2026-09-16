@@ -360,6 +360,16 @@ export function assertApp1RepairVerificationRequestAuthority(
   ) {
     reject("APP1_ANALYSIS_BINDING_INVALID");
   }
+  assertApp1ResumableAnalysisAuthority(input);
+}
+
+/** Recheck a preserved analysis without minting a receipt or calling a provider. */
+export function assertApp1ResumableAnalysisAuthority(input: Readonly<{
+  userId: string;
+  detail: WrongAnswerDetail;
+  primaryGap: App1PrimaryGap;
+  analysisBinding: string;
+}>) {
   try {
     assertApp1AnalysisBinding({
       key: signingKey(),

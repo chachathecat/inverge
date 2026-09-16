@@ -348,8 +348,8 @@ function resolveAnchor(detail: WrongAnswerDetail, draft: AnswerReviewStructureDr
   "anchor" | "anchorKind"
 > {
   const quote = draft.answerEvidenceQuote?.trim();
-  if (quote && quote.length >= 4 && quote.length <= 120 && getApp1LearnerAnswer(detail).includes(quote)) {
-    return { anchor: `AI가 선택한 답안 구절: 「${quote}」`, anchorKind: "exact" };
+  if (quote && quote.length >= 4 && quote.length <= 600 && getApp1LearnerAnswer(detail).includes(quote)) {
+    return { anchor: `AI가 선택한 답안 구절: 「${quote.slice(0, 120)}」${quote.length > 120 ? " (일부 발췌)" : ""}`, anchorKind: "exact" };
   }
   const fields = exactConfirmedFields(detail);
   const exactAnchor = scalarText(
@@ -424,6 +424,7 @@ const APP1_REPAIR_TARGET_FACETS: Readonly<
   authority_or_reason: Object.freeze([
     "논거",
     "요건",
+    "전제",
     "기준",
     "근거",
     "법리",
@@ -522,7 +523,7 @@ const APP1_REPAIR_SUBSTANTIVE_AFFIRMATIVE_PREDICATES = Object.freeze([
   "해당하",
   "성립하",
   "성립되",
-  // Applying a criterion is an operation, not an affirmative outcome.
+  "적용하",
   "적용되",
 ] as const);
 const APP1_REPAIR_DISCUSSION_ONLY_CUES = Object.freeze([
@@ -1441,7 +1442,9 @@ function buildApp1RepairTargetProfile(
       [App1RepairTargetFacet, readonly string[]]
     >
   )
-    .filter(([, terms]) => includesAny(targetIdentity, terms))
+    .filter(([facet, terms]) => includesAny(targetIdentity, terms) &&
+      // Action wording can mention a paragraph without making structure the defect.
+      (facet !== "structure" || includesAny(normalizedIdentity(requestedGap.gap), terms)))
     .map(([facet]) => facet);
   const literalAnchors = Array.from(
     new Set(literalTargetWords(facetMaterial)),
@@ -1558,7 +1561,7 @@ function repairEvidencePolarities(
         (current, predicate) =>
           current.replaceAll(normalizedIdentity(predicate), ""),
         identity,
-      );
+      ).replaceAll("적용하면", ""); // Conditional application is not an asserted positive outcome.
     const hasAffirmative = includesAny(
       identityWithoutNegativePredicates,
       APP1_REPAIR_SUBSTANTIVE_AFFIRMATIVE_PREDICATES,
