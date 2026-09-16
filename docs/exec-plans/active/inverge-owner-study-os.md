@@ -1,6 +1,21 @@
 <!-- 2026-09-16 PR #945 second source correction: exact-head review identified per-item reads in paginated learner lists and an APP1 repair-skip source contract regression. Map selected page rows locally with established timestamp normalization; regression proves three queries for 230 rows and mapper parity. Preserve repair-verification skip precedence while keeping functional-test signal exclusion. Personal runtime/data/provider remain untouched pending final checks/review. -->
 # Inverge Owner Study OS
 
+## 2026-09-16 actual Theory app validation
+
+Reuse merged #945 / 224a35c8 and the same PC writer. Apply the post909 A/B/C
+root-cause continuation exception; keep native checks, exact-head independent
+review and protected squash. Preserve the live personal draft and binding.
+The Owner authorizes one original synthetic Theory question, at most three
+answer sources and six total development analysis/verification/retry calls,
+from the existing permanent USD 5 ledger including all prior/unknown spend.
+Use actual Next.js menus, Supabase Auth and isolated PostgreSQL/PostgREST,
+without replacing internal requests with successful mocks. Keep incomplete/
+delayed-response tests separately labeled. Verify diagnosis evidence, correction,
+save/reconnect/review and personal Today isolation. No personal schema or
+Production changes; do not count simulated study as Owner learning.
+
+
 ## Owner Theory diagnostic provenance after merged #942
 
 PR #944 was closed unmerged after its two source corrections. Its second

@@ -2114,6 +2114,10 @@ export function WrongAnswerCaptureForm({
         </dl>
       </section>
 
+      {ownerAnalysisEntry && !ownerAnalysisPanelOpen && !savedConfirmation ? <section className="space-y-2" data-owner-existing-answer-entry>
+        <p>이미 쓴 답안이 있으면 문제·답안만 입력해 분석할 수 있습니다. 쟁점·목차 훈련은 선택할 수 있습니다.</p>
+        <V3ActionButton type="button" onClick={() => setStage("second-gap")}>이미 쓴 답안 AI 검토</V3ActionButton>
+      </section> : null}
       {submitting && !savedConfirmation ? (
         <section
           role="status"

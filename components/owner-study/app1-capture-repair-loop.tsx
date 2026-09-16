@@ -12,7 +12,7 @@ import {
   V3Surface,
 } from "@/components/learner";
 import { Textarea } from "@/components/ui/textarea";
-import { normalizeAnswerReviewStructureDraft } from "@/lib/evaluate/answer-review-structure";
+import { normalizeAnswerReviewStructureDraft, type AnswerReviewStructureDraft } from "@/lib/evaluate/answer-review-structure";
 import {
   APP1_LIMITS,
   APP1_RUNTIME_BOUNDARY_RECEIPT,
@@ -227,6 +227,7 @@ export function App1CaptureRepairLoop({
 }) {
   const [phase, setPhase] = useState<App1Phase>("loading");
   const [detail, setDetail] = useState<WrongAnswerDetail | null>(null);
+  const [diagnosis, setDiagnosis] = useState<AnswerReviewStructureDraft | null>(null);
   const [gap, setGap] = useState<App1PrimaryGap | null>(null);
   const [repairText, setRepairText] = useState("");
   const [verification, setVerification] =
@@ -317,6 +318,7 @@ export function App1CaptureRepairLoop({
       return;
     }
     setPhase("analyzing");
+    setDiagnosis(null);
     setError(null);
     setGap(null);
     setVerification(null);
@@ -331,6 +333,11 @@ export function App1CaptureRepairLoop({
         ANALYSIS_FAILURE_MESSAGE,
         ownerTheoryMode,
       );
+      setDiagnosis(result.draft);
+      if (ownerTheoryMode && result.draft.diagnosticStatus && result.draft.diagnosticStatus !== "finding") {
+        setPhase("structure_confirmation");
+        return;
+      }
       if (
         !result.primaryGap ||
         typeof result.analysisBinding !== "string" ||
@@ -708,6 +715,11 @@ export function App1CaptureRepairLoop({
         </div>
       ) : null}
 
+      {diagnosis?.diagnosticStatus && diagnosis.diagnosticStatus !== "finding" ? <V3Surface data-app1-diagnostic-status={diagnosis.diagnosticStatus}>
+        <h2>{diagnosis.diagnosticStatus === "no_clear_gap" ? "명백한 보완점이 확인되지 않았습니다" : diagnosis.diagnosticStatus === "analysis_failed" ? "분석이 완료되지 않았습니다" : "개인 진단 근거가 충분하지 않습니다"}</h2>
+        <p>입력은 보존됩니다. 이 결과로 약점·복구 완료·학습성과를 만들지 않습니다.</p>
+        <p>{diagnosis.diagnosticStatus === "no_clear_gap" ? "제출 답안 전체를 문제 요구와 대조한 AI 의견이며, 완전한 답안이나 공식 판정을 뜻하지 않습니다." : "필수 근거가 부족하거나 응답이 불완전하여 보완점을 확정하지 않았습니다."}</p>
+      </V3Surface> : null}
       {phase === "structure_confirmation" && detail && summary ? (
         <V3Surface className="space-y-5" data-app1-structure-confirmation>
           <div>
@@ -767,6 +779,7 @@ export function App1CaptureRepairLoop({
             </h2>
           </div>
           <p className="v3-type-caption" data-app1-evidence-source>입력한 답안에 대한 AI 검토 의견입니다. 사람 검토·공식 채점이 아닙니다.</p>
+          {diagnosis?.questionRequirementQuote ? <p data-app1-question-evidence>문제 요구: 「{diagnosis.questionRequirementQuote}」 · 확인 범위: 제출한 답안 전체</p> : null}
           {gap.anchorKind !== "exact" ? <p data-app1-evidence-unavailable>답안의 정확한 근거 구절은 확인되지 않았습니다. 아래 전체 답안과 직접 대조해 주세요.</p> : null}
           <details className="quiet-disclosure"><summary>분석에 사용한 답안 확인</summary><p className="whitespace-pre-wrap">{detail ? getApp1LearnerAnswer(detail) : ""}</p></details>
           <div data-app1-primary-gap-count="1">

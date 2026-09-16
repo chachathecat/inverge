@@ -99,19 +99,18 @@ export function buildAnswerReviewQualityView(draft: AnswerReviewStructureDraft):
   const gapSource =
     draft.missingIssueCandidates.find((item) => normalizeLine(item).length > 0) ||
     draft.weakLogicPoint ||
-    draft.weakParagraphPoint ||
-    draft.requiredIssues;
+    draft.weakParagraphPoint;
 
   const primaryFix: PrimaryFix = {
-    gap: fallbackIfNeeded(gapSource, "누락 논점 1개를 먼저 지정해 보강하세요.", warnings),
+    gap: draft.diagnosticStatus === "no_clear_gap" ? "명백한 보완점이 확인되지 않았습니다." : draft.diagnosticStatus === "analysis_failed" ? "분석이 완료되지 않았습니다." : draft.diagnosticStatus === "insufficient_evidence" ? "개인 진단 근거가 충분하지 않습니다." : fallbackIfNeeded(gapSource, "구체적인 보완점을 확인하지 못했습니다.", warnings),
     whyItMatters: fallbackIfNeeded(
       draft.weakLogicPoint || draft.requiredIssues,
-      "핵심 논점을 놓치면 답안의 설득력이 크게 떨어집니다.",
+      "개인 진단 근거가 충분하지 않습니다.",
       warnings,
     ),
     howToFix: fallbackIfNeeded(
       draft.weakParagraphPoint || draft.rewriteTarget,
-      "누락 논점 1개를 표시하고 결론 문장만 다시 쓰세요.",
+      "입력한 문제 요구와 답안을 확인해 주세요.",
       warnings,
     ),
   };
@@ -129,12 +128,12 @@ export function buildAnswerReviewQualityView(draft: AnswerReviewStructureDraft):
 
   const application = uniqueBullets(
     [draft.weakParagraphPoint, draft.weakLogicPoint],
-    "사안 적용 근거를 한 문장 더 추가해 연결하세요.",
+    "확인된 사안 적용 보완점이 없습니다.",
   );
 
   const conclusion = uniqueBullets(
     [draft.rewriteTarget, draft.rewriteDraftSuggestion, draft.nextAction],
-    "10분 동안 이 문단만 다시 써보세요.",
+    "확인된 분석 결과와 원문을 대조해 주세요.",
   );
 
   const keyTermExplanations = draft.keyTermExplanations ?? [];
@@ -151,7 +150,7 @@ export function buildAnswerReviewQualityView(draft: AnswerReviewStructureDraft):
 
   const nextAction = fallbackIfNeeded(
     draft.nextAction,
-    "10분 동안 이 문단만 다시 써보세요.",
+    "확인된 분석 결과와 원문을 대조해 주세요.",
     warnings,
   );
 

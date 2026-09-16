@@ -1,8 +1,9 @@
+import { createHash } from "node:crypto";
 import { isCaptureFunctionalTest } from "@/lib/review-os/capture-review-provenance";
 import { isOwnerPcTheoryEnabled, OwnerTheoryError, type OwnerTheoryAuthority } from "@/lib/owner-study/owner-pc-theory";
 import { NextResponse } from "next/server";
 import { getServerSessionUser } from "@/lib/auth/session";
-import { normalizeAnswerReviewStructureDraft, type AnswerReviewExplanationLevel } from "@/lib/evaluate/answer-review-structure";
+import { normalizeAnswerReviewStructureDraft, groundAnswerReviewDiagnosis, type AnswerReviewExplanationLevel } from "@/lib/evaluate/answer-review-structure";
 import { GeminiEnvError, GeminiStructureParseError, isGeminiQuotaExceededError, isGeminiConfigured, structureAnswerReviewWithGemini } from "@/lib/evaluate/gemini";
 import {
   assertApp1RepairVerificationRequestAuthority,
@@ -201,7 +202,7 @@ export async function POST(request: Request) {
       // Only the Owner-selected saved problem/answer and current manual correction.
       // Stored reference material and automatic reference enrichment stay private.
       referenceText = "";
-      ownerTheoryAuthority = { userId: session.userId, sourceItemId: app1Detail.item.id, purpose: requestPurpose };
+      ownerTheoryAuthority = { userId: session.userId, sourceItemId: app1Detail.item.id, purpose: requestPurpose, questionSha256: createHash("sha256").update(questionText).digest("hex") };
     }
     // This exact approved Owner-PC request uses the permanent one-case budget,
     // not the commercial daily quota. No global admin override or tier mutation.
@@ -209,9 +210,11 @@ export async function POST(request: Request) {
     const initialDraft = await structureAnswerReviewWithGemini({ ownerTheoryAuthority, questionFiles, answerFiles, referenceFiles, questionText, answerText, referenceText, explanationLevel });
     const referenceGrounding = ownerTheoryAuthority ? { references: [], displayLabel: "선택한 이론 입력만 검토", promptContext: "" } : buildAnswerReviewReferenceGrounding({ examMode: mode, subject, questionText, answerText, referenceText, normalizedDraft: normalizeAnswerReviewStructureDraft(initialDraft) });
     const draft = referenceGrounding.references.length > 0 ? await structureAnswerReviewWithGemini({ ownerTheoryAuthority, questionFiles, answerFiles, referenceFiles, questionText, answerText, referenceText, referenceGroundingContext: referenceGrounding.promptContext, explanationLevel }) : initialDraft;
-    const normalized = normalizeAnswerReviewStructureDraft(draft);
+    const normalizedDraft = normalizeAnswerReviewStructureDraft(draft);
+    const normalized = ownerTheoryAuthority ? groundAnswerReviewDiagnosis(normalizedDraft, questionText, answerText) : normalizedDraft;
     const analysisAuthority =
       requestPurpose === "app1_initial_analysis" &&
+      (!ownerTheoryAuthority || normalized.diagnosticStatus === "finding") &&
       session.userId &&
       app1Detail
         ? createApp1AnalysisAuthority({
@@ -222,6 +225,7 @@ export async function POST(request: Request) {
         : null;
     const repairAuthority =
       requestPurpose === "repair_verification" &&
+      (!ownerTheoryAuthority || ["finding", "no_clear_gap"].includes(normalized.diagnosticStatus ?? "")) &&
       session.userId &&
       app1Detail &&
       app1PrimaryGap &&
@@ -241,7 +245,7 @@ export async function POST(request: Request) {
         : null;
     let learningSignalStatus: "saved" | "skipped" | "failed" = "skipped";
     const learningSignalSkipReason = requestPurpose === "repair_verification" ? "repair_verification"
-      : app1Detail && isCaptureFunctionalTest(app1Detail.item.rawPayload) ? "functional_test" : undefined;
+      : app1Detail && isCaptureFunctionalTest(app1Detail.item.rawPayload) ? "functional_test" : ownerTheoryAuthority && normalized.diagnosticStatus !== "finding" ? "no_grounded_finding" : undefined;
     const skipReason = learningSignalSkipReason ?? shouldSkipLearningSignalSave(normalized);
     if (session.userId && session.email && requestPurpose !== "repair_verification" && !skipReason) {
       try { await reviewOsService.createLearningSignalEvent(session.userId, session.email, buildAnswerReviewLearningSignalInput({ examMode: mode, subjectInput: subject, answerSourceType: answerFiles.length > 0 ? "file" : "text", normalizedDraft: normalized })); learningSignalStatus = "saved"; }
@@ -251,7 +255,7 @@ export async function POST(request: Request) {
     logServerEvent({ eventName: requestPurpose === "repair_verification" ? "answer_review_structure_repair_verification" : "answer_review_structure", userId: session.userId, route: "/api/answer-review/structure", mode, subject, costCategory: "answer_review", durationMs: Date.now()-startedAt, ok: true });
     return NextResponse.json({
       ok: true,
-      draft,
+      draft: normalized,
       ...(analysisAuthority ?? {}),
       ...(repairAuthority ?? {}),
       learningSignalStatus,

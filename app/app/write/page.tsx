@@ -64,6 +64,7 @@ export default async function ReviewOsWritePage({ searchParams }: PageProps) {
             mode={mode}
             labelledBy="write-page-title"
             workflow="second-write"
+            initialSubject={isOwnerPcTheoryEnabled() ? "감정평가이론" : undefined}
             initialPreferredSubjects={profile?.preferredSubjects}
           />
         </div>

@@ -199,7 +199,10 @@ export async function structureAnswerReviewWithGemini({
               "영어 원문이 포함되어도 검토 결과는 한국어로 요약한다.",
               "문장형 모범답안을 작성하지 않는다.",
               "Skeleton은 목차와 필수 키워드만 제시한다.",
-              "가장 큰 간극은 1개만 고른다.",
+              "실제 보완점이 있을 때 가장 큰 간극은 1개만 고른다. 없으면 만들지 않는다. 모든 답안에 같은 약점을 강제로 만들지 않는다.",
+              "diagnosticStatus는 finding(근거 있는 보완점), no_clear_gap(명백한 보완점 없음), insufficient_evidence(근거 부족), analysis_failed(분석 불가) 중 하나다. 빈 필드를 채우려고 약점을 만들어내지 않는다.",
+              "questionRequirementQuote는 questionText의 실제 요구 구절을 4~240자로 정확히 인용한다. answerEvidenceQuote는 answerText의 실제 구절을 정확히 인용한다. reviewedAnswerScope는 entire_submitted_answer이다. 누락 주장은 문제 요구와 제출 답안 전체를 확인한 범위를 함께 제시한다.",
+              "no_clear_gap/insufficient_evidence/analysis_failed이면 missingIssueCandidates는 빈 배열, weakLogicPoint/weakParagraphPoint/rewriteTarget/rewriteDraftSuggestion은 빈 문자열이다. 원문에 없는 문장은 인용하지 않는다.",
               "answerEvidenceQuote에는 그 간극 판단에 사용한 answerText의 실제 구절 1개를 4~120자로 그대로 인용한다. 바꾸거나 만들어내지 않는다. 인용할 구절이 없으면 빈 문자열로 쓴다.",
               "참고 정리가 없으면 참고답안과 비교를 완료했다고 표현하지 않는다.",
               "다음 행동은 10분 안에 실행 가능한 행동 1개로 쓴다.",
@@ -422,6 +425,9 @@ function answerReviewStructureSchema(): Schema {
   return {
     type: SchemaType.OBJECT,
     properties: {
+      diagnosticStatus: { type: SchemaType.STRING, format: "enum", enum: ["finding", "no_clear_gap", "insufficient_evidence", "analysis_failed"] },
+      questionRequirementQuote: { type: SchemaType.STRING },
+      reviewedAnswerScope: { type: SchemaType.STRING, format: "enum", enum: ["entire_submitted_answer"] },
       questionSummary: { type: SchemaType.STRING },
       coreConcepts: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
       requiredIssues: { type: SchemaType.STRING },
@@ -442,7 +448,7 @@ function answerReviewStructureSchema(): Schema {
       stepByStepExplanation: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
       examAnswerHints: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
     },
-    required: [
+    required: ["diagnosticStatus", "questionRequirementQuote", "reviewedAnswerScope",
       "questionSummary",
       "coreConcepts",
       "requiredIssues",
