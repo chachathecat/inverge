@@ -49,7 +49,7 @@ test("Review Queue self-rating outcomes and learning-signal copy are present", (
   assert.ok(source.includes("data-review-interval-suggestion"));
   assert.ok(source.includes("표시된 간격은 학습 제안입니다. 복습 완료를 누르면 선택한 자기평가가 함께 저장됩니다."));
   assert.ok(source.includes("복습 완료"));
-  assert.ok(source.includes("disabled={pendingId === primaryItem.queueId || !primaryOutcome}"));
+  assert.ok(source.includes("disabled={pendingId === primaryItem.queueId || !primaryOutcome || (practiceReview && primaryRecallText.trim().length < 8)}"));
   assert.ok(source.includes("retrievalReviewVersion: \"v1\""));
   assert.ok(source.includes("recallOutcome"));
   assert.ok(source.includes("suggestedReviewInterval"));

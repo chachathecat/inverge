@@ -405,6 +405,52 @@ export function buildApp1PrimaryGap(
   });
 }
 
+// A single direct-capitalization relation must use the submitted problem operands.
+// Multi-period cash flows, unexplained quantities and adjustments fail closed.
+function hasQuestionBoundDirectCapitalization(question: string, value: string, fullAnswer: boolean) {
+  const n = APP1_REPAIR_CALCULATION_NUMBER_SOURCE;
+  const incomes = [...question.matchAll(new RegExp(String.raw`순수익(?:은|는|이|가)?\s*(${n})\s*(억원|만원|천원|원)`, "gu"))];
+  const rates = [...question.matchAll(new RegExp(String.raw`환원율(?:은|는|이|가)?\s*(${n})\s*%(?:\s*\((${n})\))?`, "gu"))];
+  const units = [...question.matchAll(/결과는\s*(억원|만원|천원|원)\s*단위/gu)];
+  const places = parseApp1DeclaredRoundingPlaces(question.replace(/반올림\s*기준/gu, "처리 기준"));
+  if (incomes.length !== 1 || rates.length !== 1 || units.length !== 1 || places == null) return null;
+  const unboundQuestion = question.replace(incomes[0][0], "").replace(rates[0][0], "").replace(APP1_REPAIR_ROUNDING_PATTERN, "");
+  if (/[0-9]/u.test(unboundQuestion) || !/(?:다른|추가|기타)?\s*조정(?:은|이)?\s*없/u.test(question)) return null;
+  const income = parseApp1ExactDecimal(incomes[0][1], incomes[0][2]);
+  const percent = parseApp1ExactDecimal(rates[0][1]);
+  if (!income || !percent || income.numerator <= BigInt(0) || percent.numerator <= BigInt(0)) return null;
+  const rate = { numerator: percent.numerator, denominator: percent.denominator * BigInt(100) };
+  if (rates[0][2]) {
+    const decimalRate = parseApp1ExactDecimal(rates[0][2]);
+    if (!decimalRate || !app1ExactDecimalsEqual(rate, decimalRate)) return null;
+  }
+  const expressions = [...value.matchAll(APP1_REPAIR_CALCULATION_SYMBOL_PATTERN)];
+  if (expressions.length !== 1 || [...value.matchAll(/=/gu)].length !== 1) return false;
+  const x = expressions[0];
+  const left = parseApp1ExactDecimal(x[1], x[2]), right = parseApp1ExactDecimal(x[4], x[5]);
+  const stated = parseApp1ExactDecimal(x[6], x[7]);
+  const expected = evaluateApp1ExactBinaryCalculation(income, "/", rate);
+  const declaredPlaces = parseApp1DeclaredRoundingPlaces(value);
+  if (!left || !right || !stated || !expected || !["/", "÷"].includes(x[3]) || !x[2] || x[5] || x[7] !== units[0][1] ||
+      !app1ExactDecimalsEqual(left, income) || !app1ExactDecimalsEqual(right, rate) ||
+      declaredPlaces === null || (fullAnswer && declaredPlaces !== places) ||
+      (declaredPlaces !== undefined && declaredPlaces !== places) ||
+      !app1ExactHalfUpMatches(expected, stated, units[0][1], places)) return false;
+  for (const assignment of value.matchAll(new RegExp(String.raw`(?:수익가액|감정평가액|시산가액)(?:은|는|이|가|을|를)?\s*(${n})\s*(억원|만원|천원|원)`, "gu"))) {
+    const amount = parseApp1ExactDecimal(assignment[1], assignment[2]);
+    if (!amount || !app1ExactDecimalsEqual(amount, stated)) return false;
+  }
+  const prose = value.slice(0, x.index) + value.slice((x.index ?? 0) + x[0].length);
+  for (const m of prose.matchAll(new RegExp(String.raw`(?:^|(?<=[^0-9.,]))(${n})\s*(억원|만원|천원|원|%)?(?=$|[^0-9.,])`, "gu"))) {
+    const number = parseApp1ExactDecimal(m[1], m[2] === "%" ? undefined : m[2]);
+    if (!number) return false;
+    if (m[2] === "%") { if (!app1ExactDecimalsEqual(number, percent)) return false; }
+    else if (m[2]) { if (!app1ExactDecimalsEqual(number, income) && !app1ExactDecimalsEqual(number, stated)) return false; }
+    else if (!app1ExactDecimalsEqual(number, rate)) return false;
+  }
+  return !hasUnresolvedRepairMetacommentary(value);
+}
+
 function normalizedIdentity(value: string) {
   return value.normalize("NFKC").replace(/[^0-9A-Za-z가-힣]+/gu, "").toLowerCase();
 }
@@ -1647,20 +1693,27 @@ export function evaluateApp1SameSessionRepair(input: Readonly<{
       observedGap,
     );
   }
-  const learnerSupportsTarget = isTargetSpecificPositiveEvidence(
-    repairText,
-    targetProfile,
-  );
+  const questionBoundCalculation = input.detail.item.subjectLabel === "감정평가실무" &&
+    input.detail.item.rawQuestionText?.includes("직접환원법") &&
+    targetProfile.requiredFacets.includes("calculation") &&
+    targetProfile.requiredFacets.every(facet => ["calculation", "linkage"].includes(facet));
+  if (questionBoundCalculation && hasQuestionBoundDirectCapitalization(input.detail.item.rawQuestionText ?? "", repairText, true) === null) {
+    return result("guided_path_needed", "주어진 자료나 계산 유형이 단일 직접환원 자동 확인 범위를 벗어납니다. 학습자 오류나 교정 완료로 처리하지 않습니다.", observedGap);
+  }
+  const positiveEvidence = (value: string, fullAnswer = false) => questionBoundCalculation
+    ? hasQuestionBoundDirectCapitalization(input.detail.item.rawQuestionText ?? "", value, fullAnswer) === true
+    : isTargetSpecificPositiveEvidence(value, targetProfile);
+  const learnerSupportsTarget = positiveEvidence(repairText, true);
   const evidenceQuote = input.repairDraft.answerEvidenceQuote?.trim() ?? "";
   const groundedClearQuote = input.repairDraft.diagnosticStatus === "no_clear_gap" &&
     input.repairDraft.reviewedAnswerScope === "entire_submitted_answer" &&
     evidenceQuote.length >= 4 && evidenceQuote.length <= 600 &&
     repairText.includes(evidenceQuote) &&
-    isTargetSpecificPositiveEvidence(evidenceQuote, targetProfile);
+    positiveEvidence(evidenceQuote);
   const targetSpecificPositiveEvidence = input.repairDraft.diagnosticStatus === "no_clear_gap"
     ? groundedClearQuote
     : input.repairDraft.strengths.some(
-        (strength) => isTargetSpecificPositiveEvidence(strength, targetProfile),
+        (strength) => positiveEvidence(strength),
       );
   const targetSpecificConflict = [
     ...input.repairDraft.missingIssueCandidates,

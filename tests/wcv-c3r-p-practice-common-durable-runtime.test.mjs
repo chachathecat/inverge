@@ -65,7 +65,7 @@ const productionAccessBlobs = Object.freeze({
   // fail-closed navigation admission check and #927 presentation-only Korean
   // learner-language rebind. Access and command semantics remain unchanged;
   // future access changes still require an explicit identity update and audit.
-  "lib/review-os/repository.ts": "287af612ef296e7a7dd0bf91b4fd5e1238288157",
+  "lib/review-os/repository.ts": "ab1bb63eba456a6bb756f3ee810cb0c3a6441317",
   "lib/review-os/server.ts": "429085a06c3104aa66c49b272738d53f00318d8a",
   "app/app/layout.tsx": "ef48f2ec1496d675233acddd5e354e62b41c3754",
   "app/app/c3r-p/page.tsx": "1183828115a8a0ef0fb04c5d9c0e42a8ae5bd240",
@@ -854,13 +854,14 @@ test("disposable profile fixture rejects non-local, non-UUID, duplicate and inco
 });
 
 test("disposable fixture leaves production access code and frozen identities unchanged", () => {
-  // Owner's APP-1 retry exception changes only unique-insert recovery and the
-  // recurrence snapshot CAS. Rebinding that file must not relax access code.
+  // Owner-authorized APP-1 changes include source-bound correction deduplication,
+  // unique-insert recovery and recurrence snapshot CAS. All access sections stay pinned.
   const priorRepository = execFileSync("git", ["show", "451bfd918cc8abc72cfb4ca152b9b39f6b0573af"], {
     cwd: root, encoding: "utf8",
   });
   for (const [start, end] of [
-    [0, "  async insertWrongAnswerItem("],
+    [0, "  createDedupeKey("],
+    ["  async findExistingByDedupe(", "  async insertWrongAnswerItem("],
     ["  async getWrongAnswerItem(", "  async ensureApp1WrongAnswerItemRecurrenceSnapshot("],
     ["  async listReviewQueue(", null],
   ]) {

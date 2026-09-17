@@ -6,7 +6,7 @@ import {spawn,execFileSync} from "node:child_process";
 import {fileURLToPath} from "node:url";
 import {localDockerRequest as api} from "./owner-economics-loopback.mjs";
 import {ORACLE_IMAGE} from "../automation/wcv-c3-pre-p-postgresql-security-state-oracle.mjs";
-import {authorizeAdditionalTheoryDevelopmentCall,readTheoryDevelopmentCallLimit,authorizeTheoryDevelopment,readTheoryDevelopmentApproval,readTheoryBudget,validateTheorySettings} from "../../lib/owner-study/owner-pc-theory-budget.mjs";
+import {THEORY_POLICY,authorizeAdditionalPracticeDevelopmentCall,readPracticeDevelopmentCallLimit,readPracticeDevelopmentUsage,authorizePracticeDevelopment,readPracticeDevelopmentApproval,authorizeAdditionalTheoryDevelopmentCall,readTheoryDevelopmentCallLimit,authorizeTheoryDevelopment,readTheoryDevelopmentApproval,readTheoryBudget,validateTheorySettings} from "../../lib/owner-study/owner-pc-theory-budget.mjs";
 const root=path.resolve(fileURLToPath(new URL("../../",import.meta.url)));
 const privateRoot=path.join(process.env.LOCALAPPDATA??"","Inverge","theory-development-20260916");
 const runtimeFile=path.join(privateRoot,"runtime.json");
@@ -73,15 +73,36 @@ async function authorizeAdditionalCall(){
  const budget=await readTheoryBudget(budgetRoot,settings);
  console.log(JSON.stringify({maximumDevelopmentCalls:await readTheoryDevelopmentCallLimit(budgetRoot,settings),developmentUsedCalls:budget.developmentUsedCalls,reservedMicros:budget.reservedMicros,remainingMicros:budget.remainingMicros}));
 }
-async function serve(production=false){
+
+async function authorizePracticeCalls(additional=false){
+ if(process.platform!=="win32"||process.env.VERCEL!==undefined)fail("pc_local_only");
+ const c=await config();if(c.userId!==userId)fail("isolated_config_mismatch");
+ const providerRoot=path.join(process.env.LOCALAPPDATA,"Inverge","owner-economics","theory-one-case-20260915");
+ const settings=validateTheorySettings(JSON.parse(await readFile(path.join(providerRoot,"provider.json"),"utf8")));
+ const budgetRoot=path.join(providerRoot,"budget");
+ const fixture=JSON.parse(await readFile(path.join(root,"tests/fixtures/practice-development-cases.json"),"utf8"));
+ const expected={userId,questionSha256:createHash("sha256").update(fixture.question.trim()).digest("hex"),supabaseUrl:"http://127.0.0.1:55431",maximumCalls:4};
+ let approval;
+ try{approval=await readPracticeDevelopmentApproval(budgetRoot,settings);}
+ catch(error){if(additional||error.code!=="OWNER_THEORY_PRACTICE_APPROVAL_REQUIRED")throw error;await authorizePracticeDevelopment(budgetRoot,settings,expected);approval=await readPracticeDevelopmentApproval(budgetRoot,settings);}
+ if(Object.entries(expected).some(([name,value])=>approval[name]!==value))fail("isolated_approval_mismatch");
+ if(additional && await readPracticeDevelopmentCallLimit(budgetRoot,settings)===4)await authorizeAdditionalPracticeDevelopmentCall(budgetRoot,settings);
+ const budget=await readTheoryBudget(budgetRoot,settings);
+ const usage=await readPracticeDevelopmentUsage(budgetRoot,settings);
+ console.log(JSON.stringify({approvalId:approval.approvalId,...usage,maximumReservationMicros:usage.maximumCalls*THEORY_POLICY.reservationMicros,developmentUsedCalls:budget.developmentUsedCalls,reservedMicros:budget.reservedMicros,remainingMicros:budget.remainingMicros}));
+}
+
+async function serve(production=false, controlledPractice=false, paidPractice=false){
  const c=await config();if(c.userId!==userId)fail("isolated_config_mismatch");
  for(const role of Object.keys(names)){const row=await inspect(names[role]);if(!row.body?.State?.Running||row.body.Config.Labels?.["inverge.isolated-theory"]!=="20260916")fail("isolated_stack_not_ready");}
  const gateway=http.createServer((req,res)=>{const match=req.url.startsWith("/auth/v1/")?{prefix:"/auth/v1",port:55433}:req.url.startsWith("/rest/v1/")?{prefix:"/rest/v1",port:55432}:null;if(!match){res.writeHead(404).end();return;}const upstream=http.request({hostname:"127.0.0.1",port:match.port,path:req.url.slice(match.prefix.length),method:req.method,headers:req.headers},response=>{res.writeHead(response.statusCode,response.headers);response.pipe(res);});upstream.on("error",()=>res.writeHead(502).end());req.pipe(upstream);});
  await new Promise((resolve,reject)=>{gateway.once("error",reject);gateway.listen(55431,"127.0.0.1",resolve);});
  const env=Object.fromEntries(Object.entries(process.env).filter(([name])=>/^(path|pathext|systemroot|windir|comspec|userprofile|localappdata|appdata|temp|tmp|programfiles|programfiles\(x86\)|programw6432|number_of_processors|processor_architecture|lang|term)$/i.test(name)));
  Object.assign(env,{NODE_ENV:production?"production":"development",NEXT_TELEMETRY_DISABLED:"1",NEXT_PUBLIC_SUPABASE_URL:"http://127.0.0.1:55431",NEXT_PUBLIC_SUPABASE_ANON_KEY:c.anon,SUPABASE_SERVICE_ROLE_KEY:c.service,DEV_SMOKE_AUTH:"false",ALPHA_ADMIN_EMAILS:email,INVERGE_OWNER_PC_THEORY_ENABLED:"true",INVERGE_OWNER_PC_THEORY_DEVELOPMENT_ENABLED:"true",WCV_C2R_C_T_THEORY_ENABLED:"true",WCV_C2R_C_T_OWNER_EMAILS:email,APP1_VERIFICATION_SIGNING_SECRET:c.signingSecret});
+ if(paidPractice) Object.assign(env,{INVERGE_OWNER_PC_PRACTICE_DEVELOPMENT_ENABLED:"true",WCV_C2R_C_T_THEORY_ENABLED:"false",WCV_C2R_C_P_PRACTICE_ENABLED:"true",WCV_C2R_C_P_OWNER_EMAILS:email});
+ if(controlledPractice) Object.assign(env,{INVERGE_OWNER_PC_THEORY_ENABLED:"false",INVERGE_OWNER_PC_THEORY_DEVELOPMENT_ENABLED:"false",WCV_C2R_C_T_THEORY_ENABLED:"false",WCV_C2R_C_P_PRACTICE_ENABLED:"true",WCV_C2R_C_P_OWNER_EMAILS:email,GEMINI_API_KEY:"synthetic-practice-no-live-key",GEMINI_MODEL:"gemini-2.5-flash",INVERGE_PRACTICE_CONTROLLED_PROVIDER:"true",NODE_OPTIONS:`--import=${new URL("./practice-development-provider.mjs",import.meta.url).href}`});
  for(const file of [".env",".env.local",".env.development",".env.development.local"]){try{await readFile(path.join(root,file));fail("unexpected_env_file");}catch(e){if(e.code!=="ENOENT")throw e;}}
  if(production)try{await new Promise((resolve,reject)=>{const build=spawn(process.execPath,["node_modules/next/dist/bin/next","build"],{cwd:root,env,stdio:"inherit",windowsHide:true});build.on("error",reject);build.on("exit",code=>code===0?resolve():reject(Error("isolated_build_failed")));});}catch(error){gateway.close();throw error;}
  const child=spawn(process.execPath,["node_modules/next/dist/bin/next",production?"start":"dev","--hostname","127.0.0.1","--port","3884"],{cwd:root,env,stdio:"inherit",windowsHide:true});child.on("exit",code=>{gateway.close();process.exitCode=code??1;});
 }
-const command=process.argv[2];(command==="prepare"?prepare():command==="serve"?serve():command==="serve-production"?serve(true):command==="authorize-development"?authorizeDevelopment():command==="authorize-additional-call"?authorizeAdditionalCall():Promise.reject(Error("invalid_isolated_command"))).catch(error=>{console.error(/^[a-z0-9_]+$/.test(error.message)?error.message:"isolated_runtime_failed_no_secret_output");process.exitCode=1;});
+const command=process.argv[2];(command==="prepare"?prepare():command==="serve"?serve():command==="serve-production"?serve(true):command==="serve-practice-controlled"?serve(true,true):command==="serve-practice-paid"?serve(true,false,true):command==="authorize-practice-development"?authorizePracticeCalls():command==="authorize-additional-practice-call"?authorizePracticeCalls(true):command==="authorize-development"?authorizeDevelopment():command==="authorize-additional-call"?authorizeAdditionalCall():Promise.reject(Error("invalid_isolated_command"))).catch(error=>{console.error(/^[a-z0-9_]+$/.test(error.message)?error.message:"isolated_runtime_failed_no_secret_output");process.exitCode=1;});

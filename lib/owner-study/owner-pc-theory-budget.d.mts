@@ -1,5 +1,5 @@
 export type OwnerTheorySettings = { version: string; ownerId: string; projectId: string; model: string; apiKey: string; paidProjectVerified: boolean; dataSharingEnabled: boolean; verifiedAt: string; verificationEvidenceSha256: string };
-export type OwnerTheoryAuthority = { userId: string; sourceItemId: string; purpose: "app1_initial_analysis" | "repair_verification"; questionSha256?: string; development?: {approvalId: string; supabaseUrl: string} };
+export type OwnerTheoryAuthority = { userId: string; sourceItemId: string; purpose: "app1_initial_analysis" | "repair_verification"; questionSha256?: string; development?: {approvalId: string; supabaseUrl: string}; practiceDevelopment?: {approvalId: string; supabaseUrl: string} };
 export const THEORY_POLICY: Readonly<{version: string; model: string; budgetMicros: number; inputTokenMaximum: number; maxOutputTokens: number; thinkingBudget: number; reservationMicros: number; maximumCalls: number}>;
 export class OwnerTheoryError extends Error { code: string; constructor(code: string); }
 export function validateTheorySettings(settings: unknown, now?: number): OwnerTheorySettings;
@@ -13,3 +13,10 @@ export function readTheoryDevelopmentApproval(root: string, settings: OwnerTheor
 
 export function readTheoryDevelopmentCallLimit(root: string, settings: OwnerTheorySettings): Promise<number>;
 export function authorizeAdditionalTheoryDevelopmentCall(root: string, settings: OwnerTheorySettings): Promise<void>;
+
+export type PracticeDevelopmentApproval = TheoryDevelopmentApproval & { maximumCalls:number; maximumSourceItems:number; maximumReservationMicros:number };
+export function readPracticeDevelopmentApproval(root:string, settings:OwnerTheorySettings):Promise<PracticeDevelopmentApproval>;
+export function readPracticeDevelopmentUsage(root:string, settings:OwnerTheorySettings):Promise<{usedCalls:number; maximumCalls:number}>;
+
+export function readPracticeDevelopmentCallLimit(root:string, settings:OwnerTheorySettings):Promise<number>;
+export function authorizeAdditionalPracticeDevelopmentCall(root:string, settings:OwnerTheorySettings):Promise<void>;

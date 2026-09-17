@@ -808,7 +808,7 @@ export class ReviewOsRepository {
     return result.count ?? 0;
   }
 
-  createDedupeKey(userId: string, input: WrongAnswerItemInput) {
+  createDedupeKey(userId: string, input: WrongAnswerItemInput, legacyApp1 = false) {
     return hashPayload(
       JSON.stringify({
         userId,
@@ -818,6 +818,8 @@ export class ReviewOsRepository {
         rawQuestionText: input.rawQuestionText?.trim() ?? "",
         correctAnswer: input.correctAnswer.trim(),
         userAnswer: input.userAnswer.trim(),
+        ...(!legacyApp1 && input.extractionPayload?.user_confirmed_fields?.app1_contract_version === APP1_CONTRACT_VERSION
+          ? { app1SourceItemId: input.rewriteSourceItemId } : {}),
       }),
     );
   }

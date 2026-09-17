@@ -132,7 +132,7 @@ function taskTypeFromConceptNodeCandidate(
   }
   const text = `${candidate.nextTaskType} ${candidate.conceptFamily} ${candidate.mistakeType ?? ""} ${subject}`;
   if (/calculator_routine|accounting_template|formula_check|계산|산식|검산|CASIO|분개/.test(text)) {
-    return mode === "first" ? "accounting_template_retry" : "second_answer_rewrite";
+    return mode === "first" ? "accounting_template_retry" : subject === "감정평가실무" ? "practice_calculation_retry" : "second_answer_rewrite";
   }
   if (/cloze|빈칸|암기/.test(text)) return "cloze_review";
   if (/trap_word|ox_retrieval|O\/X|선지/.test(text)) return mode === "first" ? "first_ox_retry" : "second_answer_rewrite";
@@ -151,6 +151,7 @@ function resolveQueueTaskType(mode: "first" | "second", item: ReviewQueueCard): 
 
   const text = `${item.subjectLabel} ${item.reviewReason} ${item.mistakeType} ${item.topicTag}`;
   if (/OCR|ocr|확인 필요|인식/.test(text)) return "ocr_confirmation";
+  if (mode === "second" && item.subjectLabel === "감정평가실무" && /calculation|계산|산식|단위|검산/.test(text)) return "practice_calculation_retry";
   if (mode === "second" && /rewrite|재작성|다시쓰기|문단|논점 누락|누락/.test(text)) return "second_answer_rewrite";
   if (mode === "first" && /회계|계산|산식|단위|공식|template|템플릿/.test(text)) return "accounting_template_retry";
   if (/빈칸|cloze|암기/.test(text)) return "cloze_review";
@@ -161,6 +162,7 @@ function resolveQueueTaskType(mode: "first" | "second", item: ReviewQueueCard): 
 function primaryCtaFor(taskType: TodayPlanTaskKind, mode: "first" | "second"): TodayPlanPrimaryCta {
   if (taskType === "ocr_confirmation") return { label: "OCR 먼저 확인", hrefKind: "capture" };
   if (taskType === "note_cleanup") return { label: "확인하고 정리", hrefKind: "capture" };
+  if (taskType === "practice_calculation_retry") return { label: "실무 재계산·검산", hrefKind: "review" };
   if (taskType === "second_answer_rewrite") return { label: "10분 다시 쓰기", hrefKind: "review" };
   if (taskType === "calculator_routine") return { label: "계산·검산 다시 하기", hrefKind: "calculator_template" };
   if (taskType === "accounting_template_retry") return { label: "계산 틀 재확인", hrefKind: "calculator_template" };
@@ -202,6 +204,7 @@ function buildDerivedActionTitle(input: { mode: "first" | "second"; subject: str
 
 function toNextAction(mode: "first" | "second", item: ReviewQueueCard, taskType: TodayPlanTaskKind) {
   if (taskType === "ocr_confirmation") return "OCR 숫자/용어 1개를 먼저 확인하고 노트를 저장합니다.";
+  if (taskType === "practice_calculation_retry") return `${item.problemTitle}의 산식·단위·반올림을 다시 계산해 확인합니다.`;
   if (taskType === "second_answer_rewrite") return `${item.problemTitle}에서 누락 논점 1개를 문단으로 다시 씁니다.`;
   if (taskType === "calculator_routine") return "입력 순서와 단위·반올림 기준을 다시 확인합니다.";
   if (taskType === "accounting_template_retry") return `${item.problemTitle}의 산식 틀을 먼저 적고 계산을 다시 확인합니다.`;

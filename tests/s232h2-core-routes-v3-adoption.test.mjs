@@ -49,14 +49,14 @@ test("S232H.2 preserves Today ranking and the maximum-three work boundary", () =
 });
 
 test("S232H.2 preserves Review queue order, local state, and completion mutation", () => {
-  assert.match(reviewQueue, /const primaryItem = items\[0\]!/);
-  assert.match(reviewQueue, /const candidateItems = items\.slice\(1\)/);
+  assert.match(reviewQueue, /const primaryItem = items\.find\(\(item\) => item\.queueId === selectedQueueId\) \?\? items\[0\]!/);
+  assert.match(reviewQueue, /const candidateItems = items\.filter\(\(item\) => item\.queueId !== primaryItem\.queueId\)/);
   assert.match(reviewQueue, /const visibleCandidateItems = candidateItems\.slice\(0, 3\)/);
   assert.doesNotMatch(reviewQueue, /items\.(?:sort|toSorted)\(/);
   assert.match(reviewQueue, /fetch\(`\/api\/os\/review-queue\/\$\{queueId\}\/complete`/);
   assert.match(reviewQueue, /body: JSON\.stringify\(\{ action: selectedAction, metadata \}\)/);
   assert.match(reviewQueue, /router\.refresh\(\)/);
-  assert.match(reviewQueue, /disabled=\{pendingId === primaryItem\.queueId \|\| !primaryOutcome\}/);
+  assert.match(reviewQueue, /disabled=\{pendingId === primaryItem\.queueId \|\| !primaryOutcome \|\| \(practiceReview && primaryRecallText\.trim\(\)\.length < 8\)\}/);
 });
 
 test("S232H.2 keeps Review reveal and self-rating on one second-round primary action", () => {

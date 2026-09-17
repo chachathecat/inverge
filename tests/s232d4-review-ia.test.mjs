@@ -50,8 +50,8 @@ test("S232D.4 orders the primary Review task from context to retrieval", () => {
 test("S232D.4 keeps Review queue and completion behavior unchanged", () => {
   assert.match(page, /reviewOsService\.getReviewQueue\(session\.userId, session\.email\)/);
   assert.match(page, /\.filter\(\s*\(item\) => item\.examName === config\.label/);
-  assert.match(client, /const primaryItem = items\[0\]!/);
-  assert.match(client, /const candidateItems = items\.slice\(1\)/);
+  assert.match(client, /const primaryItem = items\.find\(\(item\) => item\.queueId === selectedQueueId\) \?\? items\[0\]!/);
+  assert.match(client, /const candidateItems = items\.filter\(\(item\) => item\.queueId !== primaryItem\.queueId\)/);
   assert.match(client, /const visibleCandidateItems = candidateItems\.slice\(0, 3\)/);
   assert.doesNotMatch(client, /items\.(?:sort|toSorted)\(/);
   assert.match(client, /fetch\(`\/api\/os\/review-queue\/\$\{queueId\}\/complete`/);
@@ -61,7 +61,7 @@ test("S232D.4 keeps Review queue and completion behavior unchanged", () => {
   assert.match(client, /setRecallAttemptTextByQueueId/);
   assert.match(client, /setRevealedHintByQueueId/);
   assert.match(client, /setRecallOutcomeByQueueId/);
-  assert.match(client, /disabled=\{pendingId === primaryItem\.queueId \|\| !primaryOutcome\}/);
+  assert.match(client, /disabled=\{pendingId === primaryItem\.queueId \|\| !primaryOutcome \|\| \(practiceReview && primaryRecallText\.trim\(\)\.length < 8\)\}/);
 });
 
 test("S232D.4 does not invent unsupported V3 or authority semantics", () => {

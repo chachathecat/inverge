@@ -1512,7 +1512,7 @@ export class ReviewOsService {
 
     if (action === "first_short_retry") return addDays(2);
     if (action === "first_confirm_recall") return addDays(3);
-    if (action === "second_paragraph_rewrite") return addDays(2);
+    if (action === "second_paragraph_rewrite" || action === "second_calculation_retry") return addDays(2);
 
     if (existingNextReviewDate) {
       return resolveScheduleOverrideDate(
@@ -1532,6 +1532,8 @@ export class ReviewOsService {
       return "짧은 재시도를 완료한 뒤 2일 후 다시 확인합니다.";
     if (action === "first_confirm_recall")
       return "근거 회상을 확인했고 3일 후 다시 점검합니다.";
+    if (action === "second_calculation_retry")
+      return "실무 산식·단위·계산 결과를 다시 확인했고 2일 후 재계산합니다.";
     if (action === "second_paragraph_rewrite")
       return "문단 재작성을 진행했고 2일 후 다시 보강합니다.";
     return examName === "감정평가사 2차"
@@ -1542,7 +1544,9 @@ export class ReviewOsService {
   private isCompletionActionCompatible(
     examName: string,
     action: ReviewCompletionAction,
+    subjectLabel: string,
   ) {
+    if (action === "second_calculation_retry") return examName === "감정평가사 2차" && subjectLabel === "감정평가실무";
     if (examName === "감정평가사 2차") {
       return (
         action === "second_paragraph_rewrite" ||
@@ -1770,6 +1774,16 @@ export class ReviewOsService {
     }
   }
 
+  private async resolveRepairDedupeKey(userId: string, input: WrongAnswerItemInput) {
+    const key = reviewOsRepository.createDedupeKey(userId, input);
+    const legacyKey = reviewOsRepository.createDedupeKey(userId, input, true);
+    if (key === legacyKey || await reviewOsRepository.findExistingByDedupe(userId, key)) return key;
+    const legacy = await reviewOsRepository.findExistingByDedupe(userId, legacyKey);
+    // Existing sealed repairs keep their original identity. Different source answers
+    // may converge to identical corrections without borrowing each other's authority.
+    return legacy?.rawPayload.rewrite_source_item_id === input.rewriteSourceItemId ? legacyKey : key;
+  }
+
   private async resumeExistingApp1RepairAfterExpiredAuthority(
     userId: string,
     email: string | null,
@@ -1782,10 +1796,7 @@ export class ReviewOsService {
       examName: getModeLabel(mode),
       subjectLabel: normalizeSubjectForMode(input.subjectLabel, mode),
     };
-    const dedupeKey = reviewOsRepository.createDedupeKey(
-      userId,
-      normalizedInput,
-    );
+    const dedupeKey = await this.resolveRepairDedupeKey(userId, normalizedInput);
     const replayAuthority = app1ReplayAuthority(
       userId,
       normalizedInput,
@@ -1826,10 +1837,7 @@ export class ReviewOsService {
       subjectLabel: normalizeSubjectForMode(input.subjectLabel, mode),
     };
 
-    const dedupeKey = reviewOsRepository.createDedupeKey(
-      userId,
-      normalizedInput,
-    );
+    const dedupeKey = await this.resolveRepairDedupeKey(userId, normalizedInput);
     const replayAuthority = app1ReplayAuthority(
       userId,
       normalizedInput,
@@ -2875,8 +2883,13 @@ export class ReviewOsService {
     );
     if (
       context &&
-      !this.isCompletionActionCompatible(context.item.examName, action)
+      !this.isCompletionActionCompatible(context.item.examName, action, context.item.subjectLabel)
     ) {
+      throw new ReviewOsInvalidCompletionActionError();
+    }
+    // Preserve compatibility with existing Practice clients while storing the actual subject action.
+    if (context?.item.subjectLabel === "감정평가실무" && action === "second_paragraph_rewrite") action = "second_calculation_retry";
+    if (action === "second_calculation_retry" && (typeof metadata.rewriteParagraph !== "string" || metadata.rewriteParagraph.trim().length < 8 || !["remembered", "fuzzy", "wrong", "confident_wrong"].includes(metadata.recallOutcome ?? ""))) {
       throw new ReviewOsInvalidCompletionActionError();
     }
     await reviewOsRepository.completeReviewQueueItem(userId, queueId);
@@ -2905,7 +2918,7 @@ export class ReviewOsService {
         }),
       );
       const rawRewriteParagraph =
-        action === "second_paragraph_rewrite" &&
+        (action === "second_paragraph_rewrite" || action === "second_calculation_retry") &&
         typeof metadata.rewriteParagraph === "string"
           ? metadata.rewriteParagraph.trim()
           : "";
@@ -2933,7 +2946,7 @@ export class ReviewOsService {
             : {}),
           rewriteTaskType:
             context.item.examName === "감정평가사 2차"
-              ? "second_answer_rewrite"
+              ? (context.item.subjectLabel === "감정평가실무" ? "practice_calculation_retry" : "second_answer_rewrite")
               : undefined,
           rewriteInstruction:
             metadata.rewriteInstruction ??
@@ -2942,7 +2955,7 @@ export class ReviewOsService {
         },
         rawRewriteParagraph
           ? {
-              rewrite_paragraph: rawRewriteParagraph,
+              ...(action === "second_calculation_retry" ? { recalculation_draft: rawRewriteParagraph } : { rewrite_paragraph: rawRewriteParagraph }),
               original_answer_item_id: context.item.id,
               original_answer_preserved: true,
             }

@@ -107,8 +107,8 @@ export function productionHarness(executeQuery, options = {}) {
   if (options.overrides) Object.assign(overrides, options.overrides({ load, session }));
   return {
     repository, authority, load, calls, session,
-    async command(suffix = "one") {
-      const detail = await repository.getWrongAnswerDetail(OWNER_ID, SOURCE_ID);
+    async command(suffix = "one", sourceItemId = SOURCE_ID) {
+      const detail = await repository.getWrongAnswerDetail(OWNER_ID, sourceItemId);
       const draft = {
         questionSummary: "합성 문제 구조", coreConcepts: ["정의", "논거", "적용"], requiredIssues: "정의, 논거, 적용",
         userAnswerSummary: "논거에서 적용 연결이 약함", userAnswerStructure: "정의 → 논거", referenceStructure: "정의 → 논거 → 적용 → 결론",
@@ -127,7 +127,7 @@ export function productionHarness(executeQuery, options = {}) {
           weakParagraphPoint: "결론 문장의 범위를 한정해 다시 적으세요.", weakLogicPoint: "결론 범위를 확인하세요." },
       });
       assert.ok(verification.verificationReceipt, JSON.stringify(verification.verification));
-      const command = { commandVersion: authority.APP1_PERSISTENCE_COMMAND_VERSION, sourceItemId: SOURCE_ID,
+      const command = { commandVersion: authority.APP1_PERSISTENCE_COMMAND_VERSION, sourceItemId,
         ...analysis, repairText, ...operation, verificationReceipt: verification.verificationReceipt };
       const input = authority.authorizeApp1PersistenceCommand({ userId: OWNER_ID, detail, command });
       assert.equal(input.nextReviewDate ?? null, null);

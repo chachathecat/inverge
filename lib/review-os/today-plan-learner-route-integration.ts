@@ -36,6 +36,7 @@ function areTodayPlanDurableGraphRouteGatesEnabled(input: {
 function taskTypeFromDurableAction(action: TodayPlanUnifiedAction): TodayPlanTaskKind {
   const taskType = action.taskType.toLowerCase();
   if (taskType === "calculator_routine") return "calculator_routine";
+  if (taskType === "practice_calculation_retry" && action.examMode === "second" && action.subjectId === "감정평가실무") return "practice_calculation_retry";
   if (/rewrite|다시쓰기|문단/.test(taskType)) return "second_answer_rewrite";
   if (/ocr|확인/.test(taskType)) return "ocr_confirmation";
   if (/계산|산식|template|casio/.test(taskType)) return "accounting_template_retry";
@@ -45,6 +46,7 @@ function taskTypeFromDurableAction(action: TodayPlanUnifiedAction): TodayPlanTas
 }
 
 function primaryCtaForDurableAction(taskType: TodayPlanTaskKind, mode: "first" | "second"): TodayPlanPrimaryCta {
+  if (taskType === "practice_calculation_retry") return { label: "실무 재계산·검산", hrefKind: "review" };
   if (taskType === "second_answer_rewrite") return { label: "10분 다시 쓰기", hrefKind: "review" };
   if (taskType === "ocr_confirmation" || taskType === "note_cleanup") return { label: "확인하고 정리", hrefKind: "capture" };
   if (taskType === "calculator_routine") return { label: "계산·검산 다시 하기", hrefKind: "calculator_template" };

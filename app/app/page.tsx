@@ -39,6 +39,7 @@ const TASK_TYPE_LABELS: Record<TodayPlanTaskKind, string> = {
   accounting_template_retry: "계산 틀 재확인",
   calculator_routine: "계산·검산",
   second_answer_rewrite: "문단 다시쓰기",
+  practice_calculation_retry: "실무 재계산·검산",
   ocr_confirmation: "OCR 확인",
   note_cleanup: "노트 정리",
 };

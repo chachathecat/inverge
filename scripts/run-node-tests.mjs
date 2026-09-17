@@ -4,6 +4,9 @@ import { existsSync } from "node:fs";
 const defaultTestFiles = [
   "tests/capture-diagnostic-provenance.test.mjs",
   "tests/owner-pc-theory-budget.test.mjs",
+  "tests/owner-pc-practice-development.test.mjs",
+  "tests/practice-real-app-calculation.test.mjs",
+  "tests/practice-review-completion.test.mjs",
   "tests/owner-pc-theory-development.test.mjs",
   "tests/answer-review-diagnosis-evidence.test.mjs",
   "tests/answer-review-quality-contract.test.mjs",

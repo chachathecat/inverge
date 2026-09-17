@@ -1,0 +1,95 @@
+{
+  "version": "practice-development-20260917",
+  "question": "독자 작성 합성 실무 문제입니다. 대상 부동산의 연간 순수익은 2,222만원이고 환원율은 6%(0.06)입니다. 다른 조정은 없습니다. 직접환원법에 따른 수익가액을 계산하고 산식·금액 단위·반올림 기준을 제시하시오. 결과는 만원 단위에서 소수점 첫째 자리까지 반올림하시오.",
+  "weak": "직접환원법에서 수익가액은 순수익을 환원율로 나눈 금액이다. 순수익 2,222만원의 계산 산식은 2,222만원 / 0.6 = 3,703.3만원이다. 소수점 첫째 자리까지 반올림했으며 단위와 부호를 검산했다.",
+  "corrected": "직접환원법에서 수익가액은 순수익을 환원율로 나눈 금액이다. 순수익 2,222만원의 계산 산식은 2,222만원 / 0.06 = 37,033.3만원이다. 소수점 첫째 자리까지 반올림했으며 단위와 부호를 검산했다.",
+  "insufficient": "직접환원법으로 수익가액을 산정해야 한다. 환원율 수치는 확인하지 못하여 현재 입력만으로 계산 결과를 작성하지 않았다.",
+  "responses": {
+    "weak": {
+      "questionSummary": "순수익을 환원율로 나누어 수익가액 계산",
+      "coreConcepts": [
+        "직접환원법",
+        "순수익",
+        "환원율"
+      ],
+      "requiredIssues": "산식, 금액 단위, 반올림",
+      "userAnswerStructure": "산식 → 금액 → 반올림",
+      "referenceStructure": "",
+      "strengths": [],
+      "missingIssueCandidates": [
+        "환원율 6%를 0.6으로 대입하여 수익가액 계산이 잘못되었습니다."
+      ],
+      "weakParagraphPoint": "",
+      "weakLogicPoint": "환원율 6%는 0.06이므로 순수익을 0.06으로 나누어 계산해야 합니다.",
+      "rewriteTarget": "순수익과 환원율의 계산 산식",
+      "rewriteDraftSuggestion": "",
+      "nextAction": "순수익 2,222만원을 환원율 0.06으로 나누고 소수점 첫째 자리까지 반올림해 단위를 검산하세요.",
+      "caution": "통제된 합성 응답 · 실제 모델 검증 아님 · 공식 채점 아님",
+      "plainExplanation": "순수익을 소수 형태의 환원율로 나눕니다.",
+      "keyTermExplanations": [],
+      "stepByStepExplanation": [],
+      "examAnswerHints": [],
+      "questionRequirementQuote": "직접환원법에 따른 수익가액을 계산하고 산식·금액 단위·반올림 기준을 제시하시오.",
+      "reviewedAnswerScope": "entire_submitted_answer",
+      "diagnosticStatus": "finding",
+      "userAnswerSummary": "환원율 6%를 0.6으로 대입했다.",
+      "answerEvidenceQuote": "2,222만원 / 0.6 = 3,703.3만원"
+    },
+    "corrected": {
+      "questionSummary": "순수익을 환원율로 나누어 수익가액 계산",
+      "coreConcepts": [
+        "직접환원법",
+        "순수익",
+        "환원율"
+      ],
+      "requiredIssues": "산식, 금액 단위, 반올림",
+      "userAnswerStructure": "산식 → 금액 → 반올림",
+      "referenceStructure": "",
+      "strengths": [],
+      "missingIssueCandidates": [],
+      "weakParagraphPoint": "",
+      "weakLogicPoint": "",
+      "rewriteTarget": "",
+      "rewriteDraftSuggestion": "",
+      "nextAction": "계산 근거를 직접 확인하세요.",
+      "caution": "통제된 합성 응답 · 실제 모델 검증 아님 · 공식 채점 아님",
+      "plainExplanation": "순수익을 소수 형태의 환원율로 나눕니다.",
+      "keyTermExplanations": [],
+      "stepByStepExplanation": [],
+      "examAnswerHints": [],
+      "questionRequirementQuote": "직접환원법에 따른 수익가액을 계산하고 산식·금액 단위·반올림 기준을 제시하시오.",
+      "reviewedAnswerScope": "entire_submitted_answer",
+      "diagnosticStatus": "no_clear_gap",
+      "userAnswerSummary": "순수익과 환원율로 수익가액을 계산하고 단위와 반올림을 제시했다.",
+      "answerEvidenceQuote": "직접환원법에서 수익가액은 순수익을 환원율로 나눈 금액이다. 순수익 2,222만원의 계산 산식은 2,222만원 / 0.06 = 37,033.3만원이다. 소수점 첫째 자리까지 반올림했으며 단위와 부호를 검산했다."
+    },
+    "insufficient": {
+      "questionSummary": "순수익을 환원율로 나누어 수익가액 계산",
+      "coreConcepts": [
+        "직접환원법",
+        "순수익",
+        "환원율"
+      ],
+      "requiredIssues": "산식, 금액 단위, 반올림",
+      "userAnswerStructure": "산식 → 금액 → 반올림",
+      "referenceStructure": "",
+      "strengths": [],
+      "missingIssueCandidates": [],
+      "weakParagraphPoint": "",
+      "weakLogicPoint": "",
+      "rewriteTarget": "",
+      "rewriteDraftSuggestion": "",
+      "nextAction": "계산 근거를 직접 확인하세요.",
+      "caution": "통제된 합성 응답 · 실제 모델 검증 아님 · 공식 채점 아님",
+      "plainExplanation": "순수익을 소수 형태의 환원율로 나눕니다.",
+      "keyTermExplanations": [],
+      "stepByStepExplanation": [],
+      "examAnswerHints": [],
+      "questionRequirementQuote": "",
+      "reviewedAnswerScope": "entire_submitted_answer",
+      "diagnosticStatus": "insufficient_evidence",
+      "userAnswerSummary": "확인 가능한 계산 결과가 없다.",
+      "answerEvidenceQuote": ""
+    }
+  }
+}

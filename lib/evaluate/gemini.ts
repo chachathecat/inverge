@@ -102,6 +102,7 @@ function fileToPart(file: File): Promise<{ inlineData: { data: string; mimeType:
 }
 
 type AnswerReviewStructureInput = {
+  subject?: string;
   repairTarget?: { gap: string; repairAction: string };
   ownerTheoryAuthority?: OwnerTheoryAuthority;
   questionFiles: File[];
@@ -161,6 +162,7 @@ export async function gradeSecondRoundWithGemini(input: SecondGradingInput): Pro
 }
 
 export async function structureAnswerReviewWithGemini({
+  subject,
   ownerTheoryAuthority,
   repairTarget,
   questionFiles,
@@ -185,6 +187,8 @@ export async function structureAnswerReviewWithGemini({
           {
             text: [
               "너는 감정평가사 답안 검토실의 구조화 보조다.",
+              ...(subject ? [`검토 과목: ${subject}`] : []),
+              ...(subject === "감정평가실무" ? ["문제에 주어진 수치와 답안의 산식·대입값·계산 결과·단위·반올림을 대조한다. 계산에 필요한 자료가 없으면 학습자 오류로 단정하지 않고 insufficient_evidence로 표시한다. 정확한 답안에 약점을 만들지 않는다."] : []),
               "절대 수치화 평가나 합격 여부 추정을 하지 마라.",
               "출력은 반드시 JSON 하나만 반환하라.",
               "OCR 결과와 구조화 결과는 초안이며 검토자 확인이 필요하다는 점을 caution에 반영하라.",
@@ -209,7 +213,9 @@ export async function structureAnswerReviewWithGemini({
               "answerEvidenceQuote에는 finding이면 간극 판단의 근거, no_clear_gap이면 문제 요구를 충족하는 answerText의 실제 연속 구절을 4~600자로 그대로 인용한다. 바꾸거나 만들어내지 않는다. 근거 부족 또는 분석 실패로 인용할 구절이 없으면 빈 문자열로 쓴다.",
               ...(repairTarget ? [
                 `이번 요청은 기존 검토의 교정 확인이다. 서버가 확인한 교정 대상: ${JSON.stringify(repairTarget)}`,
-                "교정 대상이 실제로 보완되었는지 현재 answerText 전체에서 확인한다. 보완되었다면 answerEvidenceQuote에 사례 사실·판단 기준·적용·결론이 함께 드러나는 실제 연속 문장들을 그대로 인용한다. 평가자의 칭찬이나 요약을 인용문 대신 쓰지 않는다. 대상이 남아 있거나 판단 근거가 부족하면 그 상태를 정직하게 표시한다.",
+                subject === "감정평가실무"
+                  ? "교정 대상이 보완되었는지 answerText 전체를 확인한다. answerEvidenceQuote에는 실제 산식·대입값·계산 결과·단위·반올림 근거가 드러나는 연속 구절을 그대로 인용한다. 평가자의 요약으로 대체하지 않는다. 자료 부족이나 자동 확인 범위의 한계를 학습자 오류로 만들지 않는다."
+                  : "교정 대상이 실제로 보완되었는지 현재 answerText 전체에서 확인한다. 보완되었다면 answerEvidenceQuote에 사례 사실·판단 기준·적용·결론이 함께 드러나는 실제 연속 문장들을 그대로 인용한다. 평가자의 칭찬이나 요약을 인용문 대신 쓰지 않는다. 대상이 남아 있거나 판단 근거가 부족하면 그 상태를 정직하게 표시한다.",
               ] : []),
               "참고 정리가 없으면 참고답안과 비교를 완료했다고 표현하지 않는다.",
               "다음 행동은 10분 안에 실행 가능한 행동 1개로 쓴다.",

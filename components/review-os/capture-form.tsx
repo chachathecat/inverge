@@ -719,7 +719,8 @@ export function WrongAnswerCaptureForm({
   const currentCaptureFlowSteps = mode === "second" ? SECOND_CAPTURE_FLOW_STEPS : CAPTURE_FLOW_STEPS;
   const secondModeReferenceStepComplete = hasSecondModeReferenceStep(form);
   const referenceStatus = secondWriteReferenceStatus(form);
-  const ownerAnalysisEntry = textOnly && ownerCaptureRepairSubjectEnabled && !rewriteContext;
+  const [existingAnswerEntrySelected, setExistingAnswerEntrySelected] = useState(false);
+  const ownerAnalysisEntry = (textOnly || existingAnswerEntrySelected) && ownerCaptureRepairSubjectEnabled && !rewriteContext;
   const ownerAnalysisReady = ownerAnalysisEntry && isApp1InitialAnalysisEligible({
     questionText: form.rawQuestionText, answerText: form.userAnswer,
     referenceText: form.correctAnswer, sourceType: form.sourceType,
@@ -2116,9 +2117,9 @@ export function WrongAnswerCaptureForm({
         </dl>
       </section>
 
-      {ownerAnalysisEntry && !ownerAnalysisPanelOpen && !savedConfirmation ? <section className="space-y-2" data-owner-existing-answer-entry>
+      {ownerCaptureRepairSubjectEnabled && !rewriteContext && !ownerAnalysisPanelOpen && !savedConfirmation ? <section className="space-y-2" data-owner-existing-answer-entry>
         <p>이미 쓴 답안이 있으면 문제·답안만 입력해 분석할 수 있습니다. 쟁점·목차 훈련은 선택할 수 있습니다.</p>
-        <V3ActionButton type="button" onClick={() => setStage("second-gap")}>이미 쓴 답안 AI 검토</V3ActionButton>
+        <V3ActionButton type="button" onClick={() => { setExistingAnswerEntrySelected(true); setStage("second-gap"); }}>이미 쓴 답안 AI 검토</V3ActionButton>
       </section> : null}
       {submitting && !savedConfirmation ? (
         <section
@@ -2833,10 +2834,10 @@ function IntakePanel({
       <div className="space-y-1 sm:space-y-2">
         <p className={mode === "second" ? "v3-type-caption text-[var(--color-text-secondary)]" : "text-caption font-medium text-[color:var(--muted)]"}>1. 입력</p>
         <h2 className={mode === "second" ? "v3-type-section ko-keep text-[var(--color-text-primary)]" : "v3-type-section ko-keep text-[color:var(--foreground-strong)]"}>입력 방식 선택</h2>
-        <p className={mode === "second" ? "v3-type-body ko-keep text-[var(--color-text-secondary)]" : "ko-keep text-body text-[color:var(--muted)]"}>{textOnly ? "직접 선택한 이론 문제·내 답안을 텍스트로 입력하세요." : "사진, PDF, 텍스트 중 하나로 시작하세요."}</p>
+        <p className={mode === "second" ? "v3-type-body ko-keep text-[var(--color-text-secondary)]" : "ko-keep text-body text-[color:var(--muted)]"}>{textOnly ? `직접 선택한 ${form.subjectLabel} 문제·내 답안을 텍스트로 입력하세요.` : "사진, PDF, 텍스트 중 하나로 시작하세요."}</p>
       </div>
 
-      {textOnly ? <p className="mt-4 rounded-lg border p-4" data-owner-theory-text-only>이론 문제와 내 답안을 아래에 텍스트로 입력하세요. 사진·PDF 분석은 이 모드에서 미지원입니다. 이 단계는 로컬 저장만 하며 Gemini로 전송하지 않습니다.</p> : <>
+      {textOnly ? <p className="mt-4 rounded-lg border p-4" data-owner-theory-text-only>{form.subjectLabel} 문제와 내 답안을 아래에 텍스트로 입력하세요. 사진·PDF 분석은 이 모드에서 미지원입니다. 이 단계는 로컬 저장만 하며 Gemini로 전송하지 않습니다.</p> : <>
       {mode === "second" ? (
         <div className="mt-4 space-y-3" data-capture-input-options data-s224v-secondary-input-options="quiet">
           <CaptureActionButton
@@ -3886,7 +3887,7 @@ function OwnerAnalysisPreparationPanel({ form, update, referenceStatus, ready, o
   onEdit: () => void;
 }) {
   return <section className="space-y-4 rounded-[var(--v3-radius-panel)] border border-[var(--color-border-default)] p-4 sm:p-5" data-owner-analysis-preparation>
-    <h3 className="v3-type-section">이론 AI 분석 준비 · 아직 분석하지 않았습니다</h3>
+    <h3 className="v3-type-section">{form.subjectLabel} AI 분석 준비 · 아직 분석하지 않았습니다</h3>
     <p>기존 문제·쟁점·목차·답안을 이어받았습니다. 기본 예시나 이전 초안 문구는 개인 진단으로 사용하지 않습니다.</p>
     <p data-owner-reference-status={referenceStatus}>{referenceStatus === "compared" ? "참고 비교: 사용자 확인" : "참고 비교: 미완료 · 분석에 참고 정리를 제공하지 않아도 됩니다."}</p>
     <label className="block space-y-2"><span>분석할 문제</span><Textarea aria-label="분석할 문제" value={form.rawQuestionText} onChange={event => update("rawQuestionText", event.target.value)} /></label>
