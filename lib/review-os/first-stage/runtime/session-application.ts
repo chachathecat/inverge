@@ -93,6 +93,14 @@ export function createPrivateSessionApplication(dependencies: PrivateSessionAppl
           ? await createReviewedBankService(availabilityStore, dependencies.bankRepository(), catalog,
               dependencies.now ?? (() => new Date().toISOString())).availability(owner.ownerId)
           : null;
+        const originalHistory = catalog && activeOwnerOriginalCatalog(catalog) && availabilityStore ?
+          (await availabilityStore.listOwnerSnapshot!(owner.ownerId, "first_stage.private_session.v1")).sessions
+            .filter(saved => saved.catalogDigest === catalog.digest)
+            .map(saved => createPrivateFirstStageSessionService(availabilityStore, catalog, dependencies.now).projectHistory(saved, owner.ownerId))
+            .filter(history => history.attempted)
+            .sort((left, right) => (right.committedAttempts.at(-1)?.submittedAt ?? right.active?.startedAt ?? "").localeCompare(left.committedAttempts.at(-1)?.submittedAt ?? left.active?.startedAt ?? "") || left.sessionId.localeCompare(right.sessionId))
+            .slice(0, 10).map(history => ({ sessionId: history.sessionId, responses: history.committedAttempts.length,
+              reviewCompleted: history.reviews.length > 0 && history.reviews.every(review => review.status === "completed") })) : null;
         // Existing content remains addressable even when every original is reserved.
         // No adapter presentation or explanation construction in availability.
         return response({ ok: true, availability: {
@@ -104,7 +112,7 @@ export function createPrivateSessionApplication(dependencies: PrivateSessionAppl
             questionNumber: item.questionNumber,
           })),
           masteryClaim: false, transferEvidence: false,
-          ...(catalog && activeOwnerOriginalCatalog(catalog) ? { contentStatus: "machine_checked_owner_local", notice: OWNER_ORIGINAL_NOTICE, scope: OWNER_ORIGINAL_SCOPE, humanReviewComplete: false } : {}),
+          ...(catalog && activeOwnerOriginalCatalog(catalog) ? { contentStatus: "machine_checked_owner_local", notice: OWNER_ORIGINAL_NOTICE, scope: OWNER_ORIGINAL_SCOPE, humanReviewComplete: false, recentRecords: originalHistory } : {}),
           ...(bankStock ? { bankPractice: true, availableOriginals: bankStock.availableOriginals } : {}),
         }, continuation });
       }

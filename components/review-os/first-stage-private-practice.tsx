@@ -6,7 +6,7 @@ import type { PrivateFirstStageSessionView } from "@/lib/review-os/first-stage/r
 import type { PrivateContentBlocker } from "@/lib/review-os/first-stage/runtime/session-application";
 import { OWNER_LOCAL_R3_TRIAL_NOTICE } from "@/lib/review-os/first-stage/runtime/owner-local-trial-boundary";
 
-type Availability = { contentStatus?: "machine_checked_owner_local"; notice?: string; scope?: string; state: "available" | "blocked";
+type Availability = { recentRecords?: {sessionId: string; responses: number; reviewCompleted: boolean}[] | null; contentStatus?: "machine_checked_owner_local"; notice?: string; scope?: string; state: "available" | "blocked";
   blocker: PrivateContentBlocker | null;
   bankPractice?: boolean;
   availableOriginals?: number;
@@ -238,6 +238,11 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
             <option value="answer_seen">이미 정답·해설을 본 연습</option><option value="practice">개인 연습 (독립 학습성과로 집계하지 않음)</option><option value="functional_test">정답을 본 기능시험 (학습성과 아님)</option>
           </select>
         </label>}
+        {original && !view && availability?.recentRecords?.length ? <section aria-label="최근 연습 기록" className="space-y-3">
+          <h2 className="font-semibold">최근 연습 기록</h2>
+          {availability.recentRecords.map(record => <p key={record.sessionId}><a className="underline" href={`?sessionId=${encodeURIComponent(record.sessionId)}`}>저장된 응답 {record.responses}건 · {record.reviewCompleted ? "복습 처리 완료 기록 열기" : "연습 기록 이어가기"}</a></p>)}
+          <p className="text-xs">기능시험·도움·노출 상태는 각 기록에 보존됩니다. 독립 학습성과 목록이 아닙니다.</p>
+        </section> : null}
         {!busy && view?.nextQuestionId && <button type="button" className={BUTTON}
           onClick={() => command("begin", { questionId: view.nextQuestionId })}>문제 열고 먼저 풀기</button>}
         {ownerLocalTrial && view?.question && Boolean(view.availableConceptAids?.length) && <details className="rounded-xl border p-4">

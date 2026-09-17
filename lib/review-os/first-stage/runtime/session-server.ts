@@ -1,5 +1,5 @@
 import "server-only";
-import { createOwnerOriginalApplication } from "./owner-original-context";
+import { createOwnerOriginalApplication, createOwnerOriginalPeerReadApplication } from "./owner-original-context";
 import { OWNER_ORIGINAL_FLAG } from "./owner-original-boundary";
 import { loadOwnerOriginalContent } from "./owner-original-content";
 import { readPrivateEconomicsContent } from "./approved-catalog";
@@ -9,7 +9,7 @@ import { loadApprovedPrivateFirstStageCatalog, loadApprovedPrivateAccountingCata
   loadApprovedPrivateCivilLawCatalog, loadApprovedPrivateRealEstatePrinciplesCatalog,
   loadApprovedPrivateAppraiserRelatedLawCatalog } from "./approved-catalog";
 import type { PrivateFirstStageCatalog } from "./session-service";
-import { createPrivateSessionApplication, privateFirstStageOwner, type PrivateContentBlocker } from "./session-application";
+import { createPrivateSessionApplication, privateFirstStageOwner, type PrivateContentBlocker, type PrivateSessionApplicationDependencies } from "./session-application";
 import { createPrivateSessionRepository } from "./session-repository";
 import { createReviewedBankRepository } from "./reviewed-bank-repository";
 
@@ -27,7 +27,7 @@ const REVIEWED_CATALOG_LOADERS = {
 function privateSubjectSession(subjectId: keyof typeof REVIEWED_CATALOG_LOADERS,
   unavailableBlocker: PrivateContentBlocker = "approved_content_required") {
   const catalog = REVIEWED_CATALOG_LOADERS[subjectId];
-  return createPrivateSessionApplication({
+  const dependencies: PrivateSessionApplicationDependencies = {
     environment: () => process.env,
     session: getServerSessionUser,
     catalog,
@@ -47,7 +47,10 @@ function privateSubjectSession(subjectId: keyof typeof REVIEWED_CATALOG_LOADERS,
       if (!client) throw new Error("reviewed-bank-store-unavailable");
       return createReviewedBankRepository(client);
     },
-  });
+  };
+  return subjectId === "real_estate_principles" ? createPrivateSessionApplication(dependencies)
+    : createOwnerOriginalPeerReadApplication(dependencies, () => loadOwnerOriginalContent(() =>
+        readPrivateEconomicsContent(process.env.INVERGE_OWNER_ORIGINAL_CONTENT_PATH ?? "")));
 }
 
 // Same gate and durable store; subject authority comes only from this server binding.

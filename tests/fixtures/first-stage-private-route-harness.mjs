@@ -47,7 +47,8 @@ export function privateRoute(harness, options = {}) {
   }]));
   const server = compilePrivateSource("lib/review-os/first-stage/runtime/session-server.ts", {
     "server-only": {},
-    "./owner-original-context": originalContext,
+    "./owner-original-context": { ...originalContext, createOwnerOriginalPeerReadApplication: (dependencies, peer) =>
+      originalContext.createOwnerOriginalPeerReadApplication({ ...dependencies, now: harness.getClock }, peer) },
     "./owner-original-boundary": originalBoundary,
     "./owner-original-content": originalContent,
     "@/lib/auth/session": { getServerSessionUser: async () => {

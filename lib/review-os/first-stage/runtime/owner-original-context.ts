@@ -62,3 +62,19 @@ export function createOwnerOriginalApplication(dependencies: PrivateSessionAppli
     }catch{return Response.json({ok:false,error:"temporarily_unavailable"},{status:503,headers});}
   };
 }
+
+/** Existing reviewed-subject availability alone may validate exact authored
+ * peer history. Mutations and addressed-session reads keep their original
+ * composition; this does not supply authored stock to another subject. */
+export function createOwnerOriginalPeerReadApplication(dependencies: PrivateSessionApplicationDependencies, loadPeer: () => Promise<PrivateFirstStageCatalog | null>) {
+  const scoped = createOwnerOriginalApplication({...dependencies, peerCatalogs: async () => {
+    const peers = await dependencies.peerCatalogs?.() ?? [];
+    const original = await loadPeer();
+    return original ? [...peers, original] : peers;
+  }});
+  return async (request: Request): Promise<Response> => {
+    if (request.method === "GET" && !new URL(request.url).search && dependencies.environment().INVERGE_OWNER_ORIGINAL_REAL_ESTATE_ENABLED === "true") return scoped(request);
+    const {createPrivateSessionApplication} = await import("./session-application");
+    return createPrivateSessionApplication(dependencies)(request);
+  };
+}
