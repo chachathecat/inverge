@@ -317,7 +317,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
       : { label: "다시 풀기", href: `/problem-snap?mode=${mode}` };
   const visibleTodayPlanTasks = todayPlanTasks;
   const heroTodayPlanTasks = todayPlanTasks.slice(0, TODAY_PLAN_MAX_PRIMARY_TASKS);
-  const confirmedRepairIds = new Set(items.filter(hasSavedSameSessionRepair).map(item => item.id));
+  const confirmedRepairIds = new Set([...items.filter(hasSavedSameSessionRepair).map(item => item.id), ...queue.filter(item => item.sameSessionRepairConfirmed).map(item => item.itemId)]);
   const nextRepairReview = queue.filter(item => confirmedRepairIds.has(item.itemId) && Number.isFinite(Date.parse(item.dueAt)) && !isOverdueDueAt(item.dueAt)).sort((a,b) => Date.parse(a.dueAt) - Date.parse(b.dueAt))[0];
   const waitingForRepairReview = todayPlanTasks.length === 0 && Boolean(nextRepairReview);
   const heroPrimaryHref = waitingForRepairReview ? secondNotesHref : heroTodayPlanTasks[0] ? resolveTaskHref(heroTodayPlanTasks[0]) : todayPlan.hasPlan ? primaryHref : modeCaptureHref;

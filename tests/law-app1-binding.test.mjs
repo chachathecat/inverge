@@ -43,6 +43,12 @@ test("Law source-bound synthetic confirmation persists once and is readable with
  const dueTasks=buildToday({mode:"second",queue:scheduled,items:[reread.item],now:new Date(due+1)});
  assert.equal(dueTasks.length,1);assert.equal(dueTasks[0].queueId,scheduled[0].queueId);
  assert.match(dueTasks[0].display_reason,/교정한 연결.*회상/);assert.doesNotMatch(dueTasks[0].display_reason,/흔들린|미보완/);
+ f.store.tables.action_seeds=[];
+ const sourceProjection=await service.getTodayFocus(OWNER_ID,"synthetic-owner@example.invalid","second");
+ assert.equal(sourceProjection.queue[0].sameSessionRepairConfirmed,true);
+ assert.equal(sourceProjection.sourceQueueId,null);
+ assert.deepEqual(buildToday({mode:"second",queue:sourceProjection.queue,items:[],now:new Date(due-1000)}),[],"queue source projection survives an empty or truncated recent-items list");
+ assert.equal(buildToday({mode:"second",queue:sourceProjection.queue,items:[],now:new Date(due+1)}).length,1);
  const another={...scheduled[0],itemId:"unrelated-item",queueId:"unrelated-queue",dueAt:new Date(due-2000).toISOString()};
  const mixed=buildToday({mode:"second",queue:[...scheduled,another],items:[reread.item],now:new Date(due-1000)});
  assert.equal(mixed.length,1);assert.equal(mixed[0].queueId,"unrelated-queue");

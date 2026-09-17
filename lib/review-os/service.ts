@@ -1,5 +1,5 @@
 import { assertSupabaseOperation, getSupabasePersistenceClient, requireSupabasePersistence } from "@/lib/supabase/persistence";
-import { readCaptureReviewProvenance, isCaptureFunctionalTest, isUnanalyzedCaptureRecord } from "./capture-review-provenance";
+import { hasSavedSameSessionRepair, readCaptureReviewProvenance, isCaptureFunctionalTest, isUnanalyzedCaptureRecord } from "./capture-review-provenance";
 import "server-only";
 
 import crypto from "node:crypto";
@@ -932,7 +932,7 @@ function makeTodayFocus(
   preferredMode?: "first" | "second",
 ): TodayFocus {
   const mode = preferredMode ?? getFocusMode(queue, recentItems);
-  const priority = buildTodayPriorityPlan(queue, mode);
+  const priority = buildTodayPriorityPlan(queue.filter(item => !item.sameSessionRepairConfirmed || Date.parse(item.dueAt) <= Date.now()), mode);
   const top = priority.queueItem;
   const topMistake = top?.mistakeType ?? "반복 실수";
   const staleCount = queue.filter(
@@ -3064,7 +3064,10 @@ export class ReviewOsService {
     const recentItems = targetExamName
       ? rawRecentItems.filter((item) => item.examName === targetExamName)
       : rawRecentItems;
-    const visibleQueue = queue.filter((item) => !isSmokeSeedQueueItem(item));
+    const visibleQueue = await Promise.all(queue.filter((item) => !isSmokeSeedQueueItem(item)).map(async item => {
+      const source = await reviewOsRepository.getWrongAnswerItem(userId, item.itemId);
+      return { ...item, sameSessionRepairConfirmed: source ? hasSavedSameSessionRepair(source) : false };
+    }));
     const visibleRecentItems = recentItems.filter(
       (item) => !isSmokeSeedItem(item) && !isCaptureFunctionalTest(item.rawPayload),
     );

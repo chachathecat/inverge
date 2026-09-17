@@ -515,7 +515,7 @@ function toEngineDisplayCopy(task: Pick<TodayPlanTask, "source_label" | "task_ty
 }
 
 export function buildTodayPlanTasks({ mode, queue, items = [], learningSignals = [], now = new Date(), repeatedGaps = [], riskLevel = "stable" }: BuildWeaknessInput): TodayPlanTask[] {
-  const confirmedRepairIds = new Set(items.filter(hasSavedSameSessionRepair).map(item => item.id));
+  const confirmedRepairIds = new Set([...items.filter(hasSavedSameSessionRepair).map(item => item.id), ...queue.filter(item => item.sameSessionRepairConfirmed).map(item => item.itemId)]);
   const topRepeatedGap = repeatedGaps[0] ?? null;
   const rankedQueue = queue
     .filter(item => !confirmedRepairIds.has(item.itemId) || (parseTime(item.dueAt) !== null && parseTime(item.dueAt)! <= now.getTime()))
