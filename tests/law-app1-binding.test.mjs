@@ -42,9 +42,9 @@ test("Law rejects contradictory corrected prose, stale registry and forged auxil
   const result=f.app.authority.createApp1RepairVerificationAuthority({...f.args,repairText:body,repairDraft:{...data.responses.corrected,answerEvidenceQuote:body}});
   assert.equal(result.verificationReceipt,null,body);
  }
- const module=f.app.load("lib/review-os/trusted-repair-source-binding");
- const resolve=module.resolveTrustedRepairSourceBinding;
- module.resolveTrustedRepairSourceBinding=(...args)=>({...resolve(...args),sourceStatus:"UNKNOWN"});
+ const sourceBindingModule=f.app.load("lib/review-os/trusted-repair-source-binding");
+ const resolve=sourceBindingModule.resolveTrustedRepairSourceBinding;
+ sourceBindingModule.resolveTrustedRepairSourceBinding=(...args)=>({...resolve(...args),sourceStatus:"UNKNOWN"});
  assert.throws(()=>f.app.authority.createApp1RepairVerificationAuthority(f.args));
 });
 test("unbound Law generic analysis is denied before any provider request",async()=>{
