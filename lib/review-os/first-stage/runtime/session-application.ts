@@ -60,9 +60,22 @@ export function createPrivateSessionApplication(dependencies: PrivateSessionAppl
       if (bankRequest) return handleReviewedBank(request, dependencies, owner.ownerId, catalog);
       const blocker = dependencies.unavailableBlocker ?? "approved_content_required";
       if (request.method === "GET" && !new URL(request.url).search) {
-        const continuation = catalog
+        const bankPractice = Boolean(reviewedBankEnabled(dependencies.environment()) && catalog && reviewedBankCandidates(catalog));
+        if (bankPractice && !dependencies.bankRepository) return response({ ok: false, error: "temporarily_unavailable" }, 503);
+        let availabilityStore = catalog ? dependencies.repository() : null;
+        if (bankPractice && availabilityStore) {
+          // One request-scoped database observation for both continuation and stock.
+          // A concurrent reservation must not mix old continuation with new stock.
+          const snapshot = await availabilityStore.listOwnerSnapshot?.(owner.ownerId, "first_stage.private_session.v1");
+          if (!snapshot?.complete) return response({ ok: false, error: "temporarily_unavailable" }, 503);
+          availabilityStore = { ...availabilityStore, listOwnerSnapshot: async (readOwner, schema) => {
+            if (readOwner !== owner.ownerId || schema !== "first_stage.private_session.v1") throw new Error("snapshot_scope_mismatch");
+            return snapshot;
+          } };
+        }
+        const continuation = catalog && availabilityStore
           ? await createPrivateFirstStageSessionService(
-              dependencies.repository(),
+              availabilityStore,
               catalog,
               dependencies.now,
             ).getTodayContinuation(owner.ownerId, dependencies.peerCatalogs)
@@ -74,10 +87,8 @@ export function createPrivateSessionApplication(dependencies: PrivateSessionAppl
         if (catalog && continuation.state !== "ready") {
           return response({ ok: false, error: "temporarily_unavailable" }, 503);
         }
-        const bankPractice = Boolean(reviewedBankEnabled(dependencies.environment()) && catalog && reviewedBankCandidates(catalog));
-        if (bankPractice && !dependencies.bankRepository) return response({ ok: false, error: "temporarily_unavailable" }, 503);
-        const bankStock = bankPractice && catalog && dependencies.bankRepository
-          ? await createReviewedBankService(dependencies.repository(), dependencies.bankRepository(), catalog,
+        const bankStock = bankPractice && catalog && availabilityStore && dependencies.bankRepository
+          ? await createReviewedBankService(availabilityStore, dependencies.bankRepository(), catalog,
               dependencies.now ?? (() => new Date().toISOString())).availability(owner.ownerId)
           : null;
         // Existing content remains addressable even when every original is reserved.
