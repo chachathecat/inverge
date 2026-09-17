@@ -846,7 +846,13 @@ export function WrongAnswerCaptureForm({
       return persist({
         ...prev,
         [key]: value,
-        ocrConfirmedByLearner: key === "ocrConfirmedByLearner" ? Boolean(value) : mode === "first" && prev.lowConfidenceFlag && learnerEditedField ? true : prev.ocrConfirmedByLearner,
+        ocrConfirmedByLearner: key === "ocrConfirmedByLearner"
+          ? Boolean(value)
+          : mode === "second" && prev.sourceType !== "text" &&
+              ["rawQuestionText", "userAnswer", "rawOcrText", "sourceType", "sourceLabel", "capturePages", "pageCount"].includes(String(key)) &&
+              !Object.is(prev[key], value)
+            ? false
+            : mode === "first" && prev.lowConfidenceFlag && learnerEditedField ? true : prev.ocrConfirmedByLearner,
       });
     });
   }
@@ -1403,7 +1409,7 @@ export function WrongAnswerCaptureForm({
         lowConfidenceFlag,
         captureQualityIssue: lowConfidenceFlag ? "low_confidence_ocr" : prev.captureQualityIssue,
         hasManualCorrection: true,
-        ocrConfirmedByLearner: true,
+        ocrConfirmedByLearner: mode === "first",
       }),
     );
     setExtractionState("manual");
@@ -2336,7 +2342,7 @@ export function WrongAnswerCaptureForm({
                   update("rawQuestionText", value);
                   update("rawOcrText", value);
                   update("hasManualCorrection", true);
-                  update("ocrConfirmedByLearner", true);
+                  update("ocrConfirmedByLearner", mode === "first");
                   update("lowConfidenceFlag", form.lowConfidenceFlag || hasLowConfidenceText(value));
                 }}
               />
@@ -3145,10 +3151,10 @@ function IntakePanel({
             update("rawQuestionText", value);
             update("rawOcrText", value);
             update("hasManualCorrection", true);
-            update("ocrConfirmedByLearner", true);
+            update("ocrConfirmedByLearner", mode === "first");
             update("lowConfidenceFlag", form.lowConfidenceFlag || hasLowConfidenceText(value));
           }}
-          onFocus={() => { if (uploadedPages.length === 0 && !form.sourceLabel) update("sourceType", inferSourceTypeFromAction("text")); }}
+          onFocus={() => { if ((mode === "first" || form.sourceType === "text") && uploadedPages.length === 0 && !form.sourceLabel) update("sourceType", inferSourceTypeFromAction("text")); }}
           placeholder={
             mode === "second"
               ? "권장: 사례 메모, 강의/교재 정리, 내 답안을 텍스트로 붙여넣으세요. 예: 강의/교재 정리: ... / 내 답안: ..."
