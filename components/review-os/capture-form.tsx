@@ -26,6 +26,7 @@ import {
   isApp1SubjectAuthorized,
   type App1TrustedRepairSubject,
 } from "@/lib/owner-study/app1-capture-repair-view-model";
+import { moveCaptureSelectionToAnswer } from "@/lib/review-os/capture-input-separation";
 import { buildCaptureToNoteDraft } from "@/lib/capture/capture-to-note";
 import {
   getDefaultSubject,
@@ -334,6 +335,7 @@ type DraftState = {
   biggestGap: string;
   diagnosticSource?: CaptureDiagnosticSource;
   learningMaterial?: CaptureLearningMaterial;
+  analysisEntrySelected?: boolean;
   referenceComparisonStatus?: SecondWriteReferenceStatus;
   rawOcrText?: string;
   rawExtractionJson?: Record<string, unknown>;
@@ -719,7 +721,7 @@ export function WrongAnswerCaptureForm({
   const currentCaptureFlowSteps = mode === "second" ? SECOND_CAPTURE_FLOW_STEPS : CAPTURE_FLOW_STEPS;
   const secondModeReferenceStepComplete = hasSecondModeReferenceStep(form);
   const referenceStatus = secondWriteReferenceStatus(form);
-  const [existingAnswerEntrySelected, setExistingAnswerEntrySelected] = useState(false);
+  const existingAnswerEntrySelected = form.analysisEntrySelected === true;
   const ownerAnalysisEntry = (textOnly || existingAnswerEntrySelected) && ownerCaptureRepairSubjectEnabled && !rewriteContext;
   const ownerAnalysisReady = ownerAnalysisEntry && isApp1InitialAnalysisEligible({
     questionText: form.rawQuestionText, answerText: form.userAnswer,
@@ -776,11 +778,11 @@ export function WrongAnswerCaptureForm({
   useEffect(() => {
     if (!draftReady || restoredOwnerDraftRef.current) return;
     restoredOwnerDraftRef.current = true;
-    if (ownerAnalysisReady && !rewriteContext) {
+    if ((ownerAnalysisReady || (existingAnswerEntrySelected && ownerCaptureRepairSubjectEnabled)) && !rewriteContext) {
       const timer = window.setTimeout(() => setStage("second-gap"), 0);
       return () => window.clearTimeout(timer);
     }
-  }, [draftReady, ownerAnalysisReady, rewriteContext]);
+  }, [draftReady, ownerAnalysisReady, existingAnswerEntrySelected, ownerCaptureRepairSubjectEnabled, rewriteContext]);
 
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
@@ -844,8 +846,21 @@ export function WrongAnswerCaptureForm({
       return persist({
         ...prev,
         [key]: value,
-        ocrConfirmedByLearner: mode === "first" && prev.lowConfidenceFlag && learnerEditedField ? true : prev.ocrConfirmedByLearner,
+        ocrConfirmedByLearner: key === "ocrConfirmedByLearner" ? Boolean(value) : mode === "first" && prev.lowConfidenceFlag && learnerEditedField ? true : prev.ocrConfirmedByLearner,
       });
+    });
+  }
+
+  function separateSelectedAnswer(selectedFrom: string, start: number, end: number) {
+    invalidatePendingExtraction("separate_input");
+    extractionEditRevisionRef.current += 1;
+    setForm((prev) => {
+      const separated = moveCaptureSelectionToAnswer({ questionText: prev.rawQuestionText,
+        answerText: prev.userAnswer, selectedFrom, start, end });
+      if (!separated) return prev;
+      return persist({ ...prev, rawQuestionText: separated.questionText, userAnswer: separated.answerText,
+        rawOcrText: prev.rawOcrText || selectedFrom, hasManualCorrection: true,
+        ocrConfirmedByLearner: false, extractionNeedsReview: true });
     });
   }
 
@@ -873,7 +888,7 @@ export function WrongAnswerCaptureForm({
   }
 
   function buildStructuredDraft(base: DraftState, sourceText = base.rawQuestionText) {
-    const subject = textOnly ? base.subjectLabel || resolvedInitialSubject : pickSubject(sourceText, config.subjects, base.subjectLabel || resolvedInitialSubject);
+    const subject = textOnly || mode === "second" ? base.subjectLabel || resolvedInitialSubject : pickSubject(sourceText, config.subjects, base.subjectLabel || resolvedInitialSubject);
     const first = firstDefaults(subject);
     return mode === "first"
       ? {
@@ -955,7 +970,7 @@ export function WrongAnswerCaptureForm({
       const second = draft as Extract<ExtractionDraft, { case_title: string }>;
       return {
         ...base,
-        subjectLabel,
+        subjectLabel: base.subjectLabel || subjectLabel,
         sourceType: base.sourceType,
         problemTitle: second.case_title !== "unknown" ? second.case_title : base.problemTitle,
         rawQuestionText: extraction.raw_ocr_text || base.rawQuestionText,
@@ -1677,11 +1692,12 @@ export function WrongAnswerCaptureForm({
           confidence: form.confidence, productionBeforeComparison: form.productionBeforeComparison,
           referenceAnswerAddedAfterProduction: referenceStatus === "compared",
           captureIntent: "save", createdFromCapture: true,
-          extractionPayload: { user_confirmed_fields: {
+          extractionPayload: { raw_ocr_text: form.rawOcrText || "", user_confirmed_fields: {
             subject: form.subjectLabel, subjectLabel: form.subjectLabel, examMode: mode,
-            sourceType: form.sourceType, pageCount: form.pageCount ?? 0,
+            sourceType: form.sourceType, pageCount: form.sourceType === "pdf" ? 0 : form.pageCount ?? 0,
             ocrConfirmedByLearner: form.sourceType === "text" || Boolean(form.ocrConfirmedByLearner),
             lowConfidenceFlag: Boolean(form.lowConfidenceFlag), hasManualCorrection: Boolean(form.hasManualCorrection),
+            captureQualityIssue: form.captureQualityIssue || null,
             capture_review_provenance: provenance,
             ...buildCapturePersistenceMetadata(operation),
           } },
@@ -2123,7 +2139,7 @@ export function WrongAnswerCaptureForm({
       </fieldset> : null}
       {ownerCaptureRepairSubjectEnabled && !rewriteContext && !ownerAnalysisPanelOpen && !savedConfirmation ? <section className="space-y-2" data-owner-existing-answer-entry>
         <p>이미 쓴 답안이 있으면 문제·답안만 입력해 분석할 수 있습니다. 쟁점·목차 훈련은 선택할 수 있습니다.</p>
-        <V3ActionButton type="button" onClick={() => { setExistingAnswerEntrySelected(true); setStage("second-gap"); }}>이미 쓴 답안 AI 검토</V3ActionButton>
+        <V3ActionButton type="button" onClick={() => { update("analysisEntrySelected", true); setStage("second-gap"); }}>이미 쓴 답안 AI 검토</V3ActionButton>
       </section> : null}
       {submitting && !savedConfirmation ? (
         <section
@@ -2162,6 +2178,7 @@ export function WrongAnswerCaptureForm({
           />
         ) : ownerAnalysisPanelOpen ? (
           <OwnerAnalysisPreparationPanel form={form} update={update} referenceStatus={referenceStatus} ready={ownerAnalysisReady}
+            onSeparate={separateSelectedAnswer} onEditSource={() => setStage("intake")}
             onPrepare={() => void saveOwnerAnalysisInput()}
             onEdit={() => setStage("second-answer")} />
         ) : rewriteContext && mode === "second" ? (
@@ -3882,20 +3899,54 @@ function SecondAnswerPanel({
   );
 }
 
-function OwnerAnalysisPreparationPanel({ form, update, referenceStatus, ready, onPrepare, onEdit }: {
+function OwnerAnalysisPreparationPanel({ form, update, referenceStatus, ready, onPrepare, onEdit, onSeparate, onEditSource }: {
   form: DraftState;
   update: <K extends keyof DraftState>(key: K, value: DraftState[K]) => void;
   referenceStatus: SecondWriteReferenceStatus;
   ready: boolean;
   onPrepare: () => void;
   onEdit: () => void;
+  onSeparate: (source: string, start: number, end: number) => void;
+  onEditSource: () => void;
 }) {
+  const questionRef = useRef<HTMLTextAreaElement | null>(null);
+  const [hasSelection, setHasSelection] = useState(false);
+  const importedSource = ["photo", "image", "pdf"].includes(form.sourceType);
+  function editInput(key: "rawQuestionText" | "userAnswer", value: string) {
+    update(key, value);
+    if (importedSource) {
+      update("hasManualCorrection", true);
+      update("ocrConfirmedByLearner", false);
+    }
+  }
   return <section className="space-y-4 rounded-[var(--v3-radius-panel)] border border-[var(--color-border-default)] p-4 sm:p-5" data-owner-analysis-preparation>
     <h3 className="v3-type-section">{form.subjectLabel} AI 분석 준비 · 아직 분석하지 않았습니다</h3>
     <p>기존 문제·쟁점·목차·답안을 이어받았습니다. 기본 예시나 이전 초안 문구는 개인 진단으로 사용하지 않습니다.</p>
     <p data-owner-reference-status={referenceStatus}>{referenceStatus === "compared" ? "참고 비교: 사용자 확인" : "참고 비교: 미완료 · 분석에 참고 정리를 제공하지 않아도 됩니다."}</p>
-    <label className="block space-y-2"><span>분석할 문제</span><Textarea aria-label="분석할 문제" value={form.rawQuestionText} onChange={event => update("rawQuestionText", event.target.value)} /></label>
-    <label className="block space-y-2"><span>분석할 답안</span><Textarea aria-label="분석할 답안" value={form.userAnswer} onChange={event => update("userAnswer", event.target.value)} className="min-h-48" /></label>
+    <label className="block space-y-2"><span>분석할 문제</span><Textarea ref={questionRef} aria-label="분석할 문제" value={form.rawQuestionText}
+      onSelect={event => setHasSelection(event.currentTarget.selectionEnd > event.currentTarget.selectionStart)}
+      onChange={event => editInput("rawQuestionText", event.target.value)} /></label>
+    <div className="space-y-2" data-capture-input-separation>
+      <p>문제 칸에 답안이 함께 들어 있다면 답안 부분을 선택해 아래로 옮기세요. 기존 답안 뒤에 추가되며 원문은 보존됩니다.</p>
+      <V3ActionButton type="button" tone="quiet" disabled={!hasSelection} onClick={() => {
+        const field = questionRef.current;
+        if (field) onSeparate(field.value, field.selectionStart, field.selectionEnd);
+        setHasSelection(false);
+      }}>선택한 내용을 답안으로 옮기기</V3ActionButton>
+    </div>
+    <label className="block space-y-2"><span>분석할 답안</span><Textarea aria-label="분석할 답안" value={form.userAnswer} onChange={event => editInput("userAnswer", event.target.value)} className="min-h-48" /></label>
+    {importedSource ? <div className="space-y-3" data-capture-source-confirmation>
+      <details><summary className="cursor-pointer py-2">보존된 가져오기 원문 · 자동 판독 품질 미검증</summary>
+        <p className="whitespace-pre-wrap">{form.rawOcrText || "보존된 추출 원문이 없습니다. 원본 파일과 직접 대조해 주세요."}</p>
+        <p>기록된 페이지 수: {form.sourceType === "pdf" ? "PDF 쪽수 자동 확인 미지원" : form.pageCount || "미확인"} · 원본 파일은 자동으로 재전송하지 않습니다.</p>
+      </details>
+      <label className="flex gap-3"><input type="checkbox" checked={Boolean(form.ocrConfirmedByLearner)}
+        disabled={Boolean(form.lowConfidenceFlag && !form.hasManualCorrection)}
+        onChange={event => update("ocrConfirmedByLearner", event.target.checked)} />
+        <span>원본과 대조해 문제·답안 구분과 숫자·용어를 확인했습니다</span></label>
+      {form.lowConfidenceFlag && !form.hasManualCorrection ? <p>판독이 불확실한 입력입니다. 위 문제·답안을 직접 수정한 뒤 원문 확인을 완료해 주세요.</p> : null}
+      <p>확인은 사용자의 원문 대조 기록이며 OCR·AI 정확성 검증이 아닙니다. 내용을 바꾸면 다시 확인해야 합니다.</p>
+    </div> : null}
     <label className="block space-y-2"><span>이번 입력의 성격</span>
       <select className="block min-h-11 rounded border px-3" value={form.learningMaterial ?? "learner_input"} onChange={event => update("learningMaterial", event.target.value as CaptureLearningMaterial)}>
         <option value="learner_input">학습자 입력 · 독립 수행 여부 미검증</option>
@@ -3913,6 +3964,7 @@ function OwnerAnalysisPreparationPanel({ form, update, referenceStatus, ready, o
     <div className="flex flex-wrap gap-3">
       <V3ActionButton type="button" disabled={!ready} onClick={onPrepare} data-owner-prepare-analysis>입력 보관 후 분석 화면 열기</V3ActionButton>
       <V3ActionButton type="button" tone="quiet" onClick={onEdit}>답안 작성으로 돌아가기</V3ActionButton>
+      {importedSource ? <V3ActionButton type="button" tone="quiet" onClick={onEditSource}>원문 입력으로 돌아가기</V3ActionButton> : null}
     </div>
   </section>;
 }

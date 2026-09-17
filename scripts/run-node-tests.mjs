@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 
 const defaultTestFiles = [
+  "tests/capture-input-separation.test.mjs",
   "tests/capture-diagnostic-provenance.test.mjs",
   "tests/owner-pc-theory-budget.test.mjs",
   "tests/owner-pc-practice-development.test.mjs",

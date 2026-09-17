@@ -1,6 +1,7 @@
 export type CaptureExtractionMode = "first" | "second";
 
 export type CaptureExtractionRevisionEvent =
+  | "separate_input"
   | "text_request"
   | "image_import"
   | "pdf_import"
@@ -81,6 +82,8 @@ export function clearUnchangedCaptureExtractionSemantics<T extends SemanticState
 ): T {
   const cleared = { ...current };
   for (const field of getCaptureExtractionSemanticFields(mode)) {
+    // A selected second-round subject is learner input, not stale OCR output.
+    if (mode === "second" && field === "subjectLabel") continue;
     if (current[field] !== requestSnapshot[field]) continue;
     cleared[field] = (field === "productionBeforeComparison" ? false : "") as T[typeof field];
   }
