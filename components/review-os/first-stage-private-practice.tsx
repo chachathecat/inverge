@@ -9,6 +9,7 @@ import { OWNER_LOCAL_R3_TRIAL_NOTICE } from "@/lib/review-os/first-stage/runtime
 type Availability = { state: "available" | "blocked";
   blocker: PrivateContentBlocker | null;
   bankPractice?: boolean;
+  availableOriginals?: number;
   questions: { questionId: string; subjectId: string; questionNumber: number }[] };
 type Payload = { ok: boolean; error?: string; view?: PrivateFirstStageSessionView;
   availability?: Availability };
@@ -190,6 +191,8 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
       expectedRevision: view.revision, ...fields } });
   }
 
+  const bankStockKnown = Number.isSafeInteger(availability?.availableOriginals) && (availability?.availableOriginals ?? -1) >= 0;
+  const bankCanAssign = bankStockKnown && (availability?.availableOriginals ?? 0) > 0;
   const unavailable = availability?.state === "blocked" && !view;
   const selectedQuestion = availability?.questions.find(item => item.questionId === selectedQuestionId) ?? availability?.questions[0];
   return <main className="mx-auto w-full max-w-2xl px-5 py-10">
@@ -215,7 +218,10 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
             <p className="text-xs text-slate-500">각 문항의 변형은 저장 후 D+1 복습에서만 열립니다. 목록에 없는 문항은 근거 검토 대기입니다.</p>
           </div> : <div className="space-y-4">
             {availability.bankPractice && <div>
-              <button type="button" className={BUTTON} onClick={assignNext}>검토 재고에서 다음 연습 배정</button>
+              <button type="button" className={BUTTON} onClick={assignNext} disabled={!bankCanAssign}>검토 재고에서 다음 연습 배정</button>
+              <p className="mt-2 text-sm">{bankStockKnown
+                ? `새 배정 가능 ${availability.availableOriginals}문항${bankCanAssign ? "" : " · 기존 기록과 복습은 유지됩니다."}`
+                : "새 배정 재고를 확인하지 못했습니다. 기록을 다시 불러오세요."}</p>
               <p className="mt-2 text-xs">서버가 아직 배정하지 않은 원문을 고릅니다. 연습 전용이며 숙달·전이·측정 자격은 생기지 않습니다.</p>
             </div>}
             <details open={!availability.bankPractice}><summary>문항 직접 선택</summary>

@@ -15,6 +15,7 @@ type AvailabilityPayload = Readonly<{
     state: "available" | "blocked";
     blocker: PrivateContentBlocker | null;
     bankPractice?: boolean;
+    availableOriginals?: number;
     questions: ReadonlyArray<Readonly<{
       questionId: string;
       subjectId: string;
@@ -40,6 +41,7 @@ type AvailabilityState = Readonly<{
   blocker: PrivateContentBlocker | null;
   questionCount: number;
   bankPractice: boolean;
+  availableOriginals: number | null;
   continuation: Continuation;
 }>;
 
@@ -92,6 +94,7 @@ const INITIAL_AVAILABILITY: AvailabilityState = Object.freeze({
   blocker: null,
   questionCount: 0,
   bankPractice: false,
+  availableOriginals: null,
   continuation: { state: "unavailable", action: null } as const,
 });
 
@@ -100,6 +103,7 @@ const DISABLED_LOCAL_TRIAL: AvailabilityState = Object.freeze({
   blocker: "owner_local_trial_content_required",
   questionCount: 0,
   bankPractice: false,
+  availableOriginals: null,
   continuation: { state: "ready", action: null } as const,
 });
 
@@ -125,6 +129,8 @@ async function readAvailability(api: string, signal: AbortSignal): Promise<Avail
       blocker: payload.availability.blocker,
       questionCount: payload.availability.questions.length,
       bankPractice: payload.availability.bankPractice === true,
+      availableOriginals: Number.isSafeInteger(payload.availability.availableOriginals) &&
+        payload.availability.availableOriginals! >= 0 ? payload.availability.availableOriginals! : null,
       continuation: payload.continuation ?? { state: "unavailable", action: null },
     };
   } catch {
@@ -153,7 +159,9 @@ function statusCopy(status: AvailabilityState) {
   if (status.continuation.action?.kind === "review_due") return "D+1 복습할 차례";
   if (status.continuation.action?.kind === "review_scheduled") return "응답 저장됨 · D+1 예약";
   if (status.continuation.action?.kind === "review_blocked") return "응답 저장됨 · 복습 재고 대기";
-  if (status.bankPractice) return `학습 가능 · ${status.questionCount}문항 · 자동 배정 가능`;
+  if (status.bankPractice) return status.availableOriginals === null ? "새 배정 재고 확인 필요"
+    : status.availableOriginals === 0 ? "새 배정 재고 없음 · 저장 기록 유지"
+    : `새 배정 가능 · ${status.availableOriginals}문항`;
   return `학습 가능 · ${status.questionCount}문항`;
 }
 
@@ -220,7 +228,8 @@ export function FirstStageMcqLoop({
 
   const readySubjects = useMemo(
     () => REVIEWED_SUBJECTS.filter((subject) =>
-      subjects[subject.id]?.state === "available" && subjects[subject.id]?.continuation.state === "ready"),
+      subjects[subject.id]?.state === "available" && subjects[subject.id]?.continuation.state === "ready" &&
+      (!subjects[subject.id].bankPractice || (subjects[subject.id].availableOriginals ?? 0) > 0)),
     [subjects],
   );
   const continuationSubject = useMemo(() => {
@@ -258,7 +267,8 @@ export function FirstStageMcqLoop({
       const state = subjects[subject.id]?.state;
       const continuationState = subjects[subject.id]?.continuation.state;
       return state === "loading" || state === "unavailable" ||
-        (state === "available" && continuationState !== "ready");
+        (state === "available" && (continuationState !== "ready" ||
+          (subjects[subject.id].bankPractice && subjects[subject.id].availableOriginals === null)));
     }) ||
     localTrial.state === "loading" ||
     localTrial.state === "unavailable";
@@ -291,7 +301,7 @@ export function FirstStageMcqLoop({
         <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5" aria-live="polite" aria-busy={pending}>
           <p className="text-xs font-semibold text-slate-500">현재 상태</p>
           <p className="mt-2 text-lg font-bold text-slate-950">
-            {pending ? "5과목 재고를 확인하고 있습니다." : `학습 가능 ${readySubjects.length}/5과목`}
+            {pending ? "5과목 재고를 확인하고 있습니다." : `새 연습 가능 ${readySubjects.length}/5과목`}
           </p>
           <p className="mt-2 text-sm leading-6 text-slate-600">
             {pending
@@ -301,10 +311,10 @@ export function FirstStageMcqLoop({
                 : readySubjects.length > 0
                   ? "검토된 재고가 있는 과목부터 이어갑니다."
                   : localTrialEnabled && localTrial.state === "available"
-                    ? "검토 완료 재고는 아직 없지만, 기존 PC 전용 경제학 시험은 별도 표시로 이어갈 수 있습니다."
+                    ? "지금 새로 배정할 검토 재고는 없지만, 기존 PC 전용 경제학 시험은 별도 표시로 이어갈 수 있습니다."
                     : hasUnknownAvailability
                       ? "일부 과목의 상태를 확인하지 못했습니다. 다시 확인하기 전에는 다른 단계로 넘기지 않습니다."
-                      : "모든 1차 경로가 명확히 대기 중이므로 기존 2차 학습 흐름을 계속할 수 있습니다."}
+                      : "지금 배정할 새 문제나 기한이 된 복습이 없습니다. 저장 결과와 다음 복습 일정은 각 과목에서 확인할 수 있습니다."}
           </p>
         </div>
 

@@ -24,13 +24,14 @@ const reviewedEndpoints = [
 ];
 const trialEndpoint = "/api/review-os/first-stage/economics-trial/sessions";
 
-function availability(state, count = 0, blocker = null, bankPractice = false, action = null) {
+function availability(state, count = 0, blocker = null, bankPractice = false, action = null, availableOriginals = undefined) {
   return JSON.stringify({
     ok: true,
     availability: {
       state,
       blocker,
       bankPractice,
+      availableOriginals,
       questions: Array.from({ length: count }, (_, index) => ({
         questionId: `bodyless-${index + 1}`,
         subjectId: "metadata-only",
@@ -146,7 +147,14 @@ test("real browser selects reviewed stock, then local trial, then second-stage h
           "content-type": "application/json",
           "cache-control": "private, no-store, max-age=0",
         });
-        if (["ready-versus-due", "tie", "future"].includes(scenario) && reviewedEndpoints.includes(url.pathname)) {
+        if (scenario.startsWith("bank-") && url.pathname === reviewedEndpoints[0]) {
+          const kind = { "bank-future": "review_scheduled", "bank-resume": "resume_attempt", "bank-due": "review_due" }[scenario];
+          response.end(availability("available", 1, null, true, kind ? {
+            kind, sessionId: "bank-saved", reviewTaskId: "bank-review", actionAt: "2026-09-18T00:00:00.000Z",
+          } : null, scenario === "bank-unknown" ? undefined : 0));
+        } else if (scenario === "bank-future" && url.pathname === reviewedEndpoints[3]) {
+          response.end(availability("available", 1, null, true, null, 1));
+        } else if (["ready-versus-due", "tie", "future"].includes(scenario) && reviewedEndpoints.includes(url.pathname)) {
           const economics = url.pathname === reviewedEndpoints[0];
           const accounting = url.pathname === reviewedEndpoints[1];
           const action = scenario === "ready-versus-due"
@@ -254,30 +262,43 @@ test("real browser selects reviewed stock, then local trial, then second-stage h
       assert.doesNotMatch(await page.locator("body").innerText(), /PRIVATE_BODY|QUESTION_STEM|CORRECT_ANSWER/u);
     }
 
+    scenario = "bank-future";
+    await verify("새 연습 가능 1/5과목", "부동산학원론 연습 시작", "/app/first-stage/real-estate-principles");
+    assert.equal(await page.locator('article a[href="/app/first-stage/practice?sessionId=bank-saved"]').count(), 1);
+    scenario = "bank-empty";
+    await verify("새 연습 가능 0/5과목", "2차 오늘 할 일 계속하기", "/app?mode=second");
+    assert.equal(await page.getByText("새 배정 재고 없음 · 저장 기록 유지", {exact:true}).count(), 1);
+    assert.equal(await page.locator('article a[href="/app/first-stage/practice"]').count(), 1);
+    scenario = "bank-resume";
+    await verify("새 연습 가능 0/5과목", "경제학 진행 중인 문제 이어가기", "/app/first-stage/practice?sessionId=bank-saved");
+    scenario = "bank-due";
+    await verify("새 연습 가능 0/5과목", "경제학 D+1 복습 시작", "/app/first-stage/practice?sessionId=bank-saved");
+    scenario = "bank-unknown";
+    await verify("새 연습 가능 0/5과목", "1차 상태 다시 확인", null);
     scenario = "resume";
-    await verify("학습 가능 2/5과목", "회계학 진행 중인 문제 이어가기", "/app/first-stage/accounting?sessionId=accounting-session-1");
+    await verify("새 연습 가능 2/5과목", "회계학 진행 중인 문제 이어가기", "/app/first-stage/accounting?sessionId=accounting-session-1");
     scenario = "priority";
-    await verify("학습 가능 2/5과목", "회계학 D+1 복습 시작", "/app/first-stage/accounting?sessionId=accounting-high-review");
+    await verify("새 연습 가능 2/5과목", "회계학 D+1 복습 시작", "/app/first-stage/accounting?sessionId=accounting-high-review");
     scenario = "ready-versus-due";
-    await verify("학습 가능 2/5과목", "경제학 D+1 복습 시작", "/app/first-stage/practice?sessionId=due-session");
+    await verify("새 연습 가능 2/5과목", "경제학 D+1 복습 시작", "/app/first-stage/practice?sessionId=due-session");
     scenario = "tie";
-    await verify("학습 가능 2/5과목", "경제학 D+1 복습 시작", "/app/first-stage/practice?sessionId=z-session");
+    await verify("새 연습 가능 2/5과목", "경제학 D+1 복습 시작", "/app/first-stage/practice?sessionId=z-session");
     scenario = "future";
-    await verify("학습 가능 2/5과목", "경제학 연습 시작", "/app/first-stage/practice");
+    await verify("새 연습 가능 2/5과목", "경제학 연습 시작", "/app/first-stage/practice");
     assert.equal(await page.locator('article a[href="/app/first-stage/practice?sessionId=saved-future-session"]').count(), 1);
     assert.equal(await page.getByText("응답 저장됨 · D+1 예약", { exact: true }).count(), 1);
     scenario = "due";
-    await verify("학습 가능 1/5과목", "경제학 D+1 복습 시작", "/app/first-stage/practice?sessionId=economics-session-1");
+    await verify("새 연습 가능 1/5과목", "경제학 D+1 복습 시작", "/app/first-stage/practice?sessionId=economics-session-1");
     scenario = "reviewed";
-    await verify("학습 가능 1/5과목", "회계학 연습 시작", "/app/first-stage/accounting");
+    await verify("새 연습 가능 1/5과목", "회계학 연습 시작", "/app/first-stage/accounting");
     scenario = "trial";
-    await verify("학습 가능 0/5과목", "경제학 PC 시험 이어가기", "/app/first-stage/economics-trial");
+    await verify("새 연습 가능 0/5과목", "경제학 PC 시험 이어가기", "/app/first-stage/economics-trial");
     scenario = "unavailable";
-    await verify("학습 가능 0/5과목", "1차 상태 다시 확인", null);
+    await verify("새 연습 가능 0/5과목", "1차 상태 다시 확인", null);
     scenario = "second";
-    await verify("학습 가능 0/5과목", "2차 오늘 할 일 계속하기", "/app?mode=second");
+    await verify("새 연습 가능 0/5과목", "2차 오늘 할 일 계속하기", "/app?mode=second");
     scenario = "preview";
-    await verify("학습 가능 0/5과목", "2차 오늘 할 일 계속하기", "/app?mode=second", false);
+    await verify("새 연습 가능 0/5과목", "2차 오늘 할 일 계속하기", "/app?mode=second", false);
 
     for (const currentScenario of ["resume", "due", "reviewed", "trial", "unavailable", "second"]) {
       const seen = requests.filter((entry) => entry.startsWith(`${currentScenario}:`)).map((entry) => entry.slice(currentScenario.length + 1));

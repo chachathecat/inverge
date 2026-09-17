@@ -1,6 +1,15 @@
 <!-- 2026-09-16 PR #945 second source correction: exact-head review identified per-item reads in paginated learner lists and an APP1 repair-skip source contract regression. Map selected page rows locally with established timestamp normalization; regression proves three queries for 230 rows and mapper parity. Preserve repair-verification skip precedence while keeping functional-test signal exclusion. Personal runtime/data/provider remain untouched pending final checks/review. -->
 # Inverge Owner Study OS
 
+## 2026-09-17 remaining-stock Today continuation
+
+PR #959 native review identified a concurrent-read inconsistency: a reservation between two history reads could combine old continuation with new stock. Both projections now consume one request-scoped complete owner/schema snapshot, retaining all aggregate validation; a before/after reservation regression checks one database read per response. Final-head checks/review must bind this correction.
+
+PR #957 merged at e74d477d after all nine native checks and fresh independent 0/0/0 review. PC code is updated; fourteen personal tables and thirty-two private settings/budget files remain unchanged. Production was canceled by the existing Ignored Build Step. Reuse the historical-source and SQL/browser evidence. The Owner explicitly deferred reviewer assignment and approval for the one actual real-estate original/retry pair: no reviewer identity, human approval or runtime stock is created. The existing private packet now links its original evidence and separates AI observations, unresolved booklet/attachment scope and required human checks.
+
+Issue #958 repairs an independent continuation defect: Today used total catalog size instead of owner-scoped unassigned originals and could recommend an exhausted bank. Reuse the existing bank availability in ordinary HTTP, Today and the subject assignment control. Preserve pending-intent replay, saved results, due/future reviews, manual selection, bank-OFF and the separate economics trial. Focused API/browser regressions pass 18/18; final isolated SQL/browser, native checks and independent exact-head review remain required. No source approval, schema/app activation, provider call or budget change. Reservations USD 4.388969 and remaining USD 0.611031 are preserved.
+
+
 ## 2026-09-17 preserved 2025 real-estate source connection
 
 PR #955 merged at 00eb3a58 after all nine native gates, 1980 full-suite tests, eight actual isolated SQL/browser cases and exact-head independent 0/0/0 review. PC code is updated with unchanged fourteen-table and thirty-two private configuration/budget-file snapshots; Production was canceled by the Ignored Build Step. Reuse this assignment/save/reconnect/review/Today evidence.

@@ -245,3 +245,39 @@ test("real-estate source expiry revokes bank replay and new assignment without m
   assert.equal(await loadRealEstatePrinciplesContent(h.input),null);
   assert.equal(JSON.stringify(h.input.applicability),before);assert.equal(h.assignments.size,1);
 });
+
+
+test("ordinary availability reports remaining original stock without removing ready continuation or manual content",async()=>{
+  const h=await realEstateBank();
+  const get=async()=>{const response=await h.app(new Request(URL.replace("?view=bank","")));assert.equal(response.status,200);return response.json();};
+  assert.equal((await get()).availability.availableOriginals,1);
+  assert.equal((await assign(h.app,"stock-today")).status,200);
+  const exhausted=await get();
+  assert.equal(exhausted.availability.availableOriginals,0);
+  assert.equal(exhausted.availability.state,"available");
+  assert.equal(exhausted.availability.questions.length,1);
+  assert.equal(exhausted.continuation.action.kind,"resume_ready");
+  assert.equal((await assign(h.app,"stock-today")).status,200);
+  const incomplete=await bankHarness({complete:false});
+  assert.equal((await incomplete.app(new Request(URL.replace("?view=bank","")))).status,503);
+  const off=await bankHarness({environment:{INVERGE_OWNER_REVIEWED_BANK_ENABLED:"false"}});
+  const normal=await (await off.app(new Request(URL.replace("?view=bank","")))).json();
+  assert.equal(normal.availability.bankPractice,undefined);
+  assert.equal(normal.availability.availableOriginals,undefined);
+});
+
+
+test("continuation and stock share one observation when a reservation appears between reads",async()=>{
+  const h=await realEstateBank();
+  assert.equal((await assign(h.app,"concurrent-stock")).status,200);
+  const committed=[...h.h.rows.values()];let reads=0;
+  h.h.store.listOwnerSnapshot=async()=>({complete:true,sessions:++reads===1?[]:committed});
+  const get=async()=>{const response=await h.app(new Request(URL.replace("?view=bank","")));assert.equal(response.status,200);return response.json();};
+  const before=await get();
+  assert.equal(reads,1);assert.equal(before.continuation.action,null);
+  assert.equal(before.availability.availableOriginals,1);
+  const after=await get();
+  assert.equal(reads,2);assert.equal(after.continuation.action.kind,"resume_ready");
+  assert.equal(after.availability.availableOriginals,0);
+  assert.equal(after.continuation.action.sessionId,committed[0].sessionId);
+});
