@@ -1,3 +1,4 @@
+import { APP1_LAW_SUBJECT, APP1_LAW_SCOPE_NOTICE } from "../owner-study/app1-law-binding";
 import { isUnanalyzedCaptureRecord, isCaptureFunctionalTest } from "./capture-review-provenance";
 import { getAppraisalMode, parseAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildSecondAnswerRewriteSignal } from "@/lib/review-os/second-answer-rewrite";
@@ -92,7 +93,7 @@ export function buildNotebookPreview(item: WrongAnswerItemRecord, tag?: WrongAns
     summaryLine: "입력 보관 · 비교·검증·학습성과 미생성", notebookLine: "개인 감점 진단이나 검증된 학습신호가 아닙니다.",
   };
   const sameSessionRepairConfirmed = isSecond && hasSavedSameSessionRepair(item);
-  const lawScope = getConfirmedFieldString(item.rawPayload, "app1_law_scope") === "synthetic_applicability_only_v1";
+  const lawScope = sameSessionRepairConfirmed && item.subjectLabel === APP1_LAW_SUBJECT && getDraftString(item.rawPayload, "comparisonPoint") === APP1_LAW_SCOPE_NOTICE;
   const weakPoint = compact(
     getDraftString(item.rawPayload, isSecond ? "missingIssue" : "comparisonPoint") ??
       item.userReasonText ??

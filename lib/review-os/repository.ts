@@ -77,7 +77,6 @@ function assertApp1ReplayExact(actual: unknown, expected: unknown) {
   }
 }
 
-const APP1_LAW_PERSISTENCE_FIELDS = ["app1_law_binding", "app1_law_scope"];
 const APP1_CONTRACT_VERSION = "OwnerCaptureToRepairVerticalV1";
 const APP1_PERSISTENCE_FIELDS = Object.freeze([
   "app1_contract_version",
@@ -551,11 +550,9 @@ export class ReviewOsRepository {
           .sort()
       : [];
     if (app1Fields.length === 0) return;
-    const expectedFields = [...APP1_PERSISTENCE_FIELDS, ...(input.subjectLabel === "감정평가 및 보상법규" ? APP1_LAW_PERSISTENCE_FIELDS : [])].sort();
-    if (input.subjectLabel === "감정평가 및 보상법규" && (fields?.app1_law_scope !== "synthetic_applicability_only_v1" || !fields.app1_law_binding || typeof fields.app1_law_binding !== "object")) rejectApp1PersistenceAuthority();
     if (
-      app1Fields.length !== expectedFields.length ||
-      app1Fields.some((field, index) => field !== expectedFields[index]) ||
+      app1Fields.length !== APP1_PERSISTENCE_FIELDS.length ||
+      app1Fields.some((field, index) => field !== APP1_PERSISTENCE_FIELDS[index]) ||
       fields?.app1_contract_version !== APP1_CONTRACT_VERSION ||
       fields.app1_verification_state !== "repair_confirmed_for_this_session" ||
       fields.app1_same_session_only !== true ||

@@ -452,9 +452,6 @@ function buildAuthorizedApp1PersistenceInput(input: Readonly<{
     verification,
     operation,
   });
-  if (input.command.lawBindingInput && value.extractionPayload) {
-    value.extractionPayload.user_confirmed_fields = { ...value.extractionPayload.user_confirmed_fields, app1_law_binding: input.command.lawBindingInput, app1_law_scope: "synthetic_applicability_only_v1" };
-  }
   return value;
 }
 

@@ -27,7 +27,8 @@ test("Law source-bound synthetic confirmation persists once and is readable with
  const replay=await f.app.save(command);assert.equal(replay.status,200,JSON.stringify(replay.body));
  const repairs=f.store.tables.wrong_answer_items.filter(x=>x.id!==SOURCE_ID);assert.equal(repairs.length,1);
  const reread=await f.app.repository.getWrongAnswerDetail(OWNER_ID,repairs[0].id);assert.equal(reread.item.rawAnswerText,data.corrected);
- assert.deepEqual(reread.item.rawPayload.user_confirmed_fields.app1_law_binding,data.binding);
+ assert.match(reread.item.rawPayload.aiDraft.comparisonPoint,/합성 제10조.*실제 법령.*미검증/);
+ assert.equal(reread.item.rawPayload.user_confirmed_fields.app1_law_binding,undefined);
  assert.ok(!JSON.stringify(f.store.tables.usage_events).includes(data.corrected));
  await assert.rejects(async()=>f.app.authority.authorizeApp1PersistenceCommand({userId:OWNER_ID,detail:f.detail,command:{...command,lawBindingInput:{...data.binding,applicableAsOf:"2026-08-16"}}}));
  const wrongBody=f.app.authority.createApp1RepairVerificationAuthority({...f.args,repairText:data.weak,repairDraft:{...data.responses.corrected,answerEvidenceQuote:"합성 법령"}});assert.equal(wrongBody.verificationReceipt,null);
@@ -37,7 +38,7 @@ test("Law source-bound synthetic confirmation persists once and is readable with
 
 test("Law rejects contradictory corrected prose, stale registry and forged auxiliary fields",async()=>{
  const f=await fixture();
- for(const body of [data.weak,data.corrected.replaceAll("2026-08-15","2026-08-16"),data.corrected.replace("Article 10","Article 11"),data.corrected.replace("적용 가능","적용 불가"),data.corrected.replace("근거는 0개","근거는 1개"),data.corrected+" 또한 2025-08-15에 적용 가능하다."]){
+ for(const body of [data.corrected.replace("효력이 있고","효력이 없고"),data.corrected.replace("근거는 0개이다","근거는 0개가 아니라 2개이다"),data.corrected+" 단, 효력이 없다.",data.weak,data.corrected.replaceAll("2026-08-15","2026-08-16"),data.corrected.replace("Article 10","Article 11"),data.corrected.replace("적용 가능","적용 불가"),data.corrected.replace("근거는 0개","근거는 1개"),data.corrected+" 또한 2025-08-15에 적용 가능하다."]){
   const result=f.app.authority.createApp1RepairVerificationAuthority({...f.args,repairText:body,repairDraft:{...data.responses.corrected,answerEvidenceQuote:body}});
   assert.equal(result.verificationReceipt,null,body);
  }

@@ -48,16 +48,16 @@ export function assertApp1LawBinding(detail: WrongAnswerDetail, value: unknown, 
   return input;
 }
 export function evaluateApp1LawRepair(input: { detail: WrongAnswerDetail; gap: App1PrimaryGap; repairText: string; draft: AnswerReviewStructureDraft; lawBindingInput: unknown; revision: string }): App1RepairVerification {
-  assertApp1LawBinding(input.detail, input.lawBindingInput, input.revision);
+  const binding = assertApp1LawBinding(input.detail, input.lawBindingInput, input.revision)!;
   const quote = input.draft.answerEvidenceQuote?.trim() ?? "";
   const text = input.repairText;
-  const dates: string[] = text.match(/\d{4}-\d{2}-\d{2}/g) ?? [];
-  // Closed applicability-only consistency check. Unsupported phrasing stays unconfirmed.
-  const consistentBody = dates.includes("2026-01-01") && dates.includes("2026-08-15") && dates.every(date => ["2026-01-01","2026-08-15"].includes(date)) &&
-    /2026-01-01\s*버전/.test(text) && /Article\s+10\b/.test(text) && !/Article\s+(?!10\b)\d+/.test(text) &&
-    /2026-01-01부터\s*효력/.test(text) && /종료일은\s*없/.test(text) && /2026-08-15(?:에|\s*현재|로|을|를)/.test(text) &&
-    /적용\s*가능/.test(text) && !/적용\s*(?:불가|되지|불가능|가능하지)|적용할\s*수\s*없/.test(text) &&
-    /열린\s*차단\s*근거는\s*0개/.test(text) && !/차단\s*근거는\s*[1-9]/.test(text);
+  // Parse complete propositions, not positive substrings inside a negation or contradiction.
+  // This intentionally bounded synthetic grammar creates no real-law proof.
+  const body = text.trim().replace(/\s+/g, " ");
+  const parsed = /^합성 법령의 (\d{4}-\d{2}-\d{2}) 버전 (Article \d+)은 (\d{4}-\d{2}-\d{2})부터 효력이 있고 종료일은 (없다)\. 문제의 적용일인 (\d{4}-\d{2}-\d{2})에 적용 (가능)하며 열린 차단 근거는 (\d+)개이다\.(?: 이 결합은 합성 자료에 한정되며 실제 법령의 현재성이나 구체적 사안 포섭은 검증하지 않았다\.)?$/.exec(body);
+  const consistentBody = parsed !== null && parsed[1] === binding.version && parsed[2] === binding.locator &&
+    parsed[3] === binding.effectiveFrom && parsed[4] === "없다" && binding.effectiveTo === "없음" &&
+    parsed[5] === binding.applicableAsOf && parsed[6] === binding.currentness && parsed[7] === binding.blockerCount;
   const supported = consistentBody && quote.includes("2026-08-15") && /적용/.test(quote) && input.draft.diagnosticStatus === "no_clear_gap" && input.draft.reviewedAnswerScope === "entire_submitted_answer" && quote.length >= 4 && input.repairText.includes(quote);
   return { state: supported ? "repair_confirmed_for_this_session" : "guided_path_needed", requestedGap:input.gap.gap, observedGap:null,
     reason: supported ? APP1_LAW_SCOPE_NOTICE : "출처·적용일 구조는 확인했지만 문장 교정 결과는 확인되지 않았습니다. 오류나 완료로 단정하지 않습니다.",

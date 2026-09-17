@@ -23,6 +23,7 @@ import {
   type ExecutionNextPlanCandidate,
   type ExecutionReviewCandidate,
 } from "@/lib/review-os/execution-learning-signal";
+import { RECALL_OUTCOME_OPTIONS } from "@/lib/review-os/retrieval-review";
 import type { ReferenceSnippet } from "@/lib/review-os/reference-context";
 import { buildSecondRewriteComparison } from "@/lib/review-os/second-rewrite-comparison";
 import { SECOND_REWRITE_CASIO_UNSUPPORTED_MESSAGE } from "@/lib/review-os/second-answer-rewrite";
@@ -30,6 +31,7 @@ import { resolveAdaptiveReviewSchedule, type AdaptiveScheduleResult } from "@/li
 import {
   FIRST_STAGE_ERROR_REASON_OPTIONS,
   getSecondSubjectTemplate,
+  type RecallOutcome,
   type ReviewCompletionAction,
   type ReviewCompletionMetadata,
   type ReviewQueueCard,
@@ -236,6 +238,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
 
   const [issueRecall, setIssueRecall] = useState("");
   const [rewriteParagraph, setRewriteParagraph] = useState("");
+  const [recallOutcome, setRecallOutcome] = useState<RecallOutcome | null>(null);
   const secondTemplate = getSecondSubjectTemplate(queueItem?.subjectLabel ?? "");
   const secondRewriteComparison = useMemo(
     () =>
@@ -589,7 +592,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
             <textarea
               className={secondTextareaClass}
               value={rewriteParagraph}
-              onChange={(event) => setRewriteParagraph(event.target.value)}
+              onChange={(event) => { setRewriteParagraph(event.target.value); setRecallOutcome(null); }}
               placeholder="보강 문단 1개를 여기에 적습니다."
               aria-label="보강할 문단"
             />
@@ -651,17 +654,30 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
               예정 시점: {note?.nextReviewDate ?? "복습 큐 기본 일정"}
               <p className={mode === "second" ? "mt-2 text-[var(--color-text-secondary)]" : "mt-2 text-xs text-[color:var(--muted)]"}>이유: {adaptiveScheduleNote?.explanation ?? "복습 신호를 기준으로 자동 조정됩니다."}</p>
             </div>
+            {mode === "second" ? (
+              <fieldset className="space-y-3">
+                <legend className="v3-type-label-strong">이번 회상은 어땠나요?</legend>
+                <p className="v3-type-caption">자기평가이며 정답 판정이나 숙련도 인증이 아닙니다.</p>
+                <div className="flex flex-wrap gap-2">
+                  {RECALL_OUTCOME_OPTIONS.map(option => (
+                    <SessionActionButton key={option.value} mode={mode} type="button" tone="secondary"
+                      aria-pressed={recallOutcome === option.value} disabled={pending}
+                      onClick={() => setRecallOutcome(option.value)}>{option.label}</SessionActionButton>
+                  ))}
+                </div>
+              </fieldset>
+            ) : null}
             <SessionActionButton
               mode={mode}
               type="button"
               className={mode === "first" ? "w-full sm:w-auto" : undefined}
-              disabled={pending}
+              disabled={pending || (mode === "second" && (!recallOutcome || rewriteParagraph.trim().length < 8))}
               onClick={() =>
                 void completeAndFinish(mode === "second" ? "second_paragraph_rewrite" : "first_short_retry", {
                   retryDraft,
                   errorReason,
                   retrievalSentence,
-                  ...(mode === "second" ? { rewriteParagraph, rewriteInstruction: note?.rewriteInstruction ?? secondTemplate.rewriteGuidance } : {}),
+                  ...(mode === "second" ? { rewriteParagraph, recallOutcome: recallOutcome ?? undefined, rewriteInstruction: note?.rewriteInstruction ?? secondTemplate.rewriteGuidance } : {}),
                   ...(mode === "first" ? { trapCardsCompleted: checkedTrapTypes.length === 3, trapTypes: checkedTrapTypes } : {}),
                 })
               }
