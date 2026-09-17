@@ -42,6 +42,7 @@ export function ReviewQueueClient({
   captureReferenceLineByItemId?: Record<string, string>;
 }) {
   const router = useRouter();
+  const [selectedQueueId, setSelectedQueueId] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [inlineErrorByQueueId, setInlineErrorByQueueId] = useState<Record<string, string>>({});
   const [recallAttemptTextByQueueId, setRecallAttemptTextByQueueId] = useState<Record<string, string>>({});
@@ -55,7 +56,12 @@ export function ReviewQueueClient({
     const metadata = buildReviewCompletionMetadata(
       recallAttemptTextByQueueId[queueId] ?? "",
       recallOutcomeByQueueId[queueId] ?? null,
+      selectedAction === "second_calculation_retry",
     );
+    if (selectedAction === "second_calculation_retry" && (!metadata.rewriteParagraph || metadata.rewriteParagraph.length < 8)) {
+      setInlineErrorByQueueId((prev) => ({ ...prev, [queueId]: "산식·금액 단위·반올림을 포함한 재계산 내용을 먼저 적어 주세요." }));
+      return;
+    }
     setInlineErrorByQueueId((prev) => ({ ...prev, [queueId]: "" }));
     setPendingId(queueId);
     try {
@@ -121,8 +127,9 @@ export function ReviewQueueClient({
     );
   }
 
-  const primaryItem = items[0]!;
-  const candidateItems = items.slice(1);
+  const primaryItem = items.find((item) => item.queueId === selectedQueueId) ?? items[0]!;
+  const practiceReview = primaryItem.examName === "감정평가사 2차" && primaryItem.subjectLabel === "감정평가실무";
+  const candidateItems = items.filter((item) => item.queueId !== primaryItem.queueId);
   const visibleCandidateItems = candidateItems.slice(0, 3);
   const hiddenCandidateCount = Math.max(candidateItems.length - visibleCandidateItems.length, 0);
   const primaryNextAction = getReviewNextAction(primaryItem);
@@ -193,7 +200,7 @@ export function ReviewQueueClient({
           >
             <p className={mode === "second" ? "v3-type-caption text-[var(--color-text-brand)]" : "text-xs font-semibold text-[color:var(--muted)]"}>1. 먼저 떠올리기</p>
             <p className={mode === "second" ? "v3-type-body-strong ko-keep mt-2 text-[var(--color-text-primary)]" : "mt-2 text-sm font-medium leading-6 text-[color:var(--foreground-strong)]"}>
-              {mode === "second" ? "문단/기준 먼저 떠올리기" : "먼저 떠올리기"}
+              {practiceReview ? "산식·단위·반올림을 직접 재계산하기" : mode === "second" ? "문단/기준 먼저 떠올리기" : "먼저 떠올리기"}
             </p>
             <p className={mode === "second" ? "v3-type-body ko-keep mt-1 text-[var(--color-text-primary)]" : "mt-1 text-sm leading-7 text-[color:var(--foreground-strong)]"}>{retrievalPrompt}</p>
             <textarea
@@ -209,7 +216,7 @@ export function ReviewQueueClient({
                 ? "v3-type-body mt-3 min-h-[var(--control-height)] w-full rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] px-4 py-3 text-[var(--color-text-primary)] outline-none focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--focus-ring)]"
                 : "mt-3 w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)] px-3 py-2 text-sm leading-6 text-[color:var(--foreground-strong)] outline-none focus:border-[color:var(--brand-700)]"}
               placeholder="답을 보기 전, 기억나는 기준을 먼저 적어보세요."
-              aria-label="복습 전 먼저 떠올린 내용"
+              aria-label={practiceReview ? "실무 복습 재계산 내용" : "복습 전 먼저 떠올린 내용"}
               data-review-recall-input
             />
             {!hasRevealedHint ? (
@@ -345,7 +352,7 @@ export function ReviewQueueClient({
                   mode={mode}
                   type="button"
                   onClick={() => void complete(primaryItem.queueId)}
-                  disabled={pendingId === primaryItem.queueId || !primaryOutcome}
+                  disabled={pendingId === primaryItem.queueId || !primaryOutcome || (practiceReview && primaryRecallText.trim().length < 8)}
                   className="w-full sm:w-auto"
                   aria-label={`복습 완료: ${primaryItem.problemTitle}`}
                   data-s232d4-review-completion
@@ -403,12 +410,12 @@ export function ReviewQueueClient({
                     tone="quiet"
                     legacyVariant="ghost"
                     type="button"
-                    onClick={() => void complete(item.queueId)}
+                    onClick={() => item.subjectLabel === "감정평가실무" ? setSelectedQueueId(item.queueId) : void complete(item.queueId)}
                     disabled={pendingId === item.queueId}
                     className={mode === "second" ? "min-h-11 px-3 text-xs" : "h-9 px-3 text-xs"}
-                    aria-label={`복습 완료: ${item.problemTitle}`}
+                    aria-label={`${item.subjectLabel === "감정평가실무" ? "재계산하기" : "복습 완료"}: ${item.problemTitle}`}
                   >
-                    {pendingId === item.queueId ? "처리 중" : "복습 완료"}
+                    {pendingId === item.queueId ? "처리 중" : item.subjectLabel === "감정평가실무" ? "재계산하기" : "복습 완료"}
                   </QueueActionButton>
                 </div>
                 {inlineErrorByQueueId[item.queueId] ? (
@@ -428,10 +435,10 @@ export function ReviewQueueClient({
   );
 }
 
-function buildReviewCompletionMetadata(recallAttemptText: string, recallOutcome: RecallOutcome | null): ReviewCompletionMetadata {
+function buildReviewCompletionMetadata(recallAttemptText: string, recallOutcome: RecallOutcome | null, practice = false): ReviewCompletionMetadata {
   const retrievalSentence = recallAttemptText.trim();
   return {
-    ...(retrievalSentence ? { retrievalSentence } : {}),
+    ...(retrievalSentence ? practice ? { rewriteParagraph: retrievalSentence } : { retrievalSentence } : {}),
     ...(recallOutcome
       ? {
           recallOutcome,
@@ -443,7 +450,7 @@ function buildReviewCompletionMetadata(recallAttemptText: string, recallOutcome:
 }
 
 function getReviewNextAction(item: ReviewQueueCard) {
-  return item.examName === "감정평가사 2차" ? "문단 하나 다시쓰기" : "놓친 조건 1개 회상 후 짧은 재시도";
+  return item.subjectLabel === "감정평가실무" ? "산식·금액 단위·반올림을 직접 재계산하고 검산하기" : item.examName === "감정평가사 2차" ? "문단 하나 다시쓰기" : "놓친 조건 1개 회상 후 짧은 재시도";
 }
 
 function getReviewReason(item: ReviewQueueCard) {

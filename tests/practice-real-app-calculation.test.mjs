@@ -16,7 +16,7 @@ test("correct Practice amount, unit and declared rounding receive same-session c
  assert.equal(verify(fixture.corrected).state,"repair_confirmed_for_this_session");
 });
 test("wrong rate, rounded amount and missing evidence never receive confirmation even if AI says clear",()=>{
- for(const answer of [fixture.weak,fixture.corrected.replace("37,033.3만원","37,033.4만원"),fixture.corrected.replace("37,033.3만원","37,033.3원"),fixture.corrected.replace("소수점 첫째 자리까지 반올림했으며 ","")]){
+ for(const answer of [fixture.weak,fixture.corrected.replace("37,033.3만원","37,033.4만원"),fixture.corrected.replace("37,033.3만원","37,033.3원"),fixture.corrected.replace("37,033.3만원","370,333,000원"),fixture.corrected.replace("소수점 첫째 자리까지 반올림했으며 ","")]){
   assert.notEqual(verify(answer).state,"repair_confirmed_for_this_session",answer);
  }
  assert.notEqual(verify(fixture.corrected,{answerEvidenceQuote:""}).state,"repair_confirmed_for_this_session");

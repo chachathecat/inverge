@@ -431,7 +431,7 @@ function hasQuestionBoundDirectCapitalization(question: string, value: string, f
   const stated = parseApp1ExactDecimal(x[6], x[7]);
   const expected = evaluateApp1ExactBinaryCalculation(income, "/", rate);
   const declaredPlaces = parseApp1DeclaredRoundingPlaces(value);
-  if (!left || !right || !stated || !expected || !["/", "÷"].includes(x[3]) || !x[2] || x[5] || !x[7] ||
+  if (!left || !right || !stated || !expected || !["/", "÷"].includes(x[3]) || !x[2] || x[5] || x[7] !== units[0][1] ||
       !app1ExactDecimalsEqual(left, income) || !app1ExactDecimalsEqual(right, rate) ||
       declaredPlaces === null || (fullAnswer && declaredPlaces !== places) ||
       (declaredPlaces !== undefined && declaredPlaces !== places) ||
