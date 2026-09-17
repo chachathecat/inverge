@@ -3030,7 +3030,7 @@ test("APP1-API-002 revalidates exact Owner, subject, and source-item authority b
   assert.ok(authority, "missing APP-1 persistence authority gate");
   assert.ok(insertion, "missing wrong-answer persistence boundary");
   assert.match(authority, /Object\.keys\(fields\)[\s\S]*?key\.startsWith\("app1_"\)/u);
-  assert.match(authority, /app1Fields\.length !== expectedFields\.length/u);
+  assert.match(authority, /app1Fields\.length !== APP1_PERSISTENCE_FIELDS\.length/u);
   assert.match(authority, /app1_contract_version !== APP1_CONTRACT_VERSION/u);
   assert.match(authority, /app1_verification_state !== "repair_confirmed_for_this_session"/u);
   assert.match(authority, /fields\.app1_source_item_id !== input\.rewriteSourceItemId/u);

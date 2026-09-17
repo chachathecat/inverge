@@ -56,7 +56,12 @@ test("Law source-bound synthetic confirmation persists once and is readable with
  assert.equal(dueTasks.length,1);assert.equal(dueTasks[0].queueId,scheduled[0].queueId);
  assert.match(dueTasks[0].display_reason,/교정한 연결.*회상/);assert.doesNotMatch(dueTasks[0].display_reason,/흔들린|미보완/);
  f.store.tables.action_seeds=[];
+ const callsBefore=f.app.calls.length;
  const sourceProjection=await service.getTodayFocus(OWNER_ID,"synthetic-owner@example.invalid","second");
+ const sourceQueries=f.app.calls.slice(callsBefore).filter(q=>q.table==="wrong_answer_items"&&q.columns==="id,raw_payload");
+ assert.equal(sourceQueries.length,1);
+ assert.ok(sourceQueries[0].filters.some(([field,op,value])=>field==="user_id"&&op==="eq"&&value===OWNER_ID));
+ assert.deepEqual(sourceQueries[0].filters.find(([field,op])=>field==="id"&&op==="in")[2],[reread.item.id]);
  assert.equal(sourceProjection.queue[0].sameSessionRepairConfirmed,true);
  assert.equal(sourceProjection.sourceQueueId,null);
  assert.deepEqual(buildToday({mode:"second",queue:sourceProjection.queue,items:[],now:new Date(due-1000)}),[],"queue source projection survives an empty or truncated recent-items list");
@@ -94,4 +99,23 @@ test("Law client fields carry no fixture bank and analysis cannot enrich with st
  const route=readFileSync(new URL("../app/api/answer-review/structure/route.ts",import.meta.url),"utf8");
  assert.ok(route.includes('if (subject === "감정평가 및 보상법규") referenceText = "";'));
  assert.ok(route.includes('ownerTheoryAuthority || app1Detail?.item.subjectLabel === "감정평가 및 보상법규"'));
+});
+
+test("Today reads thirty queued correction markers in one tenant-scoped batch and fails closed on read errors",async()=>{
+ const f=await fixture();const source=f.store.tables.wrong_answer_items[0];
+ source.raw_payload={rewrite_completed:true,rewrite_source_item_id:"original",user_confirmed_fields:{app1_contract_version:"OwnerCaptureToRepairVerticalV1",app1_source_item_id:"original",app1_verification_state:"repair_confirmed_for_this_session",app1_same_session_only:true,app1_mastery_created:false,app1_transfer_created:false}};
+ for(let i=0;i<30;i++){
+  const id="batch-source-"+i;
+  f.store.tables.wrong_answer_items.push({...structuredClone(source),id});
+  f.store.tables.review_queue_items.push({id:"batch-queue-"+i,user_id:OWNER_ID,source_submission_id:id,exam_id:"wrong_answer_os",stage:"alpha",source_kind:"wrong_answer",status:"pending",priority_score:1,raw_payload:{dueAt:"2026-09-19T07:18:58.795Z"},derived_payload:{},created_at:"2026-09-06T10:00:00.000Z"});
+ }
+ f.store.tables.action_seeds=[];
+ const start=f.app.calls.length;
+ const focus=await f.app.load("lib/review-os/service").reviewOsService.getTodayFocus(OWNER_ID,"synthetic-owner@example.invalid","second");
+ assert.equal(focus.queue.length,30);assert.ok(focus.queue.every(q=>q.sameSessionRepairConfirmed));
+ const queries=f.app.calls.slice(start).filter(q=>q.table==="wrong_answer_items"&&q.columns==="id,raw_payload");assert.equal(queries.length,1);
+ assert.ok(queries[0].filters.some(([k,op,v])=>k==="user_id"&&op==="eq"&&v===OWNER_ID));
+ assert.equal(queries[0].filters.find(([k,op])=>k==="id"&&op==="in")[2].length,30);
+ const broken=productionHarness(async q=>q.table==="wrong_answer_items"&&q.columns==="id,raw_payload"?{data:null,error:{code:"synthetic-read-failure"}}:f.store.execute(q));
+ await assert.rejects(()=>broken.load("lib/review-os/service").reviewOsService.getTodayFocus(OWNER_ID,"synthetic-owner@example.invalid","second"),/todayQueuedRepairSources/);
 });

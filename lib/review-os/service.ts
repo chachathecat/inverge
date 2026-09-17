@@ -3064,10 +3064,21 @@ export class ReviewOsService {
     const recentItems = targetExamName
       ? rawRecentItems.filter((item) => item.examName === targetExamName)
       : rawRecentItems;
-    const visibleQueue = await Promise.all(queue.filter((item) => !isSmokeSeedQueueItem(item)).map(async item => {
-      const source = await reviewOsRepository.getWrongAnswerItem(userId, item.itemId);
-      return { ...item, sameSessionRepairConfirmed: source ? hasSavedSameSessionRepair(source) : false };
-    }));
+    const visibleCards = queue.filter((item) => !isSmokeSeedQueueItem(item));
+    const sourceIds = [...new Set(visibleCards.map(item => item.itemId))];
+    const confirmedSourceIds = new Set<string>();
+    if (sourceIds.length > 0) {
+      requireSupabasePersistence(userId);
+      const client = getSupabasePersistenceClient();
+      if (!client) throw new Error("supabase-persistence-unavailable");
+      const sources = await client.from("wrong_answer_items").select("id,raw_payload")
+        .eq("user_id", userId).in("id", sourceIds);
+      assertSupabaseOperation("review-os.todayQueuedRepairSources", sources);
+      for (const source of sources.data ?? []) {
+        if (hasSavedSameSessionRepair({ rawPayload: source.raw_payload })) confirmedSourceIds.add(source.id);
+      }
+    }
+    const visibleQueue = visibleCards.map(item => ({ ...item, sameSessionRepairConfirmed: confirmedSourceIds.has(item.itemId) }));
     const visibleRecentItems = recentItems.filter(
       (item) => !isSmokeSeedItem(item) && !isCaptureFunctionalTest(item.rawPayload),
     );
