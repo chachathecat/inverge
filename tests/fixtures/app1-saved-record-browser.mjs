@@ -203,7 +203,12 @@ export async function verifyApp1SavedRecordBrowser(execute, { screenshotPath, ca
     assert.match(await page.locator("body").innerText(),/감정평가이론/);
     await page.goto(`${origin}/app?mode=second`);
     assert.match(await page.locator("body").innerText(),/오늘 할 일/);
-    assert.equal((await service.getTodayFocus(OWNER_ID,app.session.email,"second")).sourceItemId,savedId);
+    const earlyFocus=await service.getTodayFocus(OWNER_ID,app.session.email,"second");
+    assert.equal(earlyFocus.sourceItemId,null,"future confirmed repair is preserved, not due today");
+    assert.equal(earlyFocus.queue.find(entry=>entry.itemId===savedId)?.dueAt,queue.dueAt);
+    const dueApp=productionHarness(execute,{now:"2026-09-07T00:00:00.001Z"});
+    const dueService=dueApp.load("lib/review-os/service").reviewOsService;
+    assert.equal((await dueService.getTodayFocus(OWNER_ID,dueApp.session.email,"second")).sourceItemId,savedId,"exact saved correction becomes today's source when due");
     assert.ok(await page.locator(`a[href*="${savedId}"]`).count(), "Today links the exact saved correction");
     assert.deepEqual(await app.repository.listReviewQueue(OWNER_ID,100),before);
     assert.equal((await app.repository.listWrongAnswerItems(OWNER_ID,100)).length,captureInput?3:2);

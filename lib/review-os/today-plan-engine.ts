@@ -1,4 +1,4 @@
-import { hasSavedSameSessionRepair } from "./capture-review-provenance";
+import { hasSavedSameSessionRepair, isUnanalyzedCaptureRecord, isCaptureFunctionalTest } from "./capture-review-provenance";
 import type { ConfidenceLevel, LearningSignalEventRecord, ReviewQueueCard, WrongAnswerItemRecord } from "@/lib/review-os/types";
 import { buildTodayPlanDisplayCopy, type TodayPlanDisplayCopy } from "./today-plan-display-copy";
 import { rankLearningStateRisk } from "./personal-learning-state-engine";
@@ -362,6 +362,8 @@ function getConceptNodeCandidateFromItem(item: WrongAnswerItemRecord) {
 
 function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: Date): { task: TodayPlanTask; score: number } | null {
   if (hasSavedSameSessionRepair(item)) return null;
+  // Stored input and functional examples are not learning evidence or scheduled work.
+  if (mode === "second" && (isUnanalyzedCaptureRecord(item.rawPayload) || isCaptureFunctionalTest(item.rawPayload))) return null;
   const createdFromCapture = Boolean(item.rawPayload?.created_from_capture ?? item.derivedPayload?.created_from_capture ?? item.createdFromCapture);
   const pageCount = getPageCount(item);
   const lowConfidence = isLowConfidenceOcrItem(item);

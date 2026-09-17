@@ -6,6 +6,8 @@ import {productionHarness,memoryTransport,seedRows,OWNER_ID,SOURCE_ID} from "./f
 const data=JSON.parse(readFileSync(new URL("./fixtures/law-development-cases.json",import.meta.url)));
 async function fixture(){
  const rows=seedRows();Object.assign(rows.wrong_answer_items[0],{subject_label:"감정평가 및 보상법규",raw_question_text:data.question,raw_answer_text:data.weak});
+ Object.assign(rows.wrong_answer_items[0].raw_payload,{created_from_capture:true});
+ rows.wrong_answer_items[0].raw_payload.user_confirmed_fields.capture_review_provenance={version:"capture_review_provenance.v1",diagnosis:"not_analyzed",learningMaterial:"learner_input",referenceComparison:"not_started"};
  const store=memoryTransport(rows),app=productionHarness(store.execute,{env:{WCV_C2R_C_L_LAW_ENABLED:"true",WCV_C2R_C_L_OWNER_EMAILS:"synthetic-owner@example.invalid"}});
  const detail=await app.repository.getWrongAnswerDetail(OWNER_ID,SOURCE_ID);
  const analysis=app.authority.createApp1AnalysisAuthority({userId:OWNER_ID,detail,draft:data.responses.weak});
@@ -39,6 +41,12 @@ test("Law source-bound synthetic confirmation persists once and is readable with
  const scheduled=await f.app.repository.listReviewQueue(OWNER_ID,100);
  const buildToday=f.app.load("lib/review-os/today-plan-engine").buildTodayPlanTasks;
  const due=Date.parse(scheduled[0].dueAt);
+ const sourceAndRepair=[f.detail.item,reread.item];
+ assert.deepEqual(buildToday({mode:"second",queue:scheduled,items:sourceAndRepair,now:new Date(due-1000)}),[],"unanalyzed original plus future confirmed repair must not create a current learning task");
+ const withOriginalDue=buildToday({mode:"second",queue:scheduled,items:sourceAndRepair,now:new Date(due+1)});
+ assert.equal(withOriginalDue.length,1);assert.equal(withOriginalDue[0].itemId,reread.item.id);
+ const functional={...f.detail.item,rawPayload:{...f.detail.item.rawPayload,user_confirmed_fields:{...f.detail.item.rawPayload.user_confirmed_fields,capture_review_provenance:{version:"capture_review_provenance.v1",diagnosis:"self_assessment",learningMaterial:"ai_example_functional_test",referenceComparison:"deferred"}}}};
+ assert.deepEqual(buildToday({mode:"second",queue:[],items:[functional],now:new Date(due)}),[]);
  assert.deepEqual(buildToday({mode:"second",queue:scheduled,items:[reread.item],now:new Date(due-1000)}),[],"confirmed repair must not recreate today's task before its saved schedule");
  const dueTasks=buildToday({mode:"second",queue:scheduled,items:[reread.item],now:new Date(due+1)});
  assert.equal(dueTasks.length,1);assert.equal(dueTasks[0].queueId,scheduled[0].queueId);
@@ -50,7 +58,7 @@ test("Law source-bound synthetic confirmation persists once and is readable with
  assert.deepEqual(buildToday({mode:"second",queue:sourceProjection.queue,items:[],now:new Date(due-1000)}),[],"queue source projection survives an empty or truncated recent-items list");
  assert.equal(buildToday({mode:"second",queue:sourceProjection.queue,items:[],now:new Date(due+1)}).length,1);
  const another={...scheduled[0],itemId:"unrelated-item",queueId:"unrelated-queue",dueAt:new Date(due-2000).toISOString()};
- const mixed=buildToday({mode:"second",queue:[...scheduled,another],items:[reread.item],now:new Date(due-1000)});
+ const mixed=buildToday({mode:"second",queue:[...scheduled,another],items:sourceAndRepair,now:new Date(due-1000)});
  assert.equal(mixed.length,1);assert.equal(mixed[0].queueId,"unrelated-queue");
  const noEvidence=f.app.authority.createApp1RepairVerificationAuthority({...f.args,repairDraft:{...data.responses.corrected,answerEvidenceQuote:"존재하지 않는 문장"}});assert.equal(noEvidence.verificationReceipt,null);
 });
