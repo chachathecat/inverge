@@ -248,8 +248,9 @@ export function buildRewriteComparisonNote(
       "다시 쓴 문단이 아직 기록되지 않았습니다.");
 
   const sameSessionRepairConfirmed = detailNote.sameSessionRepairConfirmed;
+  const lawScopeNotice = detail.item.subjectLabel === APP1_LAW_SUBJECT && detailNote.comparisonPoint === APP1_LAW_SCOPE_NOTICE ? `${APP1_LAW_SCOPE_NOTICE}. ` : "";
   const remainingNextGap = sameSessionRepairConfirmed
-    ? "요청한 연결 1개만 같은 세션에서 확인했습니다. 다른 간극·독립 복습·숙달은 확인하지 않았습니다."
+    ? `${lawScopeNotice}요청한 연결 1개만 같은 세션에서 확인했습니다. 다른 간극·독립 복습·숙달은 확인하지 않았습니다.`
     : detailNote.weakStructurePoint ?? detailNote.weakApplicationSentence ?? detailNote.weakPoint;
   const improvement = sameSessionRepairConfirmed
     ? "AI 미검토 학습보조로 요청한 연결 1개를 같은 세션에서 확인하고 교정문을 저장했습니다."

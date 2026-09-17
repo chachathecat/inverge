@@ -34,7 +34,11 @@ test("Law source-bound synthetic confirmation persists once and is readable with
  assert.ok(!JSON.stringify(f.store.tables.usage_events).includes(data.corrected));
  await assert.rejects(async()=>f.app.authority.authorizeApp1PersistenceCommand({userId:OWNER_ID,detail:f.detail,command:{...command,lawBindingInput:{...data.binding,applicableAsOf:"2026-08-16"}}}));
  const wrongBody=f.app.authority.createApp1RepairVerificationAuthority({...f.args,repairText:data.weak,repairDraft:{...data.responses.corrected,answerEvidenceQuote:"합성 법령"}});assert.equal(wrongBody.verificationReceipt,null);
- const note=f.app.load("lib/review-os/study-note").buildNotebookPreview(reread.item);assert.match(note.noteLabel,/실제 법률 미검증/);
+ const noteModule=f.app.load("lib/review-os/study-note");
+ const note=noteModule.buildNotebookPreview(reread.item);assert.match(note.noteLabel,/실제 법률 미검증/);
+ const comparison=noteModule.buildRewriteComparisonNote(reread,noteModule.buildDetailStudyNote(reread),f.detail);
+ assert.match(comparison.remainingNextGap,/합성 제10조.*실제 법령.*미검증/);
+ assert.match(comparison.remainingNextGap,/독립 복습·숙달은 확인하지 않았습니다/);
  const service=f.app.load("lib/review-os/service").reviewOsService;
  const savedQueue=await f.app.repository.listReviewQueue(OWNER_ID,100);
  await service.completeReview(OWNER_ID,"synthetic-owner@example.invalid",savedQueue[0].queueId,"second_paragraph_rewrite",{rewriteParagraph:"합성 법령의 버전과 적용일을 다시 대조한 문단이다.",recallOutcome:"fuzzy"});
