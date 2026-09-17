@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
+import {privateFirstStageSessionId} from "../../lib/review-os/first-stage/runtime/session-service.ts";
 import * as domain from "../../lib/review-os/first-stage/kernel/domain.ts";
 import {compilePrivateSource,privateRoute,ENVIRONMENT} from "./first-stage-private-route-harness.mjs";
 import {harness,submission} from "./first-stage-private-session-harness.mjs";
@@ -130,19 +131,24 @@ export async function verifyReviewedBankPostgres({sql,sdk,repository,contentInpu
     assert.equal(await sql(`select jsonb_agg(to_jsonb(r) order by session_id)::text from ${TABLE} r`),after);
     assert.equal(await sql(`select pg_get_constraintdef(oid) from pg_constraint where conrelid='${TABLE}'::regclass and conname='first_stage_reviewed_bank_binding'`,null),"CHECK (true)");
     await sql(`alter table ${TABLE} drop constraint first_stage_reviewed_bank_binding; alter table ${TABLE} add constraint first_stage_reviewed_bank_binding ${binding};`,null);
+    const rebound=(owner,label)=>{
+      const row=structuredClone(stored);row.ownerId=owner;row.sessionId=privateFirstStageSessionId(owner,label);
+      row.state.examCycle.ownerId=owner;row.state.examCycle.examCycleId=row.sessionId;return row;
+    };
     for(const value of ["accounting",null,"civil_law"]) {
-      const invalid=structuredClone(stored);invalid.sessionId+="-invalid-"+String(value);
+      const invalid=rebound(owners[0],"invalid-"+String(value));
       invalid.state.examCycle.questionReferences[0].subjectId=value;
       const invalidAssignment={...JSON.parse(assignment),learnerScopeId:invalid.sessionId};
-      await assert.rejects(sql(`insert into ${TABLE}(owner_id,session_id,revision,payload,reviewed_bank_assignment) values(${literal(owners[0])},${literal(invalid.sessionId)},1,${literal(JSON.stringify(invalid))}::jsonb,${literal(JSON.stringify(invalidAssignment))}::jsonb)`),{code:"23514"});
+      await assert.rejects(sql(`insert into ${TABLE}(owner_id,session_id,revision,payload,reviewed_bank_assignment) values(${literal(owners[0])},${literal(invalid.sessionId)},1,${literal(JSON.stringify(invalid))}::jsonb,${literal(JSON.stringify(invalidAssignment))}::jsonb)`),{code:"23514",constraint:"first_stage_reviewed_bank_binding"});
     }
     // Exact same owner/question identity from another subject must not block a
     // reservation. Both writes still pass the real SQL checks and insert guard.
-    const foreign=structuredClone(stored);foreign.sessionId+="-foreign";
+    const foreign=rebound(owners[0],"foreign-subject-original");
     foreign.state.examCycle.questionReferences[0].subjectId=subject==="economics_principles"?"real_estate_principles":"economics_principles";
     await sql(`insert into ${TABLE}(owner_id,session_id,revision,payload) values(${literal(owners[0])},${literal(foreign.sessionId)},1,${literal(JSON.stringify(foreign))}::jsonb)`);
     assert.equal(await sql(`select count(*) from ${TABLE} where owner_id=${literal(owners[0])}`),"2");
-    const reverse=structuredClone(foreign);reverse.ownerId=owners[5];reverse.sessionId+="-reverse";
+    const reverse=rebound(owners[5],"foreign-subject-before-bank");
+    reverse.state.examCycle.questionReferences[0].subjectId=foreign.state.examCycle.questionReferences[0].subjectId;
     await sql(`insert into ${TABLE}(owner_id,session_id,revision,payload) values(${literal(owners[5])},${literal(reverse.sessionId)},1,${literal(JSON.stringify(reverse))}::jsonb)`);
     assert.equal((await open(owners[5]).assign("after-other-subject")).status,200);
     assert.equal(await sql(`select count(*) from ${TABLE} where owner_id=${literal(owners[5])}`),"2");

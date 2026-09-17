@@ -93,7 +93,7 @@ test(`local PostgreSQL ${label} enforces actual route/browser durable retry/CAS 
     child.on("error", reject);
     child.on("close", code => {
       if (code === 0) resolve(out.trim());
-      else { const error = new Error("isolated-sql-rejected"); error.code = err.match(/ERROR:\s+([0-9A-Z]{5}):/u)?.[1] ?? "unknown"; reject(error); }
+      else { const error = new Error("isolated-sql-rejected"); error.code = err.match(/ERROR:\s+([0-9A-Z]{5}):/u)?.[1] ?? "unknown"; error.constraint = err.match(/CONSTRAINT NAME:\s+([a-z0-9_]+)/u)?.[1]; reject(error); }
     });
     child.stdin.end("\\set VERBOSITY verbose\n" + (role
       ? `begin; set local role ${role}; set local statement_timeout='15s'; ${statement}; commit;`
