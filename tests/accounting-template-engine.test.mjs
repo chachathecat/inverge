@@ -196,7 +196,8 @@ test("second-mode calculation task stays in second review flow instead of calcul
     },
   ];
   const tasks = buildTodayPlanTasks({ mode: "second", queue, items: [], learningSignals: [], now });
-  assert.equal(tasks[0]?.task_type, "second_answer_rewrite");
+  assert.equal(tasks[0]?.task_type, "practice_calculation_retry");
+  assert.equal(tasks[0]?.primary_cta.hrefKind, "review");
   assert.notEqual(tasks[0]?.primary_cta.hrefKind, "calculator_template");
 });
 

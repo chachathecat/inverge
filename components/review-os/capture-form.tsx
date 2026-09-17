@@ -719,7 +719,8 @@ export function WrongAnswerCaptureForm({
   const currentCaptureFlowSteps = mode === "second" ? SECOND_CAPTURE_FLOW_STEPS : CAPTURE_FLOW_STEPS;
   const secondModeReferenceStepComplete = hasSecondModeReferenceStep(form);
   const referenceStatus = secondWriteReferenceStatus(form);
-  const ownerAnalysisEntry = ownerCaptureRepairSubjectEnabled && !rewriteContext;
+  const [existingAnswerEntrySelected, setExistingAnswerEntrySelected] = useState(false);
+  const ownerAnalysisEntry = (textOnly || existingAnswerEntrySelected) && ownerCaptureRepairSubjectEnabled && !rewriteContext;
   const ownerAnalysisReady = ownerAnalysisEntry && isApp1InitialAnalysisEligible({
     questionText: form.rawQuestionText, answerText: form.userAnswer,
     referenceText: form.correctAnswer, sourceType: form.sourceType,
@@ -2116,9 +2117,9 @@ export function WrongAnswerCaptureForm({
         </dl>
       </section>
 
-      {ownerAnalysisEntry && !ownerAnalysisPanelOpen && !savedConfirmation ? <section className="space-y-2" data-owner-existing-answer-entry>
+      {ownerCaptureRepairSubjectEnabled && !rewriteContext && !ownerAnalysisPanelOpen && !savedConfirmation ? <section className="space-y-2" data-owner-existing-answer-entry>
         <p>이미 쓴 답안이 있으면 문제·답안만 입력해 분석할 수 있습니다. 쟁점·목차 훈련은 선택할 수 있습니다.</p>
-        <V3ActionButton type="button" onClick={() => setStage("second-gap")}>이미 쓴 답안 AI 검토</V3ActionButton>
+        <V3ActionButton type="button" onClick={() => { setExistingAnswerEntrySelected(true); setStage("second-gap"); }}>이미 쓴 답안 AI 검토</V3ActionButton>
       </section> : null}
       {submitting && !savedConfirmation ? (
         <section
