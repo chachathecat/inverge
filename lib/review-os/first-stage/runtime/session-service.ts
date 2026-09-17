@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { activeOwnerOriginalCatalog, activeOwnerOriginalReference, compatibleOwnerOriginalReviewedCatalog } from "./owner-original-context";
+import { activeOwnerOriginalCatalog, activeOwnerOriginalReference, ownerOriginalBankCandidates, compatibleOwnerOriginalReviewedCatalog } from "./owner-original-context";
 import { OWNER_ORIGINAL_NOTICE, OWNER_ORIGINAL_SCOPE } from "./owner-original-boundary";
 import { activeOwnerLocalR3TrialCatalog, acceptsOwnerLocalR3PreviousCatalog } from "./owner-local-trial-context";
 import { OWNER_LOCAL_R3_TRIAL_NOTICE } from "./owner-local-trial-boundary";
@@ -189,6 +189,7 @@ export function createPrivateFirstStageSessionService(
     }
     const references = catalog.initialReferences.filter((item) => item.questionId === questionId);
     if (references.length !== 1) fail("not_found");
+    if (activeOwnerOriginalCatalog(catalog) && !ownerOriginalBankCandidates(catalog)?.some(candidate => candidate.candidateId === questionId)) fail("adapter_unavailable");
     catalog.registry.require(references[0].subjectId).assertQuestionReference(references[0]);
     const state = createExamCycleState({ examCycleId: sessionId, ownerId,
       mode: "today", questionReferences: references });

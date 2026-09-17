@@ -686,5 +686,41 @@
       "human_review_claim",
       "unknown_use_or_lost_functional_lineage"
     ]
+  },
+  "exactOwnerInvestmentException": {
+    "decision": "docs/decisions/2026-09-06-owner-appraiser-first-private-continuation.md",
+    "ownerDecisionDate": "2026-09-18",
+    "packetSha256": "5a89a838a1c8873176a0bd8e137fbc3338df8ed53107379b9e12fad73e04bd81",
+    "questionIds": [
+      "owner-re-npv-initial-v1",
+      "owner-re-npv-retry-v1",
+      "owner-re-equity-initial-v1",
+      "owner-re-equity-retry-v1"
+    ],
+    "subject": "real_estate_principles",
+    "use": "exact_owner_pc_private_practice_only",
+    "humanReviewComplete": false,
+    "officialExamMetadata": null,
+    "feedbackState": "machine_checked_owner_local",
+    "rightsState": "owner_authorized_original",
+    "currentnessState": "stated_model_only",
+    "calculationScope": "stated_model_only",
+    "automaticAddition": false,
+    "transferEvidence": false,
+    "measurementEvidence": false,
+    "masteryClaim": false,
+    "existingHumanReviewRequirementsUnchanged": true,
+    "failClosed": [
+      "wrong_packet_hash",
+      "wrong_owner_or_environment",
+      "unapproved_item",
+      "calculation_or_unit_mismatch",
+      "absent_or_forged_request_capability",
+      "human_review_claim",
+      "unknown_use_or_lost_functional_lineage"
+    ],
+    "previousExceptionUnchanged": true,
+    "schemaApplyAuthorized": false,
+    "paidCalls": 0
   }
 }

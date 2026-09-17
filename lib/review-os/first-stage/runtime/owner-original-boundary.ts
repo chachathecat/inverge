@@ -17,3 +17,22 @@ export function ownerOriginalEnvironment(env: Readonly<Record<string, string | u
   if (env.NEXT_PUBLIC_SUPABASE_URL === "http://127.0.0.1:55431" && env.INVERGE_OWNER_ORIGINAL_TEST_ONLY === "isolated_synthetic") return "http://127.0.0.1:3884";
   return null;
 }
+
+/** Separately approved exact four-item addition; legacy tuple stays byte-stable. */
+export const OWNER_INVESTMENT_PACKET_SHA256 = "5a89a838a1c8873176a0bd8e137fbc3338df8ed53107379b9e12fad73e04bd81";
+export const OWNER_INVESTMENT_VERSION = "owner-pc-real-estate-investment-finance-20260918-v1";
+export const OWNER_INVESTMENT_SESSION = "owner-original-investment-finance-v1";
+export const OWNER_INVESTMENT_IDS = ["owner-re-npv-initial-v1", "owner-re-npv-retry-v1", "owner-re-equity-initial-v1", "owner-re-equity-retry-v1"] as const;
+export const OWNER_INVESTMENT_FLAG = "INVERGE_OWNER_INVESTMENT_ASSIGNMENT_ENABLED";
+export function matchesOwnerOriginalReference(value: unknown) {
+  if (!value || typeof value !== "object") return false;
+  const row = value as Record<string, unknown>;
+  const legacy = (OWNER_ORIGINAL_IDS as readonly unknown[]).includes(row.questionId);
+  const addition = (OWNER_INVESTMENT_IDS as readonly unknown[]).includes(row.questionId);
+  return (legacy || addition) && row.schemaVersion === "first_stage.owner_original_question_reference.v1" &&
+    row.subjectId === "real_estate_principles" && row.examYear === null && row.examRound === null && row.questionNumber === null && row.choiceCount === 5 &&
+    row.questionVersion === (legacy ? OWNER_ORIGINAL_VERSION : OWNER_INVESTMENT_VERSION) &&
+    row.sessionId === (legacy ? "owner-original-real-estate-v2" : OWNER_INVESTMENT_SESSION) &&
+    row.rightsState === "owner_authorized_original" && row.currentnessState === "stated_model_only" &&
+    JSON.stringify(row.sourceVersionManifestIds) === JSON.stringify([`owner-original-${legacy ? OWNER_ORIGINAL_PACKET_SHA256 : OWNER_INVESTMENT_PACKET_SHA256}`]);
+}

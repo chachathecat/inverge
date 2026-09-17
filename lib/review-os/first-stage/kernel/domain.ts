@@ -1,3 +1,4 @@
+import { matchesOwnerOriginalReference } from "../runtime/owner-original-boundary";
 export const FIRST_STAGE_KERNEL_SCHEMA_VERSION =
   "dabangil.first_stage.common_mcq_kernel.v1" as const;
 export const FIRST_STAGE_FEATURE_FLAG =
@@ -380,15 +381,11 @@ export function parseQuestionReference(value: unknown): QuestionReference {
     "sourceVersionManifestIds", "rightsState", "currentnessState",
   ]);
   if (row.schemaVersion === "first_stage.owner_original_question_reference.v1") {
-    if (row.subjectId !== "real_estate_principles" || row.examYear !== null || row.examRound !== null || row.questionNumber !== null ||
-      row.choiceCount !== 5 || row.questionVersion !== "owner-pc-real-estate-direct-capitalization-20260917-v2" ||
-      row.sessionId !== "owner-original-real-estate-v2" || !["owner-re-capitalization-original-v2", "owner-re-capitalization-retry-v2"].includes(String(row.questionId)) ||
-      row.rightsState !== "owner_authorized_original" || row.currentnessState !== "stated_model_only" ||
-      JSON.stringify(row.sourceVersionManifestIds) !== '["owner-original-0a7039441edafa476973383fdd4f8fb1163ae9bee96da55aacc0eaf33b4d9fc9"]') fail();
+    if (!matchesOwnerOriginalReference(row)) fail();
     return Object.freeze({ schemaVersion: "first_stage.owner_original_question_reference.v1", questionId: String(row.questionId),
       questionVersion: String(row.questionVersion), subjectId: "real_estate_principles", examYear: null, examRound: null,
       sessionId: String(row.sessionId), questionNumber: null, choiceCount: 5,
-      sourceVersionManifestIds: Object.freeze(["owner-original-0a7039441edafa476973383fdd4f8fb1163ae9bee96da55aacc0eaf33b4d9fc9"]),
+      sourceVersionManifestIds: Object.freeze([...(row.sourceVersionManifestIds as string[])]),
       rightsState: "owner_authorized_original", currentnessState: "stated_model_only" });
   }
   const trial = row.schemaVersion === "first_stage.owner_local_trial_question_reference.v1";

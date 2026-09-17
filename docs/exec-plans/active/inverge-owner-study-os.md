@@ -2132,3 +2132,10 @@ checks/review/merge, backup restoration and conditional exact personal installat
 are pending. No provider calls, source-body publication or personal writes yet.
 
 Issue #960 implements the exact 2026-09-17 Owner-authorized original two-item bundle. Isolated actual Next.js normal-login menu → assignment → response/save → refresh/reconnect → retry completion → durable records/Today passed (2 functional, answer-exposed attempts, revision 5; no provider calls; prior isolated learning tables unchanged). Read-only review findings on selection-only diagnosis and pre-exposure state were corrected. Full native checks, exact-head independent review, protected merge and backup/restore-verified personal installation remain pending. Parent #772/#883 remain open.
+
+
+## 2026-09-18 exact investment/finance continuation
+
+#961/c2a56e7f and its personal installation are complete and reused. Same PC writer continues on codex/owner-original-investment-finance. Owner approved the exact 5a89a838 four-item addition and 8dc7d9ca proposal: reuse existing assignment/session/review/Today and installed DB objects, preserve the old catalog identity, install only after actual isolated two-pair acceptance and protected final-head checks/review/merge. Prior independent arithmetic/29 negative checks are reused; new runtime/boundary/history/coexistence checks are pending. No SQL apply, paid calls or personal first attempt. post909 A/B/C correction exception and existing Goal remain in effect.
+
+Issue #962: both exact new pairs now passed normal-menu authenticated isolated Next.js/API/PostgreSQL assignment, functional response, save, fresh-login reconnect, matching inverse retry, completed review and recent-record/Today checks. Legacy two-item record reopening and existing learning tables were preserved. No paid calls or personal attempts. Focused service regressions 26/26 and typecheck passed; final native checks, exact-head review, protected merge and conditional content-only PC installation remain pending.

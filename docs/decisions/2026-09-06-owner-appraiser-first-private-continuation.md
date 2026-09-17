@@ -351,3 +351,10 @@ Paid calls and new costs are zero. Theory 7/7, Practice 5/5, USD 5 shared cap,
 USD 4.388969 reservations, USD 0.611031 remainder and unmeasured entries remain.
 Q96 stays deferred. Legal collection, remote databases, Production, external
 users and redistribution remain outside this exception.
+
+
+## 2026-09-18 exact Owner-PC investment/finance addition
+
+Owner approved proposal SHA-256 `8dc7d9cad1374ce9edad2d4700f8a10c621708bc92242a5308ec57de25395889` and exact private content SHA-256 `5a89a838a1c8873176a0bd8e137fbc3338df8ed53107379b9e12fad73e04bd81`: two initial items and their two inverse retries, covering stated two-period NPV/zero-NPV price and interest-only equity cash yield/required NOI. This adds only the four IDs in `exactOwnerInvestmentException`; the earlier two-item exception, references, versions and saved catalog digests remain unchanged. Internal `re_investment_finance` mapping is not official syllabus verification.
+
+Retain AI-authored, calculation-checked, human-unreviewed, private-practice labels and separate assistance/exposure from independent learning. No human reviewer, official key, transfer or mastery is fabricated. Exact private files and per-bundle settings may be installed only after normal authenticated isolated app acceptance for both pairs, old-history coexistence, final required checks/independent review/protected squash, local target/hash and recoverable-file-backup checks. Reuse the existing SQL objects without reapplying SQL or changing schema/permissions. Assignment-off retains content for safe existing-record readback and preserves all records. No paid calls, personal attempts, remote DB, public/Production activation, legal collection or Q96 approval. Any changed hash/target/permission or need for DB mutation returns only that delta to Owner.

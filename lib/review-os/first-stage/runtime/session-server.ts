@@ -1,7 +1,8 @@
 import "server-only";
 import { createOwnerOriginalApplication, createOwnerOriginalPeerReadApplication } from "./owner-original-context";
-import { OWNER_ORIGINAL_FLAG } from "./owner-original-boundary";
+import { OWNER_ORIGINAL_FLAG, OWNER_INVESTMENT_FLAG } from "./owner-original-boundary";
 import { loadOwnerOriginalContent } from "./owner-original-content";
+import { loadOwnerOriginalSupply } from "./owner-investment-content";
 import { readPrivateEconomicsContent } from "./approved-catalog";
 import { getServerSessionUser } from "@/lib/auth/session";
 import { getSupabasePersistenceClient } from "@/lib/supabase/persistence";
@@ -23,6 +24,15 @@ const REVIEWED_CATALOG_LOADERS = {
   real_estate_principles: loadApprovedPrivateRealEstatePrinciplesCatalog,
   appraiser_related_law: loadApprovedPrivateAppraiserRelatedLawCatalog,
 } as const;
+
+const readOriginal = () => readPrivateEconomicsContent(process.env.INVERGE_OWNER_ORIGINAL_CONTENT_PATH ?? "");
+const loadOriginalSupply = () => loadOwnerOriginalSupply(readOriginal,
+  process.env.INVERGE_OWNER_INVESTMENT_CONTENT_PATH ? () => readPrivateEconomicsContent(process.env.INVERGE_OWNER_INVESTMENT_CONTENT_PATH!) : undefined,
+  process.env[OWNER_INVESTMENT_FLAG] === "true");
+async function originalHistoryCatalogs() {
+  const catalogs = await Promise.all([loadOwnerOriginalContent(readOriginal), loadOriginalSupply()]);
+  return catalogs.filter((catalog, index): catalog is PrivateFirstStageCatalog => catalog !== null && catalogs.findIndex(other => other?.digest === catalog.digest) === index);
+}
 
 function privateSubjectSession(subjectId: keyof typeof REVIEWED_CATALOG_LOADERS,
   unavailableBlocker: PrivateContentBlocker = "approved_content_required") {
@@ -49,8 +59,7 @@ function privateSubjectSession(subjectId: keyof typeof REVIEWED_CATALOG_LOADERS,
     },
   };
   return subjectId === "real_estate_principles" ? createPrivateSessionApplication(dependencies)
-    : createOwnerOriginalPeerReadApplication(dependencies, () => loadOwnerOriginalContent(() =>
-        readPrivateEconomicsContent(process.env.INVERGE_OWNER_ORIGINAL_CONTENT_PATH ?? "")));
+    : createOwnerOriginalPeerReadApplication(dependencies, originalHistoryCatalogs);
 }
 
 // Same gate and durable store; subject authority comes only from this server binding.
@@ -61,10 +70,9 @@ const reviewedRealEstateSession = privateSubjectSession("real_estate_principles"
 const originalRealEstateSession = createOwnerOriginalApplication({
   environment: () => process.env,
   session: getServerSessionUser,
-  catalog: () => loadOwnerOriginalContent(() => readPrivateEconomicsContent(process.env.INVERGE_OWNER_ORIGINAL_CONTENT_PATH ?? "")),
-  peerCatalogs: async () => (await Promise.all(Object.entries(REVIEWED_CATALOG_LOADERS)
-    .map(([, load]) => load())))
-    .filter((catalog): catalog is PrivateFirstStageCatalog => catalog !== null),
+  catalog: loadOriginalSupply,
+  peerCatalogs: async () => [...(await Promise.all(Object.values(REVIEWED_CATALOG_LOADERS).map(load => load())))
+    .filter((catalog): catalog is PrivateFirstStageCatalog => catalog !== null), ...await originalHistoryCatalogs()],
   repository: () => {
     const client = getSupabasePersistenceClient();
     if (!client) throw new Error("first-stage-private-store-unavailable");
@@ -76,7 +84,7 @@ const originalRealEstateSession = createOwnerOriginalApplication({
     return createReviewedBankRepository(client);
   },
 });
-// Only this existing subject endpoint selects the exact two-item Owner lane.
+// Only this existing subject endpoint selects the exact approved Owner bundles.
 // All other subjects and the r3 endpoint retain their original composition.
 export const handlePrivateRealEstatePrinciplesSession = (request: Request) =>
   process.env[OWNER_ORIGINAL_FLAG] === "true" ? originalRealEstateSession(request) : reviewedRealEstateSession(request);
