@@ -31,7 +31,7 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
       ? trustedRepairAuthorizedSubjects(session.email)
       : [];
   const ownerCaptureRepairEnabled = ownerCaptureRepairSubjects.length > 0;
-  const initialSubject = normalizeSubjectForMode(query?.subject ?? (mode === "second" && isOwnerPcTheoryEnabled() ? "감정평가이론" : undefined), mode);
+  const initialSubject = normalizeSubjectForMode(query?.subject ?? (mode === "second" && isOwnerPcTheoryEnabled() ? (process.env.INVERGE_OWNER_PC_THEORY_DEVELOPMENT_ENABLED === "true" && process.env.INVERGE_OWNER_PC_PRACTICE_DEVELOPMENT_ENABLED === "true" ? "감정평가실무" : "감정평가이론") : undefined), mode);
   const rewriteDetail =
     mode === "second" && rewriteFrom && session.email
       ? await reviewOsService.getWrongAnswerDetail(session.userId, session.email, rewriteFrom)

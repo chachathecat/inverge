@@ -210,8 +210,9 @@ export async function POST(request: Request) {
     if (!isGeminiConfigured()) return NextResponse.json({ ok: false, errorCode: "AI_UNAVAILABLE", error: GEMINI_MISSING_MESSAGE, recovery: "retry" }, { status: 503 });
     let ownerTheoryAuthority: OwnerTheoryAuthority | undefined;
     if (isOwnerPcTheoryEnabled()) {
+      const allowedSubject = process.env.INVERGE_OWNER_PC_THEORY_DEVELOPMENT_ENABLED === "true" && process.env.INVERGE_OWNER_PC_PRACTICE_DEVELOPMENT_ENABLED === "true" ? "감정평가실무" : "감정평가이론";
       if (!session.isAuthenticated || session.email !== "owner@localhost.test" || !session.userId ||
-          !app1Detail || subject !== "감정평가이론" || requestPurpose === "learning_analysis" ||
+          !app1Detail || subject !== allowedSubject || requestPurpose === "learning_analysis" ||
           singleFormString(formData, "ownerTheoryConsent") !== "selected_text_only_v1" ||
           questionFiles.length || answerFiles.length || referenceFiles.length) {
         throw new OwnerTheoryError("OWNER_THEORY_SUBMISSION_REQUIRED");
@@ -226,9 +227,9 @@ export async function POST(request: Request) {
     if (session.userId && !ownerTheoryAuthority) await assertCanRunAnswerReview(session.userId);
     const repairTarget = requestPurpose === "repair_verification" && app1PrimaryGap
       ? { gap: app1PrimaryGap.gap, repairAction: app1PrimaryGap.repairAction } : undefined;
-    const initialDraft = await structureAnswerReviewWithGemini({ ownerTheoryAuthority, repairTarget, questionFiles, answerFiles, referenceFiles, questionText, answerText, referenceText, explanationLevel });
-    const referenceGrounding = ownerTheoryAuthority ? { references: [], displayLabel: "선택한 이론 입력만 검토", promptContext: "" } : buildAnswerReviewReferenceGrounding({ examMode: mode, subject, questionText, answerText, referenceText, normalizedDraft: normalizeAnswerReviewStructureDraft(initialDraft) });
-    const draft = referenceGrounding.references.length > 0 ? await structureAnswerReviewWithGemini({ ownerTheoryAuthority, repairTarget, questionFiles, answerFiles, referenceFiles, questionText, answerText, referenceText, referenceGroundingContext: referenceGrounding.promptContext, explanationLevel }) : initialDraft;
+    const initialDraft = await structureAnswerReviewWithGemini({ subject, ownerTheoryAuthority, repairTarget, questionFiles, answerFiles, referenceFiles, questionText, answerText, referenceText, explanationLevel });
+    const referenceGrounding = ownerTheoryAuthority ? { references: [], displayLabel: "선택한 문제·답안만 검토", promptContext: "" } : buildAnswerReviewReferenceGrounding({ examMode: mode, subject, questionText, answerText, referenceText, normalizedDraft: normalizeAnswerReviewStructureDraft(initialDraft) });
+    const draft = referenceGrounding.references.length > 0 ? await structureAnswerReviewWithGemini({ subject, ownerTheoryAuthority, repairTarget, questionFiles, answerFiles, referenceFiles, questionText, answerText, referenceText, referenceGroundingContext: referenceGrounding.promptContext, explanationLevel }) : initialDraft;
     const normalizedDraft = normalizeAnswerReviewStructureDraft(draft);
     const normalized = app1Detail ? groundAnswerReviewDiagnosis(normalizedDraft, questionText, answerText) : normalizedDraft;
     const analysisAuthority =
@@ -284,7 +285,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     if (error instanceof OwnerTheoryError) return NextResponse.json({ ok: false, errorCode: error.code,
-      error: "이론 AI 요청이 보류되었습니다. 입력은 보존됩니다. 이론 시작 화면에서 유료 설정과 누적 예산을 확인해 주세요.",
+      error: "AI 요청이 보류되었습니다. 입력은 보존됩니다. 설정 화면에서 유료 설정과 누적 예산을 확인해 주세요.",
       recovery: "owner_theory_status" }, { status: error.code === "OWNER_THEORY_SUBMISSION_REQUIRED" ? 403 : 503 });
     const authorityResponse = app1AuthorityError(error);
     if (authorityResponse) return authorityResponse;

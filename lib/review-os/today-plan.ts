@@ -20,6 +20,7 @@ function resolveAction(mode: AppMode, taskType: import("./today-plan-engine").To
   if (taskType === "ocr_confirmation" || taskType === "note_cleanup") {
     return mode === "second" ? { ctaLabel: "확인하고 정리", actionKind: "second_items" } : { ctaLabel: "확인하고 정리", actionKind: "first_capture" };
   }
+  if (taskType === "practice_calculation_retry") return { ctaLabel: "실무 재계산·검산", actionKind: "second_review" };
   if (taskType === "second_answer_rewrite") return { ctaLabel: "10분 다시 쓰기", actionKind: "second_review" };
   if (taskType === "accounting_template_retry") return { ctaLabel: "템플릿 재시도", actionKind: "first_session" };
   if (taskType === "cloze_review") return { ctaLabel: "빈칸 회상", actionKind: "first_session" };

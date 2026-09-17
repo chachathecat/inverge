@@ -51,7 +51,7 @@ export function ReviewQueueClient({
   async function complete(queueId: string) {
     const item = items.find((candidate) => candidate.queueId === queueId);
     if (!item) return;
-    const selectedAction = item.examName === "감정평가사 2차" ? "second_paragraph_rewrite" : "first_confirm_recall";
+    const selectedAction = item.examName === "감정평가사 2차" ? (item.subjectLabel === "감정평가실무" ? "second_calculation_retry" : "second_paragraph_rewrite") : "first_confirm_recall";
     const metadata = buildReviewCompletionMetadata(
       recallAttemptTextByQueueId[queueId] ?? "",
       recallOutcomeByQueueId[queueId] ?? null,

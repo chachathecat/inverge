@@ -199,7 +199,7 @@ async function requestStructure(
   if (!response.ok || !payload?.ok) {
     throw new App1StructureRequestError(
       payload && !payload.ok && payload.errorCode?.startsWith("OWNER_THEORY_")
-        ? "이론 AI 요청이 보류되었습니다. 입력은 보존됩니다. 위 설정·누적 예산 확인에서 상태를 확인해 주세요."
+        ? "AI 요청이 보류되었습니다. 입력은 보존됩니다. 위 설정·누적 예산 확인에서 상태를 확인해 주세요."
         : failureMessage,
       payload && !payload.ok && typeof payload.errorCode === "string"
         ? payload.errorCode
@@ -719,7 +719,7 @@ export function App1CaptureRepairLoop({
   return (
     <V3RouteFrame width="reading" className="space-y-6" data-app1-owner-capture-repair>
       {ownerTheoryMode ? <aside className="rounded-lg border p-4 text-sm" data-owner-theory-disclosure>
-        <p>이론 1건 · AI 미검토 학습보조. 사람 검토나 공식 채점이 아닙니다.</p>
+        <p>{summary?.subject ?? "선택한 과목"} 1건 · AI 미검토 학습보조. 사람 검토나 공식 채점이 아닙니다.</p>
         <p>분석·교정 확인을 누를 때 선택한 문제·답안과 직접 쓴 교정문만 Gemini 유료 API로 전송합니다. 저장된 다른 자료는 전송하지 않습니다.</p>
         <p>누적 US$5 이내에서 호출 전 최대비용을 예약합니다. 실패·재시도도 포함되며 날짜 변경이나 재시작으로 초기화되지 않습니다.</p>
         <a href="/app/owner-theory">설정·누적 예산 확인</a>

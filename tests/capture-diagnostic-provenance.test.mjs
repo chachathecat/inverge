@@ -96,6 +96,7 @@ test("Owner entry page props and controlled hydration preserve an existing Theor
     }
     await page.getByLabel("분석할 답안",{exact:true}).fill("");
     assert.equal(await page.locator("[data-owner-analysis-preparation]").isVisible(),true,"editing does not discard or leave the preparation panel");
+    await page.waitForFunction(() => document.querySelector("[data-owner-prepare-analysis]")?.disabled === true);
     assert.equal(await page.locator("[data-owner-prepare-analysis]").isEnabled(),false);
     await page.getByLabel("분석할 답안",{exact:true}).fill(draft.userAnswer);
     const restored=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)),draftKey);

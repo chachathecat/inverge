@@ -344,6 +344,7 @@ export type ReviewCompletionAction =
   | "first_confirm_recall"
   | "first_keep_scheduled_review"
   | "second_paragraph_rewrite"
+  | "second_calculation_retry"
   | "second_keep_scheduled_rewrite";
 
 export type RecallOutcome = "remembered" | "fuzzy" | "wrong" | "confident_wrong";
