@@ -115,3 +115,13 @@ test("page removal, movement, PDF replacement, and reset each invalidate a pendi
     );
   }
 });
+
+test("new second-round imports preserve the selected subject while clearing stale OCR findings",()=>{
+  const before=secondState();
+  const cleared=clearUnchangedCaptureExtractionSemantics(before,snapshotCaptureExtractionSemantics(before,"second"),"second");
+  assert.equal(cleared.subjectLabel,"감정평가이론");
+  assert.equal(cleared.missingIssue,"");
+  assert.equal(cleared.userAnswer,before.userAnswer);
+  const edited={...before,subjectLabel:"감정평가 및 보상법규"};
+  assert.equal(clearUnchangedCaptureExtractionSemantics(edited,snapshotCaptureExtractionSemantics(before,"second"),"second").subjectLabel,edited.subjectLabel);
+});

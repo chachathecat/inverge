@@ -1895,7 +1895,9 @@ export class ReviewOsService {
           (normalizedInput.problemIdentifier ?? "") === (existing.problemIdentifier ?? "") &&
           Boolean(normalizedInput.productionBeforeComparison) === Boolean(existing.rawPayload.production_before_comparison) &&
           Boolean(normalizedInput.referenceAnswerAddedAfterProduction) === Boolean(existing.rawPayload.reference_answer_added_after_production) &&
-          ["pageCount", "ocrConfirmedByLearner", "lowConfidenceFlag", "hasManualCorrection"].every(key =>
+          (normalizedInput.extractionPayload?.raw_ocr_text || normalizedInput.rawQuestionText || "") ===
+            (existing.rawPayload.raw_ocr_text ?? existing.rawQuestionText ?? "") &&
+          ["pageCount", "ocrConfirmedByLearner", "lowConfidenceFlag", "hasManualCorrection", "captureQualityIssue"].every(key =>
             (normalizedInput.extractionPayload?.user_confirmed_fields?.[key] ?? null) ===
             ((existing.rawPayload.user_confirmed_fields as Record<string, unknown> | undefined)?.[key] ?? null));
         if (!sameSource) throw new Error("review-os:capture-source-provenance-conflict");
@@ -1936,7 +1938,7 @@ export class ReviewOsService {
         const sourceOnlyInput = { ...normalizedInput, userReasonText: undefined, userReasonPreset: undefined };
         const item = await reviewOsRepository.insertWrongAnswerItem(userId, sourceOnlyInput, {
           user_confirmed_fields: input.extractionPayload?.user_confirmed_fields,
-          raw_ocr_text: input.rawQuestionText ?? "", mode, subjectLabel: normalizedInput.subjectLabel,
+          raw_ocr_text: input.extractionPayload?.raw_ocr_text || input.rawQuestionText || "", mode, subjectLabel: normalizedInput.subjectLabel,
           issue_recall: input.issueRecall ?? null, outline_draft: input.outlineDraft ?? null,
           production_before_comparison: input.productionBeforeComparison ?? false,
           reference_answer_added_after_production: input.referenceAnswerAddedAfterProduction ?? false,

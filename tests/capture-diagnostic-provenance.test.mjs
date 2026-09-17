@@ -125,6 +125,64 @@ test("Owner entry page props and controlled hydration preserve an existing Theor
     await page.waitForURL(`**/app/capture/repair?itemId=${id}`);
     assert.equal(store.tables.wrong_answer_items.length,sourceCount);
     assert.equal(await page.evaluate(key=>localStorage.getItem(key),draftKey),persistedDraft);
+    // Imported OCR/manual drafts must have a reachable explicit confirmation and
+    // keep the original combined text in real service storage after separation.
+    for (const sourceType of ["photo", "pdf"]) {
+      const problem = "[Page 1]\n" + draft.rawQuestionText + " " + sourceType + " 분리 시험";
+      const answer = "[Page 2]\n" + draft.userAnswer;
+      const combined = problem + "\n\n" + answer;
+      const imported = {...draft,sourceType,rawQuestionText:combined,userAnswer:"",rawOcrText:combined,
+        pageCount:2,lowConfidenceFlag:true,hasManualCorrection:false,ocrConfirmedByLearner:false};
+      await page.evaluate(({key,value})=>localStorage.setItem(key,JSON.stringify(value)),{key:draftKey,value:imported});
+      await page.goto(origin+"/app/capture?mode=second");
+      await page.getByRole("button",{name:"이미 쓴 답안 AI 검토",exact:true}).click();
+      const confirmLabel="원본과 대조해 문제·답안 구분과 숫자·용어를 확인했습니다";
+      await page.getByRole("button",{name:"원문 입력으로 돌아가기",exact:true}).click();
+      await page.getByLabel("오늘 공부한 내용 또는 내 답안").fill(combined+" 원문 편집");
+      await page.getByRole("button",{name:"이미 쓴 답안 AI 검토",exact:true}).click();
+      assert.equal(await page.getByRole("checkbox",{name:confirmLabel}).isChecked(),false);
+      await page.getByRole("checkbox",{name:confirmLabel}).check();
+      await page.getByRole("button",{name:"원문 입력으로 돌아가기",exact:true}).click();
+      await page.getByLabel("오늘 공부한 내용 또는 내 답안").fill(combined);
+      await page.getByRole("button",{name:"이미 쓴 답안 AI 검토",exact:true}).click();
+      assert.equal(await page.getByRole("checkbox",{name:confirmLabel}).isChecked(),false);
+      await page.reload();
+      assert.equal(await page.getByRole("checkbox",{name:confirmLabel}).isChecked(),false);
+      const questionField=page.getByLabel("분석할 문제",{exact:true});
+      await questionField.evaluate((element,start)=>{element.focus();element.setSelectionRange(start,element.value.length);element.dispatchEvent(new Event("select",{bubbles:true}));document.dispatchEvent(new Event("selectionchange"));},combined.indexOf("[Page 2]"));
+      await page.getByRole("button",{name:"선택한 내용을 답안으로 옮기기",exact:true}).click();
+      assert.equal(await questionField.inputValue(),problem+"\n\n");
+      assert.equal(await page.getByLabel("분석할 답안",{exact:true}).inputValue(),answer);
+      const confirm=page.getByRole("checkbox",{name:"원본과 대조해 문제·답안 구분과 숫자·용어를 확인했습니다"});
+      assert.equal(await page.locator("[data-owner-prepare-analysis]").isEnabled(),false);
+      await confirm.check();
+      assert.equal(await page.locator("[data-owner-prepare-analysis]").isEnabled(),true);
+      await page.getByRole("button",{name:"답안 작성으로 돌아가기",exact:true}).click();
+      await page.locator('[data-s232e-second-write-panel="3"] textarea').fill(answer+" 이전 답안 편집");
+      await page.getByRole("button",{name:"이미 쓴 답안 AI 검토",exact:true}).click();
+      assert.equal(await confirm.isChecked(),false);
+      assert.equal(await page.locator("[data-owner-prepare-analysis]").isEnabled(),false);
+      await page.reload();
+      assert.equal(await confirm.isChecked(),false);
+      await confirm.check();
+      await page.getByLabel("분석할 답안",{exact:true}).fill(answer+" 직접 교정한 문장.");
+      assert.equal(await confirm.isChecked(),false);
+      await confirm.check();
+      await page.reload();
+      assert.equal(await page.getByLabel("분석할 답안",{exact:true}).inputValue(),answer+" 직접 교정한 문장.");
+      assert.equal(await page.getByRole("checkbox",{name:"원본과 대조해 문제·답안 구분과 숫자·용어를 확인했습니다"}).isChecked(),true);
+      await page.locator("[data-owner-prepare-analysis]").click();
+      await page.waitForURL("**/app/capture/repair?itemId=*");
+      const importedId=new URL(page.url()).searchParams.get("itemId");
+      const importedSaved=await app.repository.getWrongAnswerItem(OWNER_ID,importedId);
+      assert.equal(importedSaved.rawPayload.raw_ocr_text,combined);
+      assert.equal(importedSaved.rawQuestionText,problem+"\n\n");
+      assert.equal(importedSaved.userAnswer,answer+" 직접 교정한 문장.");
+      assert.equal(importedSaved.rawPayload.user_confirmed_fields.ocrConfirmedByLearner,true);
+      assert.equal(importedSaved.rawPayload.user_confirmed_fields.pageCount,sourceType==="pdf"?0:2);
+      for(const table of ["wrong_answer_notes","review_queue_items","learning_signal_events","study_logs"])
+        assert.equal(store.tables[table]?.length??0,0,table);
+    }
     assert.deepEqual(errors,[]);
   }finally{await browser?.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 });
