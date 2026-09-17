@@ -269,6 +269,23 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
     assert.ok((await recap.innerText()).includes(`제출 선택: ${retryChoice}번`));
     assert.notEqual(await recap.locator("time").getAttribute("datetime"),submittedAt);
     assert.equal(await page.getByRole("button", { name: "예정 시각 이후 새 문제로 복습" }).count(), 0);
+    if (bankPractice) {
+      const response = await route.GET(new Request(origin + apiPath));
+      assert.equal(response.status, 200);
+      const payload = await response.json();
+      assert.equal(payload.availability.bankPractice, true);
+      assert.equal(payload.availability.availableOriginals, payload.availability.questions.length - 1);
+      const beforeCount = postCount;
+      await page.goto(origin + pagePath);
+      const assignButton = page.getByRole("button", {name:"검토 재고에서 다음 연습 배정"});
+      await assignButton.waitFor();
+      assert.equal(await assignButton.isDisabled(), payload.availability.availableOriginals === 0);
+      await page.getByText("문항 직접 선택", {exact:true}).waitFor();
+      assert.equal(postCount, beforeCount);
+      await page.goto(reconnectUrl);
+      await page.getByText("이 복습 처리 완료 — 학습 성공·숙달 판정과는 별개입니다.").waitFor();
+      assert.ok((await recap.innerText()).includes(`제출 선택: ${retryChoice}번`));
+    }
     if (ownerLocalTrial) {
       const popupPromise=context.waitForEvent("page");
       await page.getByRole("link",{name:"다른 문항 선택 — 현재 기록은 이 창에 보존"}).click();

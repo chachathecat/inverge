@@ -3,7 +3,7 @@ import { createPrivateSessionHttpHandler } from "./session-http";
 import { createPrivateFirstStageSessionService,
   type PrivateFirstStageCatalog, type PrivateFirstStageSessionStore } from "./session-service";
 import type { TrialPlanningStore } from "./owner-local-today";
-import type { ReviewedBankStore } from "./reviewed-bank-service";
+import { createReviewedBankService, type ReviewedBankStore } from "./reviewed-bank-service";
 import { handleReviewedBank, reviewedBankEnabled } from "./reviewed-bank-http";
 import { reviewedBankCandidates } from "./private-reviewed-content";
 
@@ -74,6 +74,13 @@ export function createPrivateSessionApplication(dependencies: PrivateSessionAppl
         if (catalog && continuation.state !== "ready") {
           return response({ ok: false, error: "temporarily_unavailable" }, 503);
         }
+        const bankPractice = Boolean(reviewedBankEnabled(dependencies.environment()) && catalog && reviewedBankCandidates(catalog));
+        if (bankPractice && !dependencies.bankRepository) return response({ ok: false, error: "temporarily_unavailable" }, 503);
+        const bankStock = bankPractice && catalog && dependencies.bankRepository
+          ? await createReviewedBankService(dependencies.repository(), dependencies.bankRepository(), catalog,
+              dependencies.now ?? (() => new Date().toISOString())).availability(owner.ownerId)
+          : null;
+        // Existing content remains addressable even when every original is reserved.
         // No adapter presentation or explanation construction in availability.
         return response({ ok: true, availability: {
           schemaVersion: "first_stage.private_availability.v1",
@@ -84,8 +91,7 @@ export function createPrivateSessionApplication(dependencies: PrivateSessionAppl
             questionNumber: item.questionNumber,
           })),
           masteryClaim: false, transferEvidence: false,
-          ...(reviewedBankEnabled(dependencies.environment()) && catalog && reviewedBankCandidates(catalog)
-            ? { bankPractice: true } : {}),
+          ...(bankStock ? { bankPractice: true, availableOriginals: bankStock.availableOriginals } : {}),
         }, continuation });
       }
       if (!catalog?.initialReferences.length) {
