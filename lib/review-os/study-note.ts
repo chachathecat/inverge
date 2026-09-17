@@ -1,5 +1,5 @@
 import { APP1_LAW_SUBJECT, APP1_LAW_SCOPE_NOTICE } from "../owner-study/app1-law-binding";
-import { isUnanalyzedCaptureRecord, isCaptureFunctionalTest } from "./capture-review-provenance";
+import { hasSavedSameSessionRepair, isUnanalyzedCaptureRecord, isCaptureFunctionalTest } from "./capture-review-provenance";
 import { getAppraisalMode, parseAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildSecondAnswerRewriteSignal } from "@/lib/review-os/second-answer-rewrite";
 import { getSecondSubjectTemplate } from "@/lib/review-os/types";
@@ -55,18 +55,6 @@ function getConfirmedFieldString(rawPayload: Record<string, unknown> | undefined
       : null;
   const value = confirmed?.[key];
   return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-// Server-authorized save fields describe a historical result, never new mastery.
-function hasSavedSameSessionRepair(item: WrongAnswerItemRecord) {
-  const fields = item.rawPayload?.user_confirmed_fields as Record<string, unknown> | undefined;
-  const sourceId = getRawPayloadString(item.rawPayload, "rewrite_source_item_id");
-  return item.rawPayload?.rewrite_completed === true && !isCaptureFunctionalTest(item.rawPayload) &&
-    fields?.app1_contract_version === "OwnerCaptureToRepairVerticalV1" &&
-    fields.app1_verification_state === "repair_confirmed_for_this_session" &&
-    fields.app1_same_session_only === true && fields.app1_mastery_created === false &&
-    fields.app1_transfer_created === false && Boolean(sourceId) &&
-    fields.app1_source_item_id === sourceId;
 }
 
 function truncateLine(value: string, max = 220) {

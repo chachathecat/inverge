@@ -1,3 +1,4 @@
+import { hasSavedSameSessionRepair } from "./capture-review-provenance";
 import type { ConfidenceLevel, LearningSignalEventRecord, ReviewQueueCard, WrongAnswerItemRecord } from "@/lib/review-os/types";
 import { buildTodayPlanDisplayCopy, type TodayPlanDisplayCopy } from "./today-plan-display-copy";
 import { rankLearningStateRisk } from "./personal-learning-state-engine";
@@ -360,6 +361,7 @@ function getConceptNodeCandidateFromItem(item: WrongAnswerItemRecord) {
 }
 
 function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: Date): { task: TodayPlanTask; score: number } | null {
+  if (hasSavedSameSessionRepair(item)) return null;
   const createdFromCapture = Boolean(item.rawPayload?.created_from_capture ?? item.derivedPayload?.created_from_capture ?? item.createdFromCapture);
   const pageCount = getPageCount(item);
   const lowConfidence = isLowConfidenceOcrItem(item);
@@ -513,8 +515,10 @@ function toEngineDisplayCopy(task: Pick<TodayPlanTask, "source_label" | "task_ty
 }
 
 export function buildTodayPlanTasks({ mode, queue, items = [], learningSignals = [], now = new Date(), repeatedGaps = [], riskLevel = "stable" }: BuildWeaknessInput): TodayPlanTask[] {
+  const confirmedRepairIds = new Set(items.filter(hasSavedSameSessionRepair).map(item => item.id));
   const topRepeatedGap = repeatedGaps[0] ?? null;
   const rankedQueue = queue
+    .filter(item => !confirmedRepairIds.has(item.itemId) || (parseTime(item.dueAt) !== null && parseTime(item.dueAt)! <= now.getTime()))
     .map((item) => {
       const dueTs = parseTime(item.dueAt);
       const isOverdue = dueTs !== null && dueTs <= now.getTime();
@@ -620,6 +624,7 @@ export function buildTodayPlanTasks({ mode, queue, items = [], learningSignals =
     .map((entry) => ({
       ...entry.task,
       ...toEngineDisplayCopy(entry.task),
+      ...(confirmedRepairIds.has(entry.task.itemId) ? { reason: "교정한 연결을 예정된 복습에서 다시 회상합니다.", display_reason: "교정한 연결을 예정된 복습에서 다시 회상합니다.", one_biggest_gap: "교정한 연결의 독립 회상 여부 확인", display_primary_cta: "교정한 연결 다시 회상" } : {}),
     }));
   return selectActiveTodayPlanTasks(selected, TODAY_PLAN_MAX_PRIMARY_TASKS);
 }

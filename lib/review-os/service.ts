@@ -3421,7 +3421,7 @@ export class ReviewOsService {
         event.eventName === "review_complete" &&
         isSameKstDay(event.createdAt, now),
     );
-    const hasDueQueue = modeQueue.length > 0;
+    const hasDueQueue = modeQueue.some(item => Date.parse(item.dueAt) <= now.getTime());
     const hasOverdueQueue = modeQueue.some((item) =>
       isOverdueDueAt(item.dueAt, Date.parse(nowIso)),
     );

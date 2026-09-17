@@ -33,6 +33,19 @@ test("Law source-bound synthetic confirmation persists once and is readable with
  await assert.rejects(async()=>f.app.authority.authorizeApp1PersistenceCommand({userId:OWNER_ID,detail:f.detail,command:{...command,lawBindingInput:{...data.binding,applicableAsOf:"2026-08-16"}}}));
  const wrongBody=f.app.authority.createApp1RepairVerificationAuthority({...f.args,repairText:data.weak,repairDraft:{...data.responses.corrected,answerEvidenceQuote:"합성 법령"}});assert.equal(wrongBody.verificationReceipt,null);
  const note=f.app.load("lib/review-os/study-note").buildNotebookPreview(reread.item);assert.match(note.noteLabel,/실제 법률 미검증/);
+ const service=f.app.load("lib/review-os/service").reviewOsService;
+ const savedQueue=await f.app.repository.listReviewQueue(OWNER_ID,100);
+ await service.completeReview(OWNER_ID,"synthetic-owner@example.invalid",savedQueue[0].queueId,"second_paragraph_rewrite",{rewriteParagraph:"합성 법령의 버전과 적용일을 다시 대조한 문단이다.",recallOutcome:"fuzzy"});
+ const scheduled=await f.app.repository.listReviewQueue(OWNER_ID,100);
+ const buildToday=f.app.load("lib/review-os/today-plan-engine").buildTodayPlanTasks;
+ const due=Date.parse(scheduled[0].dueAt);
+ assert.deepEqual(buildToday({mode:"second",queue:scheduled,items:[reread.item],now:new Date(due-1000)}),[],"confirmed repair must not recreate today's task before its saved schedule");
+ const dueTasks=buildToday({mode:"second",queue:scheduled,items:[reread.item],now:new Date(due+1)});
+ assert.equal(dueTasks.length,1);assert.equal(dueTasks[0].queueId,scheduled[0].queueId);
+ assert.match(dueTasks[0].display_reason,/교정한 연결.*회상/);assert.doesNotMatch(dueTasks[0].display_reason,/흔들린|미보완/);
+ const another={...scheduled[0],itemId:"unrelated-item",queueId:"unrelated-queue",dueAt:new Date(due-2000).toISOString()};
+ const mixed=buildToday({mode:"second",queue:[...scheduled,another],items:[reread.item],now:new Date(due-1000)});
+ assert.equal(mixed.length,1);assert.equal(mixed[0].queueId,"unrelated-queue");
  const noEvidence=f.app.authority.createApp1RepairVerificationAuthority({...f.args,repairDraft:{...data.responses.corrected,answerEvidenceQuote:"존재하지 않는 문장"}});assert.equal(noEvidence.verificationReceipt,null);
 });
 
