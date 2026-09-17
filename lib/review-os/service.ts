@@ -1774,6 +1774,16 @@ export class ReviewOsService {
     }
   }
 
+  private async resolveRepairDedupeKey(userId: string, input: WrongAnswerItemInput) {
+    const key = reviewOsRepository.createDedupeKey(userId, input);
+    const legacyKey = reviewOsRepository.createDedupeKey(userId, input, true);
+    if (key === legacyKey || await reviewOsRepository.findExistingByDedupe(userId, key)) return key;
+    const legacy = await reviewOsRepository.findExistingByDedupe(userId, legacyKey);
+    // Existing sealed repairs keep their original identity. Different source answers
+    // may converge to identical corrections without borrowing each other's authority.
+    return legacy?.rawPayload.rewrite_source_item_id === input.rewriteSourceItemId ? legacyKey : key;
+  }
+
   private async resumeExistingApp1RepairAfterExpiredAuthority(
     userId: string,
     email: string | null,
@@ -1786,10 +1796,7 @@ export class ReviewOsService {
       examName: getModeLabel(mode),
       subjectLabel: normalizeSubjectForMode(input.subjectLabel, mode),
     };
-    const dedupeKey = reviewOsRepository.createDedupeKey(
-      userId,
-      normalizedInput,
-    );
+    const dedupeKey = await this.resolveRepairDedupeKey(userId, normalizedInput);
     const replayAuthority = app1ReplayAuthority(
       userId,
       normalizedInput,
@@ -1830,10 +1837,7 @@ export class ReviewOsService {
       subjectLabel: normalizeSubjectForMode(input.subjectLabel, mode),
     };
 
-    const dedupeKey = reviewOsRepository.createDedupeKey(
-      userId,
-      normalizedInput,
-    );
+    const dedupeKey = await this.resolveRepairDedupeKey(userId, normalizedInput);
     const replayAuthority = app1ReplayAuthority(
       userId,
       normalizedInput,
@@ -2885,7 +2889,7 @@ export class ReviewOsService {
     }
     // Preserve compatibility with existing Practice clients while storing the actual subject action.
     if (context?.item.subjectLabel === "감정평가실무" && action === "second_paragraph_rewrite") action = "second_calculation_retry";
-    if (action === "second_calculation_retry" && (typeof metadata.rewriteParagraph !== "string" || metadata.rewriteParagraph.trim().length < 8)) {
+    if (action === "second_calculation_retry" && (typeof metadata.rewriteParagraph !== "string" || metadata.rewriteParagraph.trim().length < 8 || !["remembered", "fuzzy", "wrong", "confident_wrong"].includes(metadata.recallOutcome ?? ""))) {
       throw new ReviewOsInvalidCompletionActionError();
     }
     await reviewOsRepository.completeReviewQueueItem(userId, queueId);

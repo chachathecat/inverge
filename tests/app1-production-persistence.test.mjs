@@ -268,3 +268,23 @@ test("2차 analysis and unsaved correction reconnect without provider replay, th
   assert.ok(control.modelCalls >= 2);
   assert.equal(result.modelCalls - control.modelCalls, 0, "reload must add zero provider calls");
 });
+
+
+test("identical corrections from different sources retain separate authority and legacy replay",async()=>{
+ const store=memoryTransport();const first=productionHarness(store.execute);
+ const source=store.tables.wrong_answer_items[0];const secondId="cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+ store.tables.wrong_answer_items.push({...structuredClone(source),id:secondId,dedupe_key:"synthetic-second-source"});
+ const originalKey=first.repository.createDedupeKey.bind(first.repository);
+ first.repository.createDedupeKey=(userId,input)=>originalKey(userId,input,true);
+ const commandA=await first.command("same-correction");const savedA=await first.save(commandA);
+ assert.equal(savedA.status,200,JSON.stringify(savedA.body));
+ const current=productionHarness(store.execute);
+ const commandB=await current.command("same-correction",secondId);assert.equal(commandB.sourceItemId,secondId);assert.notEqual(current.repository,first.repository);const savedB=await current.save(commandB);
+ assert.equal(savedB.status,200,JSON.stringify(savedB.body));
+ assert.notEqual(savedA.body.item.id,savedB.body.item.id);
+ assert.equal(savedA.body.item.userAnswer,savedB.body.item.userAnswer);
+ for(const command of [commandA,commandB])assert.equal((await current.save(command)).status,200);
+ assert.equal(store.tables.wrong_answer_items.length,4);
+ assert.equal(store.tables.review_queue_items.length,2);
+ assert.equal(store.tables.learning_signal_events.filter(x=>x.source_type==="app1_c3r_handoff").length,2);
+});

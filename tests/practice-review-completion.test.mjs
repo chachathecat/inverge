@@ -39,7 +39,7 @@ test("Practice follow-up keeps the same subject and a recalculation action in To
 });
 
 test("Practice cannot complete from a hint or rating without a preserved calculation",async()=>{
- for(const metadata of [{},{recallOutcome:"fuzzy"},{rewriteParagraph:" "},{rewriteParagraph:"짧음"}]){
+ for(const metadata of [{},{recallOutcome:"fuzzy"},{rewriteParagraph:" "},{rewriteParagraph:"짧음"},{rewriteParagraph:"2,222만원 / 0.06 = 37,033.3만원"},{rewriteParagraph:"2,222만원 / 0.06 = 37,033.3만원",recallOutcome:"invalid"}]){
   const f=fixture();await f.service.ensureAccess(OWNER_ID,"synthetic-owner@example.invalid");const before=structuredClone(f.store.tables);
   await assert.rejects(f.service.completeReview(OWNER_ID,"synthetic-owner@example.invalid","eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee","second_calculation_retry",metadata));
   assert.deepEqual(f.store.tables,before);
