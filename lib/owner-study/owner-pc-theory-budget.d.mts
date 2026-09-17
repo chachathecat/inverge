@@ -17,3 +17,6 @@ export function authorizeAdditionalTheoryDevelopmentCall(root: string, settings:
 export type PracticeDevelopmentApproval = TheoryDevelopmentApproval & { maximumCalls:number; maximumSourceItems:number; maximumReservationMicros:number };
 export function readPracticeDevelopmentApproval(root:string, settings:OwnerTheorySettings):Promise<PracticeDevelopmentApproval>;
 export function readPracticeDevelopmentUsage(root:string, settings:OwnerTheorySettings):Promise<{usedCalls:number; maximumCalls:number}>;
+
+export function readPracticeDevelopmentCallLimit(root:string, settings:OwnerTheorySettings):Promise<number>;
+export function authorizeAdditionalPracticeDevelopmentCall(root:string, settings:OwnerTheorySettings):Promise<void>;

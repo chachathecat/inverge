@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {mkdtemp,readFile,readdir} from "node:fs/promises";
+import {mkdtemp,readFile,readdir,writeFile} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import {THEORY_POLICY as policy, initializeTheoryBudget,testOwnerTheoryConnection,authorizeTheoryDevelopment,readTheoryDevelopmentApproval,reserveTheoryDevelopmentCall,authorizeAdditionalTheoryDevelopmentCall,readTheoryBudget,authorizePracticeDevelopment,readPracticeDevelopmentApproval,reservePracticeDevelopmentCall,generateOwnerTheory} from "../lib/owner-study/owner-pc-theory-budget.mjs";
+import {THEORY_POLICY as policy, initializeTheoryBudget,testOwnerTheoryConnection,authorizeTheoryDevelopment,readTheoryDevelopmentApproval,reserveTheoryDevelopmentCall,authorizeAdditionalTheoryDevelopmentCall,readTheoryBudget,authorizePracticeDevelopment,readPracticeDevelopmentApproval,readPracticeDevelopmentCallLimit,readPracticeDevelopmentUsage,authorizeAdditionalPracticeDevelopmentCall,reservePracticeDevelopmentCall,generateOwnerTheory} from "../lib/owner-study/owner-pc-theory-budget.mjs";
 const userId="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 async function fixture(){
  const root=path.join(await mkdtemp(path.join(os.tmpdir(),"practice-shared-budget-")),"budget");
@@ -54,4 +54,43 @@ test("unknown Practice provider outcome retains the full shared reservation with
  assert.equal(result.status,"unknown");assert.equal(result.estimatedCostMicros,null);
  for(const n of await readdir(f.root))assert.ok(!(await readFile(path.join(f.root,n),"utf8")).includes("PRIVATE_SYNTHETIC_CALCULATION"));
  assert.equal((await readPracticeDevelopmentApproval(f.root,f.settings)).maximumCalls,4);
+});
+
+test("explicit fifth Practice call preserves original approval and UNKNOWN while enforcing the shared cap across restart/concurrency",async()=>{
+ const f=await fixture();await authorizePracticeDevelopment(f.root,f.settings,f.input);
+ const approvalFile=path.join(path.dirname(f.root),"practice-development-approval-20260917.json");
+ const originalApproval=await readFile(approvalFile,"utf8");
+ await assert.rejects(authorizeAdditionalPracticeDevelopmentCall(f.root,f.settings),{code:"OWNER_THEORY_PRACTICE_EXTENSION_NOT_READY"});
+ for(let i=0;i<3;i++)await reservePracticeDevelopmentCall(f.root,f.settings,f.authority);
+ const originals=new Map(await Promise.all((await readdir(f.root)).map(async n=>[n,await readFile(path.join(f.root,n),"utf8")])));
+ assert.deepEqual(await readPracticeDevelopmentUsage(f.root,f.settings),{usedCalls:3,maximumCalls:4});
+ await authorizeAdditionalPracticeDevelopmentCall(f.root,f.settings);
+ await assert.rejects(authorizeAdditionalPracticeDevelopmentCall(f.root,f.settings),{code:"EEXIST"});
+ assert.equal(await readPracticeDevelopmentCallLimit(f.root,f.settings),5);
+ assert.equal(await readFile(approvalFile,"utf8"),originalApproval);
+ const restarted=await import("../lib/owner-study/owner-pc-theory-budget.mjs?practice-fifth-restart");
+ const results=await Promise.allSettled(Array.from({length:8},()=>restarted.reservePracticeDevelopmentCall(f.root,f.settings,f.authority)));
+ assert.equal(results.filter(x=>x.status==="fulfilled").length,2);
+ assert.ok(results.filter(x=>x.status==="rejected").every(x=>x.reason.code==="OWNER_THEORY_DEVELOPMENT_CALL_LIMIT"));
+ assert.deepEqual(await readPracticeDevelopmentUsage(f.root,f.settings),{usedCalls:5,maximumCalls:5});
+ const budget=await readTheoryBudget(f.root,f.settings);
+ assert.equal(budget.usedReservations,13);assert.equal(budget.reservedMicros,4388969);assert.equal(budget.remainingMicros,611031);
+ assert.equal(budget.developmentUsedCalls,7);assert.equal(budget.caseId,null);
+ for(const [n,body]of originals)assert.equal(await readFile(path.join(f.root,n),"utf8"),body,n);
+ await assert.rejects(reserveTheoryDevelopmentCall(f.root,f.settings,f.theory),{code:"OWNER_THEORY_DEVELOPMENT_CALL_LIMIT"});
+});
+
+test("Practice extension rejects altered authority or a forged higher original cap",async()=>{
+ const f=await fixture();
+ await assert.rejects(authorizePracticeDevelopment(f.root,f.settings,{...f.input,maximumCalls:5}),{code:"OWNER_THEORY_PRACTICE_APPROVAL_REQUIRED"});
+ await authorizePracticeDevelopment(f.root,f.settings,f.input);
+ for(let i=0;i<3;i++)await reservePracticeDevelopmentCall(f.root,f.settings,f.authority);
+ await authorizeAdditionalPracticeDevelopmentCall(f.root,f.settings);
+ const file=path.join(path.dirname(f.root),"practice-call-extension-20260917.json");
+ const extension=JSON.parse(await readFile(file,"utf8"));
+ for(const delta of [{maximumPracticeCalls:6},{additionalReservationMicros:0},{practiceApprovalSha256:"0".repeat(64)}]){
+  await writeFile(file,JSON.stringify({...extension,...delta}));
+  await assert.rejects(reservePracticeDevelopmentCall(f.root,f.settings,f.authority),{code:"OWNER_THEORY_PRACTICE_EXTENSION_INVALID"});
+  assert.equal((await readTheoryBudget(f.root,f.settings)).usedReservations,11);
+ }
 });

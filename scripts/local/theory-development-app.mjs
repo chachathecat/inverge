@@ -6,7 +6,7 @@ import {spawn,execFileSync} from "node:child_process";
 import {fileURLToPath} from "node:url";
 import {localDockerRequest as api} from "./owner-economics-loopback.mjs";
 import {ORACLE_IMAGE} from "../automation/wcv-c3-pre-p-postgresql-security-state-oracle.mjs";
-import {authorizePracticeDevelopment,readPracticeDevelopmentApproval,authorizeAdditionalTheoryDevelopmentCall,readTheoryDevelopmentCallLimit,authorizeTheoryDevelopment,readTheoryDevelopmentApproval,readTheoryBudget,validateTheorySettings} from "../../lib/owner-study/owner-pc-theory-budget.mjs";
+import {THEORY_POLICY,authorizeAdditionalPracticeDevelopmentCall,readPracticeDevelopmentCallLimit,readPracticeDevelopmentUsage,authorizePracticeDevelopment,readPracticeDevelopmentApproval,authorizeAdditionalTheoryDevelopmentCall,readTheoryDevelopmentCallLimit,authorizeTheoryDevelopment,readTheoryDevelopmentApproval,readTheoryBudget,validateTheorySettings} from "../../lib/owner-study/owner-pc-theory-budget.mjs";
 const root=path.resolve(fileURLToPath(new URL("../../",import.meta.url)));
 const privateRoot=path.join(process.env.LOCALAPPDATA??"","Inverge","theory-development-20260916");
 const runtimeFile=path.join(privateRoot,"runtime.json");
@@ -74,7 +74,7 @@ async function authorizeAdditionalCall(){
  console.log(JSON.stringify({maximumDevelopmentCalls:await readTheoryDevelopmentCallLimit(budgetRoot,settings),developmentUsedCalls:budget.developmentUsedCalls,reservedMicros:budget.reservedMicros,remainingMicros:budget.remainingMicros}));
 }
 
-async function authorizePracticeCalls(){
+async function authorizePracticeCalls(additional=false){
  if(process.platform!=="win32"||process.env.VERCEL!==undefined)fail("pc_local_only");
  const c=await config();if(c.userId!==userId)fail("isolated_config_mismatch");
  const providerRoot=path.join(process.env.LOCALAPPDATA,"Inverge","owner-economics","theory-one-case-20260915");
@@ -84,10 +84,12 @@ async function authorizePracticeCalls(){
  const expected={userId,questionSha256:createHash("sha256").update(fixture.question.trim()).digest("hex"),supabaseUrl:"http://127.0.0.1:55431",maximumCalls:4};
  let approval;
  try{approval=await readPracticeDevelopmentApproval(budgetRoot,settings);}
- catch(error){if(error.code!=="OWNER_THEORY_PRACTICE_APPROVAL_REQUIRED")throw error;await authorizePracticeDevelopment(budgetRoot,settings,expected);approval=await readPracticeDevelopmentApproval(budgetRoot,settings);}
+ catch(error){if(additional||error.code!=="OWNER_THEORY_PRACTICE_APPROVAL_REQUIRED")throw error;await authorizePracticeDevelopment(budgetRoot,settings,expected);approval=await readPracticeDevelopmentApproval(budgetRoot,settings);}
  if(Object.entries(expected).some(([name,value])=>approval[name]!==value))fail("isolated_approval_mismatch");
+ if(additional && await readPracticeDevelopmentCallLimit(budgetRoot,settings)===4)await authorizeAdditionalPracticeDevelopmentCall(budgetRoot,settings);
  const budget=await readTheoryBudget(budgetRoot,settings);
- console.log(JSON.stringify({approvalId:approval.approvalId,maximumCalls:approval.maximumCalls,maximumReservationMicros:approval.maximumReservationMicros,developmentUsedCalls:budget.developmentUsedCalls,reservedMicros:budget.reservedMicros,remainingMicros:budget.remainingMicros}));
+ const usage=await readPracticeDevelopmentUsage(budgetRoot,settings);
+ console.log(JSON.stringify({approvalId:approval.approvalId,...usage,maximumReservationMicros:usage.maximumCalls*THEORY_POLICY.reservationMicros,developmentUsedCalls:budget.developmentUsedCalls,reservedMicros:budget.reservedMicros,remainingMicros:budget.remainingMicros}));
 }
 
 async function serve(production=false, controlledPractice=false, paidPractice=false){
@@ -103,4 +105,4 @@ async function serve(production=false, controlledPractice=false, paidPractice=fa
  if(production)try{await new Promise((resolve,reject)=>{const build=spawn(process.execPath,["node_modules/next/dist/bin/next","build"],{cwd:root,env,stdio:"inherit",windowsHide:true});build.on("error",reject);build.on("exit",code=>code===0?resolve():reject(Error("isolated_build_failed")));});}catch(error){gateway.close();throw error;}
  const child=spawn(process.execPath,["node_modules/next/dist/bin/next",production?"start":"dev","--hostname","127.0.0.1","--port","3884"],{cwd:root,env,stdio:"inherit",windowsHide:true});child.on("exit",code=>{gateway.close();process.exitCode=code??1;});
 }
-const command=process.argv[2];(command==="prepare"?prepare():command==="serve"?serve():command==="serve-production"?serve(true):command==="serve-practice-controlled"?serve(true,true):command==="serve-practice-paid"?serve(true,false,true):command==="authorize-practice-development"?authorizePracticeCalls():command==="authorize-development"?authorizeDevelopment():command==="authorize-additional-call"?authorizeAdditionalCall():Promise.reject(Error("invalid_isolated_command"))).catch(error=>{console.error(/^[a-z0-9_]+$/.test(error.message)?error.message:"isolated_runtime_failed_no_secret_output");process.exitCode=1;});
+const command=process.argv[2];(command==="prepare"?prepare():command==="serve"?serve():command==="serve-production"?serve(true):command==="serve-practice-controlled"?serve(true,true):command==="serve-practice-paid"?serve(true,false,true):command==="authorize-practice-development"?authorizePracticeCalls():command==="authorize-additional-practice-call"?authorizePracticeCalls(true):command==="authorize-development"?authorizeDevelopment():command==="authorize-additional-call"?authorizeAdditionalCall():Promise.reject(Error("invalid_isolated_command"))).catch(error=>{console.error(/^[a-z0-9_]+$/.test(error.message)?error.message:"isolated_runtime_failed_no_secret_output");process.exitCode=1;});
