@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { profileForQuestion, profileQuestionNumber, ECONOMICS_R3_PROFILE } from "../lib/review-os/first-stage/runtime/foundation-official-profile.ts";
 import test from "node:test";
 import path from "node:path";
 import * as remainingContent from "../lib/review-os/first-stage/runtime/remaining-subject-content.ts";
@@ -232,5 +233,46 @@ test("durable HTTP disclosure and reconnect revalidate the exact final subject e
     assert.equal(response.status, 503); assert.match(response.headers.get("cache-control"), /no-store/u);
     assert.doesNotMatch(await response.text(), /EXPLANATION|correctChoice|SYNTHETIC_/u);
     assert.equal(JSON.stringify([...h.rows]), persisted);
+  }
+});
+
+function historicalInput(mutate=()=>{}) {
+  const packet=remainingPacket(SUBJECT),installed=realEstateApplicability(packet,mutate,"both",true);
+  return {packet,installed,options:{...syntheticContentInput(packet),applicability:[installed]}};
+}
+test("2025 real-estate source binds historical exam date, session numbering, key and separate method",async()=>{
+  const {packet,installed,options}=historicalInput();const before=JSON.stringify(options.applicability);
+  const catalog=await loadRealEstatePrinciplesContent(options);assert.ok(catalog);
+  assert.equal(catalog.initialReferences[0].examYear,2025);assert.equal(catalog.initialReferences[0].examRound,36);
+  assert.equal(catalog.initialReferences[0].questionNumber,81);assert.equal(catalog.initialReferences[0].sessionId,"qnet-2025-36-s1-A");
+  assert.equal(installed.items[0].examDate,"2025-04-05");
+  const h=harness({catalog}),route=privateRoute(h,{subject:SUBJECT,contentInput:options});
+  const opened=await route.POST(post(create));assert.equal(opened.status,200);
+  const view=(await opened.json()).view;
+  const begin=await route.POST(post({sessionId:view.sessionId,command:{action:"begin",requestId:"historical-begin",expectedRevision:1,questionId:packet.questions[0].reference.questionId}}));
+  const begun=(await begin.json()).view;assert.equal(begin.status,200);assert.ok(begun.question);assert.equal(begun.explanation,null);
+  h.setClock(SUBMIT);
+  const saved=await route.POST(post({sessionId:view.sessionId,command:submission(begun.attempt.attemptId,1)}));assert.equal(saved.status,200);
+  const body=await saved.json();assert.ok(body.view.explanation);assert.equal(body.view.masteryClaim,false);
+  const reconnect=privateRoute(harness({rows:h.rows,catalog}),{subject:SUBJECT,contentInput:options});
+  assert.deepEqual(await (await reconnect.GET(new Request(URL+"?sessionId="+view.sessionId))).json(),body);
+  assert.equal(JSON.stringify(options.applicability),before);
+});
+test("rehashed 2025 date, source profile, official position and method drift fail closed",async()=>{
+  for(const [id,mutate] of [
+    ["subject-projection-0",r=>{r.exam_date="2026-04-04";}],
+    ["manifest-0",r=>{r.exam_date="2026-04-04";}],
+    ["0-easy-version",r=>{r.exam_date="2026-04-04";}],
+    ["validator-derivation-0-real_estate_calculation_check",r=>{r.derivation_method_version="1";}],
+    ["final-key-0",r=>{r.official_question_number=1;}],
+    ["final-key-0",r=>{r.session_profile_id="first_2026_session_1";}],
+  ]) {const {options}=historicalInput((name,row)=>{if(name===id)mutate(row);});await denied(options,id);}
+  const good=historicalInput();const bytes=await good.options.readBytes();const p=JSON.parse(bytes);
+  assert.equal(profileQuestionNumber(SUBJECT,16,ECONOMICS_R3_PROFILE),96);
+  for(const other of ["civil_law","appraiser_related_law","accounting"]) assert.throws(()=>profileForQuestion({subjectId:other,examYear:2025,examRound:36}));
+  for(const [year,round] of [[2024,35],[2025,37],[2026,36]]) {
+    assert.throws(()=>profileForQuestion({subjectId:SUBJECT,examYear:year,examRound:round}));
+    const changed=structuredClone(p);for(const row of changed.questions){row.reference.examYear=year;row.reference.examRound=round;}
+    await denied({...good.options,readBytes:async()=>Buffer.from(JSON.stringify(changed))},"unapproved year/round");
   }
 });

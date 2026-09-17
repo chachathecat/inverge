@@ -3,14 +3,14 @@ import { privateSessionDigest as digest } from "./session-service";
 import { applicabilityFailure as fail, requireSame as same, type FoundationEvidence } from "./foundation-applicability";
 import { FIVE, MANIFEST_FIELDS, RETRY_KEY_FIELDS } from "./foundation-release-contract";
 import { rows, type ReleaseContext, type Row } from "./foundation-release-rights";
-import { REAL_ESTATE_METHOD, REAL_ESTATE_PROJECTION_FIELDS, realEstateFacts } from "./foundation-real-estate-facts";
+import { realEstateMethod, REAL_ESTATE_PROJECTION_FIELDS, realEstateFacts } from "./foundation-real-estate-facts";
 
 const SUBJECT = "real_estate_principles", ROLE = "named_owner_authorized_human_subject_reviewer";
 const MATRIX = FIVE.deterministicValidatorContractMatrix.real_estate_principles;
-export function realEstateValidatorConfiguration(id: typeof MATRIX[number]) {
+export function realEstateValidatorConfiguration(id: typeof MATRIX[number], reference: Row) {
   return { registryVersion: FIVE.deterministicValidatorRegistry.registryVersion,
     definition: FIVE.deterministicValidatorRegistry.definitions[id as "real_estate_calculation_check" | "real_estate_source_grounded_concept_check"],
-    canonicalization: "RFC8785", method: REAL_ESTATE_METHOD };
+    canonicalization: "RFC8785", method: realEstateMethod(reference) };
 }
 // Manifest/source projection precedes subject-validator → pre-release → final
 // decision. A body version binds that same source projection, not the later
@@ -32,7 +32,7 @@ export function validateRealEstatePreRelease(evidence: FoundationEvidence, pre: 
   same(subject.validator_contract_version, FIVE.contractVersion);
   same(pre.applicable_authority_ids, []); same(pre.authority_derivation_receipt_reference_or_null, null);
   if (pre.receipt_kind !== "subject_not_applicable_validator" || pre.applicable_version_status !== "not_applicable_verified" ||
-    manifest.exam_date !== REAL_ESTATE_METHOD.examDate || manifest.applicable_version_status !== pre.applicable_version_status) fail();
+    manifest.exam_date !== realEstateMethod(ref).examDate || manifest.applicable_version_status !== pre.applicable_version_status) fail();
   requiredIdentifier(manifest.manifest_id); requiredIdentifier(manifest.manifest_version);
   const facts = realEstateFacts(evidence, projectionRefs[0], question, choices);
   evidence.reviewer(manifest, ROLE, "verified_exact_source_version_manifest", facts.projection.reviewed_at);
@@ -44,6 +44,7 @@ export function validateRealEstatePreRelease(evidence: FoundationEvidence, pre: 
 
 export function validateRealEstateReleaseEvidence(ctx: ReleaseContext, release: Row, pre: Row,
   question: Row, choices: readonly unknown[], keyReference: unknown, variant: boolean) {
+  const method = realEstateMethod(question.reference as Row);
   const bound = validateRealEstatePreRelease(ctx.evidence, pre, question, choices);
   const { subject, subjectRef, manifestRefs, manifest, projectionRefs, projection, values } = bound;
   // Every transitive reviewed source must precede this final use decision.
@@ -77,7 +78,7 @@ export function validateRealEstateReleaseEvidence(ctx: ReleaseContext, release: 
   let applicableCount = 0;
   const key = ctx.resolve(keyReference, variant ? RETRY_KEY_FIELDS : FIVE.releaseReceiptContract.verifiedOfficialKeyReceiptShape.requiredFields);
   for (const validatorId of MATRIX) {
-    const definition = realEstateValidatorConfiguration(validatorId).definition, actual = values.get(validatorId); if (!actual) fail();
+    const definition = realEstateValidatorConfiguration(validatorId, question.reference as Row).definition, actual = values.get(validatorId); if (!actual) fail();
     const app = apps.get(validatorId)?.row; if (!app) fail();
     const binding = { item_id: release.item_id, item_version: release.item_version, subject_id: SUBJECT,
       validator_contract_id: validatorId, validator_contract_version: definition.contractVersion };
@@ -104,8 +105,8 @@ export function validateRealEstateReleaseEvidence(ctx: ReleaseContext, release: 
     same(derivation.input_projection_schema_version, definition.inputProjectionSchemaVersion);
     same(derivation.validator_input_facts_schema_version, definition.inputProjectionSchemaVersion);
     same(derivation.validator_input_facts, actual.facts); same(derivation.validator_input_facts_digest, digest(actual.facts));
-    same(derivation.derivation_method_id, REAL_ESTATE_METHOD.method); same(derivation.derivation_method_version, REAL_ESTATE_METHOD.version);
-    same(derivation.derivation_configuration_digest, digest(REAL_ESTATE_METHOD));
+    same(derivation.derivation_method_id, method.method); same(derivation.derivation_method_version, method.version);
+    same(derivation.derivation_configuration_digest, digest(method));
     const keyRef = exactObject(keyReference, ["evidence_id", "evidence_version", "evidence_sha256"]);
     const input = { item_id: release.item_id, item_version: release.item_version, subject_id: SUBJECT,
       question_item_object_sha256: (release.question_item_object_reference_or_null as Row).object_sha256,
@@ -119,7 +120,7 @@ export function validateRealEstateReleaseEvidence(ctx: ReleaseContext, release: 
       same(value.source_version_manifest_references, manifestRefs); same(value.applicability_evidence_references, projectionRefs);
     }
     for (const value of [result, pass]) {
-      same(value.validator_configuration_digest, digest(realEstateValidatorConfiguration(validatorId)));
+      same(value.validator_configuration_digest, digest(realEstateValidatorConfiguration(validatorId, question.reference as Row)));
       same(value.input_projection_digest, digest(input));
       same(value.validator_input_facts_derivation_receipt_reference, pass.validator_input_facts_derivation_receipt_reference);
       same(value.assertion_count, definition.requiredAssertionIdsExactly.length); same(value.failed_assertion_count, 0); same(value.unresolved_assertion_count, 0);

@@ -12,11 +12,13 @@ import { verifyPrivateBrowser } from "./fixtures/first-stage-private-browser-har
 import { verifyPrivateSubjectNavigation } from "./fixtures/first-stage-private-navigation-browser.mjs";
 import { verifyReviewedBankPostgres } from "./fixtures/first-stage-reviewed-bank-postgres.mjs";
 import { harness as kernelHarness, SUBMIT, submission } from "./fixtures/first-stage-private-session-harness.mjs";
-import { economicsCatalog } from "./fixtures/first-stage-economics-content-harness.mjs";
+import { economicsCatalog, syntheticContentInput } from "./fixtures/first-stage-economics-content-harness.mjs";
 import { loadEconomicsContent } from "../lib/review-os/first-stage/runtime/economics-content.ts";
 import { economicsReleaseInput } from "./fixtures/first-stage-economics-applicability-harness.mjs";
 import { accountingCatalog } from "./fixtures/first-stage-accounting-content-harness.mjs";
-import { remainingCatalogs, remainingInput, SUBJECT_CASES } from "./fixtures/first-stage-remaining-content-harness.mjs";
+import { remainingCatalogs, remainingInput, remainingPacket, SUBJECT_CASES } from "./fixtures/first-stage-remaining-content-harness.mjs";
+import { realEstateApplicability } from "./fixtures/first-stage-real-estate-applicability-harness.mjs";
+import { loadRealEstatePrinciplesContent } from "../lib/review-os/first-stage/runtime/remaining-subject-content.ts";
 import { trialHarness, startTrial, syntheticTrialInput } from "./fixtures/first-stage-owner-local-trial-harness.mjs";
 import { ORACLE_IMAGE, ORACLE_PLATFORM } from "../scripts/automation/wcv-c3-pre-p-postgresql-security-state-oracle.mjs";
 
@@ -70,12 +72,18 @@ test("all five browser routes consume their server blocker on POST, reload and r
 const convertedInput = (await economicsReleaseInput()).input;
 const convertedCatalog = await loadEconomicsContent(convertedInput);
 assert.ok(convertedCatalog);
+const historicalEstatePacket=remainingPacket("real_estate_principles");
+const historicalEstateInstallation=realEstateApplicability(historicalEstatePacket,undefined,undefined,true);
+const historicalEstateInput={...syntheticContentInput(historicalEstatePacket),applicability:[historicalEstateInstallation]};
+const historicalEstateCatalog=await loadRealEstatePrinciplesContent(historicalEstateInput);assert.ok(historicalEstateCatalog);
 const postgresCases = [
   ...Object.entries({ economics_principles: economicsCatalog, accounting: accountingCatalog, ...remainingCatalogs })
     .map(([subject, catalog]) => ({ subject, catalog, label: subject, contentInput: undefined })),
   { subject: "economics_principles", catalog: convertedCatalog, label: "economics_r3_candidate", contentInput: convertedInput },
+  { subject: "real_estate_principles", catalog: historicalEstateCatalog, label: "real_estate_2025_source", contentInput: historicalEstateInput },
 ];
 for (const { subject, catalog, label, contentInput } of postgresCases) {
+const convertedEconomics=subject==="economics_principles" && Boolean(contentInput);
 const harness = options => kernelHarness({ ...options, catalog });
 const reference = () => catalog.initialReferences[0];
 const EXPLANATION = catalog.explanation(reference()).text;
@@ -172,9 +180,9 @@ test(`local PostgreSQL ${label} enforces actual route/browser durable retry/CAS 
       grant usage on schema public to anon,authenticated,service_role;
       insert into auth.users values (${literal(OWNER)}),(${literal(OTHER)});`, null);
     const syntheticDesign = readFileSync(new URL("../supabase/local-designs/first-stage-private-sessions.sql", import.meta.url), "utf8");
-    const design = contentInput ? readFileSync(new URL("../supabase/local-designs/first-stage-owner-local-sessions.sql", import.meta.url), "utf8") : syntheticDesign;
+    const design = convertedEconomics ? readFileSync(new URL("../supabase/local-designs/first-stage-owner-local-sessions.sql", import.meta.url), "utf8") : syntheticDesign;
     await assert.rejects(sql(design, null), { code: "P0001" });
-    if (contentInput) {
+    if (convertedEconomics) {
       // Verify the proposed persistent design in a disposable fixture only.
       // This setting in a synthetic test is NOT a performed personal-use approval.
       await assert.rejects(sql(`set inverge.local_first_stage_design='synthetic_only';\n${design}`, null), { code: "P0001" });
@@ -191,7 +199,7 @@ test(`local PostgreSQL ${label} enforces actual route/browser durable retry/CAS 
     // fresh table that already accepts the new trial schema.
     const legacyTable = syntheticDesign.slice(syntheticDesign.indexOf("create table"), syntheticDesign.indexOf("comment on table"));
     for (let replay = 0; replay < 2; replay++) {
-      await sql(contentInput ? `begin;\n${legacyTable}\ncommit;`
+      await sql(convertedEconomics ? `begin;\n${legacyTable}\ncommit;`
         : "set inverge.local_first_stage_design='synthetic_only';\n" + design, null);
     }
     for (const role of ["anon", "authenticated"]) {
@@ -248,7 +256,7 @@ test(`local PostgreSQL ${label} enforces actual route/browser durable retry/CAS 
     reopened.setClock(tasks[0].dueAt);
     const retry = await reopened.service.execute(OWNER, sessionId, { action: "retry", requestId: "postgres-retry", expectedRevision: 3, reviewTaskId: tasks[0].reviewTaskId });
     reopened.setClock("2026-09-07T10:02:00.000Z");
-    const completed = await reopened.service.execute(OWNER, sessionId, { ...submission(retry.state.attempts.at(-1).attemptId, contentInput ? 4 : 2), requestId: "postgres-retry-submit", expectedRevision: 4 });
+    const completed = await reopened.service.execute(OWNER, sessionId, { ...submission(retry.state.attempts.at(-1).attemptId, convertedEconomics ? 4 : 2), requestId: "postgres-retry-submit", expectedRevision: 4 });
     assert.equal(completed.state.reviewTasks[0].status, "completed");
     const oldRequest = await post(second, command);
     assert.equal(oldRequest.status, 200);
@@ -260,7 +268,7 @@ test(`local PostgreSQL ${label} enforces actual route/browser durable retry/CAS 
     assert.equal(final.transferEvidence, false);
     const browserHarness = harness({ store: repository(sdk()) });
     const browserResult = await verifyPrivateBrowser({ route: handler(browserHarness), subject,
-      ...(contentInput ? { questionNumber: 46, retryChoice: 4 } : {}),
+      questionNumber:reference().questionNumber,retryChoice:convertedEconomics?4:2,
       ...(catalog.questionAttributions ? { expectedAttributions: { question: catalog.questionAttributions(reference()),
         feedback: catalog.explanation(reference()).attributions } } : {}),
       clock: { set: browserHarness.setClock, advance: ms => browserHarness.setClock(
@@ -271,7 +279,7 @@ test(`local PostgreSQL ${label} enforces actual route/browser durable retry/CAS 
     assert.equal(browserSaved.reviewTasks[0].status, "completed");
     assert.equal(browserSaved.reviewTasks[0].dueAt, browserResult.dueAt);
     assert.equal(await sql(`select count(*) from ${TABLE}`), "2");
-    if(contentInput) {
+    if(convertedEconomics) {
       // Same real SDK/repository and disposable PostgreSQL, but the actual trial
       // loader -> adapter -> HTTP scope; no reviewed catalog substitution.
       const fixture=syntheticTrialInput({numericTrialModels:true});
@@ -371,7 +379,7 @@ test(`local PostgreSQL ${label} enforces actual route/browser durable retry/CAS 
       process.stdout.write("legacy personal-table upgrade: denied before upgrade; reviewed/trial records and other constraints preserved across reapply; RLS/privileges unchanged\n");
       process.stdout.write("trial isolated PG: actual loader/HTTP/repository, lost durable response, concurrent replay, reconnect, D+1 and reviewed-mixing denial passed; synthetic only\n");
     }
-    if(subject==="real_estate_principles") await verifyReviewedBankPostgres({sql,sdk,repository,contentInput:remainingInput(subject),catalog});
+    if(subject==="real_estate_principles") await verifyReviewedBankPostgres({sql,sdk,repository,contentInput:contentInput??remainingInput(subject),catalog});
     process.stdout.write(JSON.stringify({ subject, browser: "passed", screenshot: browserResult.screenshot,
       externalRequests: browserResult.externalRequests, browserErrors: browserResult.browserErrors }) + "\n");
     await sql(`delete from auth.users where id in (${literal(OWNER)},${literal(OTHER)})`, null);
