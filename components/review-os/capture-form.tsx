@@ -2342,7 +2342,8 @@ export function WrongAnswerCaptureForm({
                   update("rawQuestionText", value);
                   update("rawOcrText", value);
                   update("hasManualCorrection", true);
-                  update("ocrConfirmedByLearner", mode === "first");
+                  if (mode === "first") update("ocrConfirmedByLearner", true);
+                  else update("ocrConfirmedByLearner", false);
                   update("lowConfidenceFlag", form.lowConfidenceFlag || hasLowConfidenceText(value));
                 }}
               />
@@ -3151,7 +3152,8 @@ function IntakePanel({
             update("rawQuestionText", value);
             update("rawOcrText", value);
             update("hasManualCorrection", true);
-            update("ocrConfirmedByLearner", mode === "first");
+            if (mode === "first") update("ocrConfirmedByLearner", true);
+            else update("ocrConfirmedByLearner", false);
             update("lowConfidenceFlag", form.lowConfidenceFlag || hasLowConfidenceText(value));
           }}
           onFocus={() => { if ((mode === "first" || form.sourceType === "text") && uploadedPages.length === 0 && !form.sourceLabel) update("sourceType", inferSourceTypeFromAction("text")); }}
