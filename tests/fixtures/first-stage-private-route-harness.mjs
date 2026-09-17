@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { runInThisContext } from "node:vm";
 import ts from "typescript";
+import * as originalContext from "../../lib/review-os/first-stage/runtime/owner-original-context.ts";
+import * as originalBoundary from "../../lib/review-os/first-stage/runtime/owner-original-boundary.ts";
+import * as originalContent from "../../lib/review-os/first-stage/runtime/owner-original-content.ts";
 import * as application from "../../lib/review-os/first-stage/runtime/session-application.ts";
 import * as trialBoundary from "../../lib/review-os/first-stage/runtime/owner-local-trial-boundary.ts";
 import { loadEconomicsContent } from "../../lib/review-os/first-stage/runtime/economics-content.ts";
@@ -44,6 +47,9 @@ export function privateRoute(harness, options = {}) {
   }]));
   const server = compilePrivateSource("lib/review-os/first-stage/runtime/session-server.ts", {
     "server-only": {},
+    "./owner-original-context": originalContext,
+    "./owner-original-boundary": originalBoundary,
+    "./owner-original-content": originalContent,
     "@/lib/auth/session": { getServerSessionUser: async () => {
       counts.auth++;
       return options.session ?? { isAuthenticated: true, userId: ownerId, email: "owner@example.test" };

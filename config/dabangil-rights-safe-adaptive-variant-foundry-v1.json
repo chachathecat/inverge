@@ -655,5 +655,36 @@
     "STALE_DECISION_BASIS_CHECKSUM",
     "AI_SELF_CERTIFICATION",
     "PRIVATE_ACADEMY_OR_UNKNOWN_SOURCE_ENTERS_SHARED_ROUTE"
-  ]
+  ],
+  "exactOwnerOriginalException": {
+    "decision": "docs/decisions/2026-09-06-owner-appraiser-first-private-continuation.md",
+    "ownerDecisionDate": "2026-09-17",
+    "packetSha256": "0a7039441edafa476973383fdd4f8fb1163ae9bee96da55aacc0eaf33b4d9fc9",
+    "questionIds": [
+      "owner-re-capitalization-original-v2",
+      "owner-re-capitalization-retry-v2"
+    ],
+    "subject": "real_estate_principles",
+    "use": "exact_owner_pc_private_practice_only",
+    "humanReviewComplete": false,
+    "officialExamMetadata": null,
+    "feedbackState": "machine_checked_owner_local",
+    "rightsState": "owner_authorized_original",
+    "currentnessState": "stated_model_only",
+    "calculationScope": "stated_model_only",
+    "automaticAddition": false,
+    "transferEvidence": false,
+    "measurementEvidence": false,
+    "masteryClaim": false,
+    "existingHumanReviewRequirementsUnchanged": true,
+    "failClosed": [
+      "wrong_packet_hash",
+      "wrong_owner_or_environment",
+      "unapproved_item",
+      "calculation_or_unit_mismatch",
+      "absent_or_forged_request_capability",
+      "human_review_claim",
+      "unknown_use_or_lost_functional_lineage"
+    ]
+  }
 }

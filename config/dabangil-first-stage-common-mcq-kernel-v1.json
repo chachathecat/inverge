@@ -32,8 +32,19 @@
       "accounting"
     ],
     "choiceCountExactly": 5,
-    "confidenceVocabularyExactly": ["low", "medium", "high"],
-    "errorCauseVocabularyExactly": ["K", "C", "A", "R", "T", "G"],
+    "confidenceVocabularyExactly": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "errorCauseVocabularyExactly": [
+      "K",
+      "C",
+      "A",
+      "R",
+      "T",
+      "G"
+    ],
     "elapsedBucketsExactly": [
       "0_29999",
       "30000_59999",
@@ -50,11 +61,24 @@
     "liveGitHubValidated": true,
     "exactHeadPinnedSquashMerged": true,
     "requiredChecksPassed": true,
-    "actionableP0P1P2": [0, 0, 0],
+    "actionableP0P1P2": [
+      0,
+      0,
+      0
+    ],
     "unresolvedActionableThreads": 0,
     "focusedResultingTreeTests": "8/8",
-    "governedIssuesClosed": [706, 707, 708, 781, 837],
-    "issue714RemainsOpenWithAllocations": ["C4", "C6"],
+    "governedIssuesClosed": [
+      706,
+      707,
+      708,
+      781,
+      837
+    ],
+    "issue714RemainsOpenWithAllocations": [
+      "C4",
+      "C6"
+    ],
     "remoteSupabaseMutationCount": 0,
     "productionMutationCount": 0
   },
@@ -101,8 +125,14 @@
       "bodyless": true,
       "choiceCountExactly": 5,
       "requiresSourceVersionManifestIds": true,
-      "rightsStates": ["verified_owner_private", "verified_cleared"],
-      "currentnessStates": ["verified_exam_date", "verified_current"],
+      "rightsStates": [
+        "verified_owner_private",
+        "verified_cleared"
+      ],
+      "currentnessStates": [
+        "verified_exam_date",
+        "verified_current"
+      ],
       "duplicateQuestionIdentityFailsClosed": true,
       "duplicateQuestionIdAcrossVersionsFailsClosed": true
     },
@@ -116,7 +146,10 @@
         "eliminatedChoiceIds",
         "workTrace"
       ],
-      "trustedServerFieldsExactly": ["attemptStartedAt", "submittedAt"],
+      "trustedServerFieldsExactly": [
+        "attemptStartedAt",
+        "submittedAt"
+      ],
       "elapsedTimeDerivedFromTrustedServerFields": true,
       "clientElapsedTimeOrSubmittedAtRejectedAsUnknown": true,
       "clientMaySetCorrectness": false,
@@ -147,8 +180,14 @@
       "freeTextAllowed": false
     },
     "attempt": {
-      "kinds": ["initial", "independent_retry"],
-      "states": ["in_progress", "evaluated"],
+      "kinds": [
+        "initial",
+        "independent_retry"
+      ],
+      "states": [
+        "in_progress",
+        "evaluated"
+      ],
       "evaluationDecisionsExactly": [
         "correct",
         "incorrect",
@@ -215,7 +254,11 @@
       "withheldOrUnavailableEvaluationRejectsTransition": true,
       "withheldOrUnavailableEvaluationPreservesActiveAttemptAndVariant": true,
       "withheldOrUnavailableEvaluationConsumesNoRevisionOrLineage": true,
-      "outcomes": ["active", "succeeded", "failed"]
+      "outcomes": [
+        "active",
+        "succeeded",
+        "failed"
+      ]
     },
     "rehydratedStateValidation": {
       "runsBeforeAttemptPresentationAndEveryMutation": true,
@@ -276,7 +319,7 @@
   "subjectAdapterFreeze": {
     "schemaVersion": "dabangil.first_stage.subject_adapter.v1",
     "interfaceDigestAlgorithm": "sha256_over_recursively_key_sorted_utf8_json",
-    "interfaceDigest": "274661ef36eb2592b0ee744015ab19dac0b19ee68769b0cdaf32b6c1fbddf705",
+    "interfaceDigest": "84504769d72c80567ed54e145a1808ee17d14e2fec13a7255d95b4906cba7d6b",
     "interfaceDescriptor": {
       "schemaVersion": "dabangil.first_stage.subject_adapter.v1",
       "interfaceName": "SubjectAdapterV1",
@@ -291,7 +334,7 @@
         {
           "path": "lib/review-os/first-stage/kernel/domain.ts",
           "normalization": "utf8_lf",
-          "sha256": "992332231069846209dea9d7b925900b4e941dc3bb9b6b37e33cae6730e2e097",
+          "sha256": "97cb59a0354e82cc4e8da14be020f954eadf814ecea76f7d439b37f887942aba",
           "covers": [
             "QuestionReference",
             "Attempt",
@@ -338,7 +381,12 @@
           ]
         }
       ],
-      "fields": ["schemaVersion", "adapterId", "adapterVersion", "subjectId"],
+      "fields": [
+        "schemaVersion",
+        "adapterId",
+        "adapterVersion",
+        "subjectId"
+      ],
       "methods": [
         {
           "name": "assertQuestionReference",
@@ -432,7 +480,8 @@
           "state",
           "submission",
           "evaluation",
-          "ownerLocalAssistance"
+          "ownerLocalAssistance",
+          "ownerOriginalUse"
         ],
         "AnswerSubmission": [
           "schemaVersion",
@@ -535,6 +584,7 @@
           "adapterId",
           "adapterVersion",
           "officialKeyReference",
+          "calculationKeyReference",
           "choiceSetReference",
           "sourceReference",
           "versionDecisionReference",
@@ -564,8 +614,18 @@
           "appraiser_related_law",
           "accounting"
         ],
-        "choiceIds": [1, 2, 3, 4, 5],
-        "confidence": ["low", "medium", "high"],
+        "choiceIds": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "confidence": [
+          "low",
+          "medium",
+          "high"
+        ],
         "elapsedTimeBuckets": [
           "0_29999",
           "30000_59999",
@@ -581,18 +641,30 @@
           "change_answer",
           "select_answer"
         ],
-        "errorCauses": ["K", "C", "A", "R", "T", "G"],
+        "errorCauses": [
+          "K",
+          "C",
+          "A",
+          "R",
+          "T",
+          "G"
+        ],
         "questionRightsStates": [
           "verified_owner_private",
           "verified_cleared",
-          "observed_owner_local_only"
+          "observed_owner_local_only",
+          "owner_authorized_original"
         ],
         "questionCurrentnessStates": [
           "verified_exam_date",
           "verified_current",
-          "observed_historical_unreviewed"
+          "observed_historical_unreviewed",
+          "stated_model_only"
         ],
-        "attemptKinds": ["initial", "independent_retry"],
+        "attemptKinds": [
+          "initial",
+          "independent_retry"
+        ],
         "attemptEvaluationDecisions": [
           "correct",
           "incorrect",
@@ -605,12 +677,16 @@
           "review_then_retry",
           "review_before_new_variant"
         ],
-        "conceptBindingRoles": ["primary", "supporting"],
+        "conceptBindingRoles": [
+          "primary",
+          "supporting"
+        ],
         "reviewedFeedbackStates": [
           "reviewed_available",
           "withheld_rights_or_version",
           "not_emitted_unavailable",
-          "human_unreviewed_owner_local"
+          "human_unreviewed_owner_local",
+          "machine_checked_owner_local"
         ],
         "reviewerClasses": [
           "named_owner_authorized_human_reviewer",
@@ -627,10 +703,25 @@
           "hint_or_scaffold",
           "answer_revealed"
         ],
-        "attemptStates": ["in_progress", "evaluated"],
-        "reviewTaskPriorities": ["critical", "high", "normal"],
-        "reviewTaskStatuses": ["pending", "retry_active", "completed"],
-        "independentRetryOutcomes": ["active", "succeeded", "failed"],
+        "attemptStates": [
+          "in_progress",
+          "evaluated"
+        ],
+        "reviewTaskPriorities": [
+          "critical",
+          "high",
+          "normal"
+        ],
+        "reviewTaskStatuses": [
+          "pending",
+          "retry_active",
+          "completed"
+        ],
+        "independentRetryOutcomes": [
+          "active",
+          "succeeded",
+          "failed"
+        ],
         "independentRetryLineageDecisions": [
           "verified_variant_for_independent_retry",
           "unreviewed_owner_local_practice_retry"
@@ -711,5 +802,36 @@
     "mixedFiveSubjectTodayAndFullDay": "later_milestone",
     "sharedTestRunnerRegistration": "installed_by_lane_b_serial_integration_gate",
     "durablePersistence": "not_authorized_by_this_milestone"
+  },
+  "exactOwnerOriginalException": {
+    "decision": "docs/decisions/2026-09-06-owner-appraiser-first-private-continuation.md",
+    "ownerDecisionDate": "2026-09-17",
+    "packetSha256": "0a7039441edafa476973383fdd4f8fb1163ae9bee96da55aacc0eaf33b4d9fc9",
+    "questionIds": [
+      "owner-re-capitalization-original-v2",
+      "owner-re-capitalization-retry-v2"
+    ],
+    "subject": "real_estate_principles",
+    "use": "exact_owner_pc_private_practice_only",
+    "humanReviewComplete": false,
+    "officialExamMetadata": null,
+    "feedbackState": "machine_checked_owner_local",
+    "rightsState": "owner_authorized_original",
+    "currentnessState": "stated_model_only",
+    "calculationScope": "stated_model_only",
+    "automaticAddition": false,
+    "transferEvidence": false,
+    "measurementEvidence": false,
+    "masteryClaim": false,
+    "existingHumanReviewRequirementsUnchanged": true,
+    "failClosed": [
+      "wrong_packet_hash",
+      "wrong_owner_or_environment",
+      "unapproved_item",
+      "calculation_or_unit_mismatch",
+      "absent_or_forged_request_capability",
+      "human_review_claim",
+      "unknown_use_or_lost_functional_lineage"
+    ]
   }
 }

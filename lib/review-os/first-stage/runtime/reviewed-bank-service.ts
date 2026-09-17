@@ -1,6 +1,7 @@
 import { FirstStageKernelError, requiredIdentifier, requiredUtcInstant } from "../kernel/domain";
 import { selectQfI1BankFirstAssignmentV1, type QfI1CandidateV1 } from "../../../question-foundry/runtime/qf-i1-bank-first";
 import { reviewedBankCandidates } from "./private-reviewed-content";
+import { ownerOriginalBankCandidates } from "./owner-original-context";
 import { createPrivateFirstStageSessionService, privateFirstStageSessionId, privateSessionDigest,
   type PrivateFirstStageCatalog, type PrivateFirstStageSession, type PrivateFirstStageSessionStore } from "./session-service";
 
@@ -23,7 +24,9 @@ export function createReviewedBankService(sessions: PrivateFirstStageSessionStor
   const service = createPrivateFirstStageSessionService(sessions, catalog, now);
   const subject = catalog.initialReferences[0]?.subjectId;
   function stock() {
-    const candidates = reviewedBankCandidates(catalog);
+    // Only the exact catalog object admitted inside an authenticated local
+    // authored request has this capability; all other catalogs retain the old gate.
+    const candidates = reviewedBankCandidates(catalog) ?? ownerOriginalBankCandidates(catalog);
     if (!candidates || !["economics_principles", "real_estate_principles"].includes(subject)) fail();
     return candidates;
   }

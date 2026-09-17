@@ -6,6 +6,8 @@ import type { TrialPlanningStore } from "./owner-local-today";
 import { createReviewedBankService, type ReviewedBankStore } from "./reviewed-bank-service";
 import { handleReviewedBank, reviewedBankEnabled } from "./reviewed-bank-http";
 import { reviewedBankCandidates } from "./private-reviewed-content";
+import { activeOwnerOriginalCatalog } from "./owner-original-context";
+import { OWNER_ORIGINAL_NOTICE, OWNER_ORIGINAL_SCOPE } from "./owner-original-boundary";
 
 type Environment = Readonly<Record<string, string | undefined>>;
 type Session = Readonly<{ isAuthenticated: boolean; userId?: string | null; email?: string | null }>;
@@ -60,7 +62,7 @@ export function createPrivateSessionApplication(dependencies: PrivateSessionAppl
       if (bankRequest) return handleReviewedBank(request, dependencies, owner.ownerId, catalog);
       const blocker = dependencies.unavailableBlocker ?? "approved_content_required";
       if (request.method === "GET" && !new URL(request.url).search) {
-        const bankPractice = Boolean(reviewedBankEnabled(dependencies.environment()) && catalog && reviewedBankCandidates(catalog));
+        const bankPractice = Boolean(reviewedBankEnabled(dependencies.environment()) && catalog && (reviewedBankCandidates(catalog) || activeOwnerOriginalCatalog(catalog)));
         if (bankPractice && !dependencies.bankRepository) return response({ ok: false, error: "temporarily_unavailable" }, 503);
         let availabilityStore = catalog ? dependencies.repository() : null;
         if (bankPractice && availabilityStore) {
@@ -102,6 +104,7 @@ export function createPrivateSessionApplication(dependencies: PrivateSessionAppl
             questionNumber: item.questionNumber,
           })),
           masteryClaim: false, transferEvidence: false,
+          ...(catalog && activeOwnerOriginalCatalog(catalog) ? { contentStatus: "machine_checked_owner_local", notice: OWNER_ORIGINAL_NOTICE, scope: OWNER_ORIGINAL_SCOPE, humanReviewComplete: false } : {}),
           ...(bankStock ? { bankPractice: true, availableOriginals: bankStock.availableOriginals } : {}),
         }, continuation });
       }

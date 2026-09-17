@@ -121,6 +121,7 @@ const defaultTestFiles = [
   "tests/foundation-development-toolchain-security.test.mjs",
   "tests/foundation-continuous-security-automation.test.mjs",
   "tests/first-stage-common-mcq-kernel.test.mjs",
+  "tests/first-stage-owner-original.test.mjs",
   "tests/first-stage-owner-home.test.mjs",
   "tests/second-stage-owner-home.test.mjs",
   "tests/first-stage-private-session.test.mjs",

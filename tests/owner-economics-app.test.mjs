@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { ownerLocalAppEnvironment,ownerLocalLegalEnvironment } from "../scripts/local/owner-economics-app.mjs";
+import { ownerLocalAppEnvironment,ownerLocalLegalEnvironment,ownerLocalTheoryEnvironment,ownerLocalOriginalEnvironment } from "../scripts/local/owner-economics-app.mjs";
 import path from "node:path";
 import { FIRST_STAGE_FEATURE_FLAG,FIRST_STAGE_OWNER_ALLOWLIST } from "../lib/review-os/first-stage/kernel/domain.ts";
 import { ownerLocalR3TrialEnvironment } from "../lib/review-os/first-stage/runtime/owner-local-trial-boundary.ts";
@@ -32,4 +32,17 @@ test("explicit local bridge launch forwards only closed non-secret configuration
     {...settings,INVERGE_OWNER_LEGAL_CATALOG_SHA256:"invalid"},
     {...settings,INVERGE_OWNER_LEGAL_CATALOG_PATH:path.resolve("outside.json")}])
     assert.throws(()=>ownerLocalLegalEnvironment({},keys,altered),/local_legal_/);
+});
+
+test("exact original installation preserves economics/theory and cannot inherit or regrant a provider/budget",()=>{
+ const hashes={contentSha256:"0a7039441edafa476973383fdd4f8fb1163ae9bee96da55aacc0eaf33b4d9fc9",sqlSha256:"5346dbf1caa872c880ab621ffd91c508791747e9c80112b1030f86642e307a3a"};
+ const base=ownerLocalTheoryEnvironment({INVERGE_OWNER_ORIGINAL_REAL_ESTATE_ENABLED:"true",GEMINI_API_KEY:"synthetic"},{anon:"synthetic-anon",service:"synthetic-service"},"a".repeat(43));
+ assert.equal(base.INVERGE_OWNER_ORIGINAL_REAL_ESTATE_ENABLED,undefined);
+ const installation={schemaVersion:"owner_original_installation.v1",enabled:true,backupRestoreVerified:true,database:"inverge_owner_economics_db_loopback/postgres",...hashes};
+ const contentPath=path.resolve("synthetic-private/candidate-v2.json");
+ const env=ownerLocalOriginalEnvironment(base,installation,contentPath,hashes.contentSha256,hashes.sqlSha256);
+ for(const [key,value] of Object.entries(base))assert.equal(env[key],value);
+ assert.equal(env.INVERGE_OWNER_ORIGINAL_REAL_ESTATE_ENABLED,"true");assert.equal(env.GEMINI_API_KEY,undefined);
+ for(const delta of [{enabled:false},{backupRestoreVerified:false},{database:"remote/postgres"},{contentSha256:"f".repeat(64)},{sqlSha256:"f".repeat(64)}])assert.throws(()=>ownerLocalOriginalEnvironment(base,{...installation,...delta},contentPath,hashes.contentSha256,hashes.sqlSha256));
+ assert.throws(()=>ownerLocalOriginalEnvironment({...base,VERCEL:"1"},installation,contentPath,hashes.contentSha256,hashes.sqlSha256));
 });

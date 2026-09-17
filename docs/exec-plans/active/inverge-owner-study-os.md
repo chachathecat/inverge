@@ -2120,3 +2120,15 @@ Owner now approved exactly one additional isolated Core account, with ordinary a
 The approved controlled actual-app run on 8f05a882 completed normal login/entry, two controlled responses, real correction save, authenticated reconnect, paragraph review completion and Learning Record; SQL preserves the future September 19 follow-up and the prior September 18 Theory review. This is not actual-model or real-law acceptance. It exposed a Today defect: historical pre-correction gaps recreated a current task before the stored review date. The follow-up correction reuses existing confirmed-record provenance, gives the saved queue schedule priority, preserves other due work and uses an honest waiting state. Existing personal activation and the shared paid ledger remain unchanged.
 
 The actual final-app re-read also found the preserved unanalyzed original being converted into a concept task. Today now excludes 2nd-round inputs explicitly marked not-analyzed or functional-test from learning-task generation, retaining Notes/resume access. Regression checks preserve the exact saved correction in the future queue and require its return only at the stored due time; this implements the Owner's explicit future-review waiting condition without deleting checks, records or schedules. Paid Law/model accuracy remains unverified.
+
+## 2026-09-17 exact authored real-estate private bundle
+
+Owner approved proposal e82f790b, content 0a703944 and conditional personal SQL
+5346dbf1. Continue on codex/owner-original-real-estate from a46ede00; root remains
+the sole writer. Reuse prior calculation and ten isolated SQL checks. Implement
+only explicit authored references, separate calculation feedback/key and exact
+server admission; retain official/r3 gates. New normal-app acceptance, final-head
+checks/review/merge, backup restoration and conditional exact personal installation
+are pending. No provider calls, source-body publication or personal writes yet.
+
+Issue #960 implements the exact 2026-09-17 Owner-authorized original two-item bundle. Isolated actual Next.js normal-login menu → assignment → response/save → refresh/reconnect → retry completion → durable records/Today passed (2 functional, answer-exposed attempts, revision 5; no provider calls; prior isolated learning tables unchanged). Read-only review findings on selection-only diagnosis and pre-exposure state were corrected. Full native checks, exact-head independent review, protected merge and backup/restore-verified personal installation remain pending. Parent #772/#883 remain open.
