@@ -17,9 +17,9 @@ import type { QfI1CandidateV1 } from "../../../question-foundry/runtime/qf-i1-ba
 
 // Output capability of this actual loader only. Cloned objects, legacy six-check
 // catalogs and the separately admitted unreviewed r3 catalog cannot claim it.
-const economicsBankSupply = new WeakMap<PrivateFirstStageCatalog, () => readonly QfI1CandidateV1[]>();
-export function reviewedEconomicsBankCandidates(catalog: PrivateFirstStageCatalog) {
-  return economicsBankSupply.get(catalog)?.() ?? null;
+const reviewedBankSupply = new WeakMap<PrivateFirstStageCatalog, () => readonly QfI1CandidateV1[]>();
+export function reviewedBankCandidates(catalog: PrivateFirstStageCatalog) {
+  return reviewedBankSupply.get(catalog)?.() ?? null;
 }
 
 export const PRIVATE_CONTENT_MAX_BYTES = 2 * 1024 * 1024;
@@ -290,8 +290,8 @@ export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIE
             : "human-reviewed-private-learning-reference", learningReferenceDisclaimer: true as const,
           ...(attributions ? { attributions: attributions.get(reference.questionId)!.feedback } : {}) });
       } });
-    if (subjectId === "economics_principles" && candidateProjections && applicabilityDigest !== null) {
-      economicsBankSupply.set(catalog, () => Object.freeze(catalog.initialReferences.map(reference => {
+    if (((subjectId === "economics_principles" && candidateProjections) || subjectId === "real_estate_principles") && applicabilityDigest !== null) {
+      reviewedBankSupply.set(catalog, () => Object.freeze(catalog.initialReferences.map(reference => {
         requireRow(reference); // Recheck exact version and all source/release expiry before each use.
         return Object.freeze({ candidateId: reference.questionId,
           candidateDigest: `sha256:${digest({ questionId: reference.questionId, questionVersion: reference.questionVersion,

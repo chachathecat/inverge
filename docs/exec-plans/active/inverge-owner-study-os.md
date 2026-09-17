@@ -1,6 +1,16 @@
 <!-- 2026-09-16 PR #945 second source correction: exact-head review identified per-item reads in paginated learner lists and an APP1 repair-skip source contract regression. Map selected page rows locally with established timestamp normalization; regression proves three queries for 230 rows and mapper parity. Preserve repair-verification skip precedence while keeping functional-test signal exclusion. Personal runtime/data/provider remain untouched pending final checks/review. -->
 # Inverge Owner Study OS
 
+## 2026-09-17 reviewed real-estate stock continuation
+
+PR #953 is merged at 53bfa38b after all nine native checks and exact-head review; the PC runs that version with fourteen personal tables and thirty-two private configuration/budget files preserved. Reuse its actual Next.js photo/PDF separation, confirmation and authenticated save/reconnect evidence; actual OCR remains unverified.
+
+Dedicated issue #954 continues the same writer under post951 clauses 7/16/18. Connect existing Foundation-validated real-estate catalogs to the same Question Foundry LEARNING_ONLY bank and canonical attempt/explanation/review/Today loop. Preserve economics identities, source-expiry checks, exact legacy CHECK upgrade, custom-constraint denial and cross-subject question-ID isolation. No additional catalog, ledger or personal activation.
+
+Related loader/bank regressions: 23 pass; typecheck passes. Actual isolated PostgreSQL/browser validation covers both subjects, durable replay/reconnect, D+1 synthetic-clock review/Today, exact legacy upgrade and unchanged stored rows. Auth/catalog/clock are explicit test ports; this is not a normal Next.js login or real learner/content acceptance. Final SQL results, latest-head native checks and independent review are required before protected squash.
+
+Actual approved stock remains zero for real estate, accounting, civil law and related law; the existing economics personal exception remains separate and human-unreviewed. Content approval and personal/remote SQL installation remain gated. No paid call, budget mutation or Production deployment. Preserve the USD 4.388969 reservations, USD 0.611031 remainder and earlier unverified Theory/Law results.
+
 ## 2026-09-17 post951 source and input continuation
 
 Same Goal and single PC writer; reuse #946/#949 actual-model evidence and #951 controlled-law acceptance/cc247ad9. The Owner's post951-next-delivery instruction preserves full scope and the post909 A/B/C exception.
