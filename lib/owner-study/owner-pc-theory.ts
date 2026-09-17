@@ -52,3 +52,7 @@ export async function generateOwnerTheoryStructure(authority: OwnerTheoryAuthori
   const development = developmentEnabled() ? await readTheoryDevelopmentApproval(budgetRoot, settings) : undefined;
   return generateOwnerTheory(budgetRoot, settings, { ...authority, ...(development ? { development } : {}) }, request);
 }
+
+export function ownerPcSecondInitialSubject() {
+  return isOwnerPcTheoryEnabled() ? (process.env.INVERGE_OWNER_PC_THEORY_DEVELOPMENT_ENABLED === "true" && process.env.INVERGE_OWNER_PC_PRACTICE_DEVELOPMENT_ENABLED === "true" ? "감정평가실무" : "감정평가이론") : undefined;
+}

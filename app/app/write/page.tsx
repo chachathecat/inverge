@@ -1,4 +1,4 @@
-import { isOwnerPcTheoryEnabled } from "@/lib/owner-study/owner-pc-theory";
+import { isOwnerPcTheoryEnabled, ownerPcSecondInitialSubject } from "@/lib/owner-study/owner-pc-theory";
 import { isTrustedRepairEnabled, trustedRepairAuthorizedSubjects } from "@/lib/review-os/trusted-repair-access";
 import { redirect } from "next/navigation";
 
@@ -35,7 +35,7 @@ export default async function ReviewOsWritePage({ searchParams }: PageProps) {
 
   const initialSubject = query?.subject !== undefined
     ? normalizeSubjectForMode(query.subject, mode)
-    : isOwnerPcTheoryEnabled() ? (process.env.INVERGE_OWNER_PC_THEORY_DEVELOPMENT_ENABLED === "true" && process.env.INVERGE_OWNER_PC_PRACTICE_DEVELOPMENT_ENABLED === "true" ? "감정평가실무" : "감정평가이론") : undefined;
+    : ownerPcSecondInitialSubject();
 
   return (
     <div

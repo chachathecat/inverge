@@ -318,6 +318,8 @@ export type ReviewQueueItemRecord = {
 };
 
 export type ReviewQueueCard = {
+  // Server read projection only; this historical marker grants no proof or mastery.
+  sameSessionRepairConfirmed?: boolean;
   queueId: string;
   itemId: string;
   examName: string;

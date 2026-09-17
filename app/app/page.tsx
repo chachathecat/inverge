@@ -1,3 +1,4 @@
+import { hasSavedSameSessionRepair } from "@/lib/review-os/capture-review-provenance";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ComponentPropsWithoutRef } from "react";
@@ -142,7 +143,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const hasOverdueQueue = queue.some((item) => isOverdueDueAt(item.dueAt));
   const homeState = resolveDailyStudyState({
     hasNoData: firstUse,
-    hasDueQueue: dailyActivity.hasDueQueue || queue.length > 0,
+    hasDueQueue: dailyActivity.hasDueQueue || queue.some(item => isOverdueDueAt(item.dueAt)),
     hasOverdueQueue: dailyActivity.completedToday ? false : dailyActivity.hasOverdueQueue || hasOverdueQueue,
     savedToday: dailyActivity.savedToday || Boolean(savedParam),
     completedToday: dailyActivity.completedToday,
@@ -316,23 +317,26 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
       : { label: "다시 풀기", href: `/problem-snap?mode=${mode}` };
   const visibleTodayPlanTasks = todayPlanTasks;
   const heroTodayPlanTasks = todayPlanTasks.slice(0, TODAY_PLAN_MAX_PRIMARY_TASKS);
-  const heroPrimaryHref = heroTodayPlanTasks[0] ? resolveTaskHref(heroTodayPlanTasks[0]) : todayPlan.hasPlan ? primaryHref : modeCaptureHref;
+  const confirmedRepairIds = new Set([...items.filter(hasSavedSameSessionRepair).map(item => item.id), ...queue.filter(item => item.sameSessionRepairConfirmed).map(item => item.itemId)]);
+  const nextRepairReview = queue.filter(item => confirmedRepairIds.has(item.itemId) && Number.isFinite(Date.parse(item.dueAt)) && !isOverdueDueAt(item.dueAt)).sort((a,b) => Date.parse(a.dueAt) - Date.parse(b.dueAt))[0];
+  const waitingForRepairReview = todayPlanTasks.length === 0 && Boolean(nextRepairReview);
+  const heroPrimaryHref = waitingForRepairReview ? secondNotesHref : heroTodayPlanTasks[0] ? resolveTaskHref(heroTodayPlanTasks[0]) : todayPlan.hasPlan ? primaryHref : modeCaptureHref;
   const missionTask = heroTodayPlanTasks[0] ?? null;
-  const missionTitle = homeState === "overdue_recovery"
+  const missionTitle = waitingForRepairReview ? "오늘 예정된 교정 복습이 없습니다." : homeState === "overdue_recovery"
     ? dailyStateCopy.overdueTitle
     : homeState === "post_completion"
       ? dailyStateCopy.completionTitle
       : missionTask?.title ?? (mode === "second" ? `답안 1개 올리고 ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan} 만들기` : "오늘 한 것 1개 올리고 계획 만들기");
-  const missionWhy = homeState === "overdue_recovery" ? dailyStateCopy.overdueReason : missionTask?.display_reason ?? missionTask?.reason ?? todayPlan.reason;
-  const missionMinutes = missionTask ? `${missionTask.estimated_minutes}분` : mode === "second" ? "18분 안팎" : "12분 안팎";
-  const missionAfter = missionTask
+  const missionWhy = waitingForRepairReview ? `교정 기록은 보존됐습니다. 다음 복습은 ${new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric" }).format(new Date(nextRepairReview.dueAt))} 예정입니다.` : homeState === "overdue_recovery" ? dailyStateCopy.overdueReason : missionTask?.display_reason ?? missionTask?.reason ?? todayPlan.reason;
+  const missionMinutes = waitingForRepairReview ? "예정일까지 대기" : missionTask ? `${missionTask.estimated_minutes}분` : mode === "second" ? "18분 안팎" : "12분 안팎";
+  const missionAfter = waitingForRepairReview ? "예정일에 교정한 연결을 다시 회상합니다." : missionTask
     ? "학습 노트에 저장되고 다음 복습 시점으로 돌아옵니다."
     : `학습 노트, ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan}, ${REVIEW_OS_LEARNER_LANGUAGE.reviewQueue}가 함께 만들어집니다.`;
   const fallbackMissionPrimaryLabel =
     homeState === "first_capture" || homeState === "overdue_recovery" || homeState === "evening_capture"
       ? homePrimaryCta
       : "답안 1개 올리기";
-  const missionPrimaryLabel = missionTask?.display_primary_cta ?? missionTask?.primary_cta.label ?? (todayPlan.hasPlan ? primaryCtaLabel : fallbackMissionPrimaryLabel);
+  const missionPrimaryLabel = waitingForRepairReview ? "저장한 교정 기록 보기" : missionTask?.display_primary_cta ?? missionTask?.primary_cta.label ?? (todayPlan.hasPlan ? primaryCtaLabel : fallbackMissionPrimaryLabel);
   const learnerLoopSummary = mode === "second"
     ? `오늘 한 것 올리기 → 학습 노트 → ${REVIEW_OS_LEARNER_LANGUAGE.todayPlan} → ${REVIEW_OS_LEARNER_LANGUAGE.reviewQueue} → ${REVIEW_OS_LEARNER_LANGUAGE.studyLedger}`
     : "오늘 한 것 올리기 → 학습 노트 → 오늘 할 일 → 복습 → 학습 기록";

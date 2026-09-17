@@ -7,6 +7,8 @@ const defaultTestFiles = [
   "tests/owner-pc-practice-development.test.mjs",
   "tests/practice-real-app-calculation.test.mjs",
   "tests/practice-review-completion.test.mjs",
+  "tests/law-app1-binding.test.mjs",
+  "tests/today-paragraph-self-rating.test.mjs",
   "tests/owner-pc-theory-development.test.mjs",
   "tests/answer-review-diagnosis-evidence.test.mjs",
   "tests/answer-review-quality-contract.test.mjs",

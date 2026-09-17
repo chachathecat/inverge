@@ -2117,6 +2117,10 @@ export function WrongAnswerCaptureForm({
         </dl>
       </section>
 
+      {mode === "second" && ownerCaptureRepairEnabled && !rewriteContext && !ownerAnalysisPanelOpen && !savedConfirmation ? <fieldset disabled={submitting} data-owner-analysis-subject>
+        <SubjectSelect mode={mode} subjectLabel="검토할 과목" subjects={config.subjects} value={form.subjectLabel} onChange={updateSubject} />
+        {!ownerCaptureRepairSubjectEnabled ? <p>이 실행에서 선택한 과목의 AI 검토는 활성화되지 않았습니다. 입력은 보존됩니다.</p> : null}
+      </fieldset> : null}
       {ownerCaptureRepairSubjectEnabled && !rewriteContext && !ownerAnalysisPanelOpen && !savedConfirmation ? <section className="space-y-2" data-owner-existing-answer-entry>
         <p>이미 쓴 답안이 있으면 문제·답안만 입력해 분석할 수 있습니다. 쟁점·목차 훈련은 선택할 수 있습니다.</p>
         <V3ActionButton type="button" onClick={() => { setExistingAnswerEntrySelected(true); setStage("second-gap"); }}>이미 쓴 답안 AI 검토</V3ActionButton>

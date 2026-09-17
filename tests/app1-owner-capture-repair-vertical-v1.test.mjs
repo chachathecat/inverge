@@ -1478,7 +1478,7 @@ test("APP1-VM-003E distinguishes substantive negative conclusions from unresolve
       repairText: lawNegative,
       repairDraft: resolvedTargetDraft({ strength: lawNegative }),
     }).state,
-    "repair_confirmed_for_this_session",
+    "guided_path_needed",
   );
 
   for (const repairText of [
@@ -2452,7 +2452,7 @@ test("APP1-VM-004A preserves multiline Theory, Law and Practice bodies without i
     });
     assert.equal(
       verification.state,
-      "repair_confirmed_for_this_session",
+      fixture.subjectLabel === "감정평가 및 보상법규" ? "guided_path_needed" : "repair_confirmed_for_this_session",
       fixture.subjectLabel,
     );
     const payload = buildApp1RepairPersistenceInput({
@@ -3115,7 +3115,7 @@ test("APP1-UI-002A exposes guided fallback after verification service failure wi
   assert.ok(verifyRepair, "missing verification request boundary");
   assert.match(
     verifyRepair,
-    /catch \(verificationError\) \{[\s\S]*?APP1_ANALYSIS_BINDING_INVALID[\s\S]*?APP1_VERIFICATION_EXPIRED[\s\S]*?returnToFreshAnalysis\(\);[\s\S]*?setVerification\(preliminary\);[\s\S]*?setVerificationReceipt\(null\);[\s\S]*?setError\(verificationError instanceof App1RequestTimeoutError \? verificationError.message : VERIFICATION_FAILURE_MESSAGE\);[\s\S]*?setPhase\("repair_verification"\);[\s\S]*?\}/u,
+    /catch \(verificationError\) \{[\s\S]*?APP1_ANALYSIS_BINDING_INVALID[\s\S]*?APP1_VERIFICATION_EXPIRED[\s\S]*?returnToFreshAnalysis\(\);[\s\S]*?setVerification\(preliminary\);[\s\S]*?setVerificationReceipt\(null\);[\s\S]*?setError\([\s\S]*?verificationError instanceof App1RequestTimeoutError \? verificationError.message : VERIFICATION_FAILURE_MESSAGE\);[\s\S]*?setPhase\("repair_verification"\);[\s\S]*?\}/u,
   );
   assert.match(
     repairLoop,

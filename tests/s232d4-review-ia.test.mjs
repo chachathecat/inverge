@@ -61,7 +61,7 @@ test("S232D.4 keeps Review queue and completion behavior unchanged", () => {
   assert.match(client, /setRecallAttemptTextByQueueId/);
   assert.match(client, /setRevealedHintByQueueId/);
   assert.match(client, /setRecallOutcomeByQueueId/);
-  assert.match(client, /disabled=\{pendingId === primaryItem\.queueId \|\| !primaryOutcome \|\| \(practiceReview && primaryRecallText\.trim\(\)\.length < 8\)\}/);
+  assert.match(client, /disabled=\{pendingId === primaryItem\.queueId \|\| !primaryOutcome \|\| \(\(practiceReview \|\| paragraphReview\) && primaryRecallText\.trim\(\)\.length < 8\)\}/);
 });
 
 test("S232D.4 does not invent unsupported V3 or authority semantics", () => {

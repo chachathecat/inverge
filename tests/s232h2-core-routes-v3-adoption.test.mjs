@@ -56,7 +56,7 @@ test("S232H.2 preserves Review queue order, local state, and completion mutation
   assert.match(reviewQueue, /fetch\(`\/api\/os\/review-queue\/\$\{queueId\}\/complete`/);
   assert.match(reviewQueue, /body: JSON\.stringify\(\{ action: selectedAction, metadata \}\)/);
   assert.match(reviewQueue, /router\.refresh\(\)/);
-  assert.match(reviewQueue, /disabled=\{pendingId === primaryItem\.queueId \|\| !primaryOutcome \|\| \(practiceReview && primaryRecallText\.trim\(\)\.length < 8\)\}/);
+  assert.match(reviewQueue, /disabled=\{pendingId === primaryItem\.queueId \|\| !primaryOutcome \|\| \(\(practiceReview \|\| paragraphReview\) && primaryRecallText\.trim\(\)\.length < 8\)\}/);
 });
 
 test("S232H.2 keeps Review reveal and self-rating on one second-round primary action", () => {

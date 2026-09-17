@@ -1,5 +1,5 @@
 import { assertSupabaseOperation, getSupabasePersistenceClient, requireSupabasePersistence } from "@/lib/supabase/persistence";
-import { readCaptureReviewProvenance, isCaptureFunctionalTest, isUnanalyzedCaptureRecord } from "./capture-review-provenance";
+import { hasSavedSameSessionRepair, readCaptureReviewProvenance, isCaptureFunctionalTest, isUnanalyzedCaptureRecord } from "./capture-review-provenance";
 import "server-only";
 
 import crypto from "node:crypto";
@@ -932,7 +932,7 @@ function makeTodayFocus(
   preferredMode?: "first" | "second",
 ): TodayFocus {
   const mode = preferredMode ?? getFocusMode(queue, recentItems);
-  const priority = buildTodayPriorityPlan(queue, mode);
+  const priority = buildTodayPriorityPlan(queue.filter(item => !item.sameSessionRepairConfirmed || Date.parse(item.dueAt) <= Date.now()), mode);
   const top = priority.queueItem;
   const topMistake = top?.mistakeType ?? "반복 실수";
   const staleCount = queue.filter(
@@ -2889,7 +2889,7 @@ export class ReviewOsService {
     }
     // Preserve compatibility with existing Practice clients while storing the actual subject action.
     if (context?.item.subjectLabel === "감정평가실무" && action === "second_paragraph_rewrite") action = "second_calculation_retry";
-    if (action === "second_calculation_retry" && (typeof metadata.rewriteParagraph !== "string" || metadata.rewriteParagraph.trim().length < 8 || !["remembered", "fuzzy", "wrong", "confident_wrong"].includes(metadata.recallOutcome ?? ""))) {
+    if ((action === "second_calculation_retry" || action === "second_paragraph_rewrite") && (typeof metadata.rewriteParagraph !== "string" || metadata.rewriteParagraph.trim().length < 8 || !["remembered", "fuzzy", "wrong", "confident_wrong"].includes(metadata.recallOutcome ?? ""))) {
       throw new ReviewOsInvalidCompletionActionError();
     }
     await reviewOsRepository.completeReviewQueueItem(userId, queueId);
@@ -2963,6 +2963,7 @@ export class ReviewOsService {
       );
     }
     const { rewriteParagraph: _rewriteParagraph, ...safeMetadata } = metadata;
+    delete safeMetadata.retrievalSentence;
     await reviewOsRepository.logUsageEvent(
       userId,
       "review_complete",
@@ -3063,7 +3064,21 @@ export class ReviewOsService {
     const recentItems = targetExamName
       ? rawRecentItems.filter((item) => item.examName === targetExamName)
       : rawRecentItems;
-    const visibleQueue = queue.filter((item) => !isSmokeSeedQueueItem(item));
+    const visibleCards = queue.filter((item) => !isSmokeSeedQueueItem(item));
+    const sourceIds = [...new Set(visibleCards.map(item => item.itemId))];
+    const confirmedSourceIds = new Set<string>();
+    if (sourceIds.length > 0) {
+      requireSupabasePersistence(userId);
+      const client = getSupabasePersistenceClient();
+      if (!client) throw new Error("supabase-persistence-unavailable");
+      const sources = await client.from("wrong_answer_items").select("id,raw_payload")
+        .eq("user_id", userId).in("id", sourceIds);
+      assertSupabaseOperation("review-os.todayQueuedRepairSources", sources);
+      for (const source of sources.data ?? []) {
+        if (hasSavedSameSessionRepair({ rawPayload: source.raw_payload })) confirmedSourceIds.add(source.id);
+      }
+    }
+    const visibleQueue = visibleCards.map(item => ({ ...item, sameSessionRepairConfirmed: confirmedSourceIds.has(item.itemId) }));
     const visibleRecentItems = recentItems.filter(
       (item) => !isSmokeSeedItem(item) && !isCaptureFunctionalTest(item.rawPayload),
     );
@@ -3420,7 +3435,7 @@ export class ReviewOsService {
         event.eventName === "review_complete" &&
         isSameKstDay(event.createdAt, now),
     );
-    const hasDueQueue = modeQueue.length > 0;
+    const hasDueQueue = modeQueue.some(item => Date.parse(item.dueAt) <= now.getTime());
     const hasOverdueQueue = modeQueue.some((item) =>
       isOverdueDueAt(item.dueAt, Date.parse(nowIso)),
     );

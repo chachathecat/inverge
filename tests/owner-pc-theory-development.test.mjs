@@ -79,3 +79,17 @@ test("development status keeps shared spend but never links a personal source fr
   assert.equal(shared.caseId,personalId,"display projection must not rewrite the personal binding");
  }
 });
+
+test("actual Owner subject selector keeps personal Theory, explicit Practice development and disabled fallback separate",async()=>{
+ const {default:ts}=await import("typescript"),{runInNewContext}=await import("node:vm");
+ const source=await readFile(new URL("../lib/owner-study/owner-pc-theory.ts",import.meta.url),"utf8");
+ const compiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,esModuleInterop:true}}).outputText;
+ const output={exports:{}},env={};
+ const modules={"server-only":{},"node:path":path,"node:fs/promises":{},"./owner-pc-theory-budget.mjs":{}};
+ runInNewContext(compiled,{module:output,exports:output.exports,require:name=>{assert.ok(Object.hasOwn(modules,name));return modules[name];},process:{platform:"win32",env}});
+ assert.equal(output.exports.ownerPcSecondInitialSubject(),undefined);
+ env.INVERGE_OWNER_PC_THEORY_ENABLED="true";assert.equal(output.exports.ownerPcSecondInitialSubject(),"감정평가이론");
+ env.INVERGE_OWNER_PC_PRACTICE_DEVELOPMENT_ENABLED="true";assert.equal(output.exports.ownerPcSecondInitialSubject(),"감정평가이론");
+ env.INVERGE_OWNER_PC_THEORY_DEVELOPMENT_ENABLED="true";assert.equal(output.exports.ownerPcSecondInitialSubject(),"감정평가실무");
+ env.INVERGE_OWNER_PC_THEORY_ENABLED="false";assert.equal(output.exports.ownerPcSecondInitialSubject(),undefined);
+});

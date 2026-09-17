@@ -27,7 +27,7 @@ test("deferred reference is a completed choice, never completed comparison", () 
 test("write entry consumes the task subject before Owner or profile fallback",async()=>{
   for(const ownerTheoryEnabled of [false,true]){
     const app=productionHarness(memoryTransport().execute,{overrides:({session})=>({
-      "@/lib/owner-study/owner-pc-theory":{isOwnerPcTheoryEnabled:()=>ownerTheoryEnabled},
+      "@/lib/owner-study/owner-pc-theory":{isOwnerPcTheoryEnabled:()=>ownerTheoryEnabled,ownerPcSecondInitialSubject:()=>ownerTheoryEnabled?"감정평가이론":undefined},
       "@/lib/review-os/server":{buildReviewOsReturnTo:x=>x,getReviewOsServerContext:async()=>({session,access:{status:"allowed"},profile:{preferredSubjects:["감정평가 및 보상법규"]}})},
       "next/navigation":{redirect(){throw new Error("unexpected redirect")}},
     })});
@@ -44,7 +44,7 @@ test("write entry consumes the task subject before Owner or profile fallback",as
 test("Owner entry page props and controlled hydration preserve an existing Theory draft through source-only storage", {timeout:120000}, async () => {
   const store=memoryTransport(); Object.assign(store.tables,{study_profiles:[],action_seeds:[],study_logs:[]});
   const app=productionHarness(store.execute,{env:{ALPHA_ADMIN_EMAILS:"owner@localhost.test",WCV_C2R_C_T_OWNER_EMAILS:"owner@localhost.test"},overrides:({load,session})=>({
-    "@/lib/owner-study/owner-pc-theory":{isOwnerPcTheoryEnabled:()=>true},
+    "@/lib/owner-study/owner-pc-theory":{isOwnerPcTheoryEnabled:()=>true,ownerPcSecondInitialSubject:()=>"감정평가이론"},
     "@/lib/review-os/server":{buildReviewOsReturnTo:x=>x,getReviewOsServerContext:async()=>({session,access:load("lib/review-os/access-result").buildReviewOsAccessResult(await load("lib/review-os/service").reviewOsService.ensureAccess(OWNER_ID,session.email)),profile:null})},
     "next/navigation":{useRouter:()=>({}),redirect(){throw new Error("unexpected redirect")},notFound(){throw new Error("unexpected notFound")}},
     "next/link":({children,href,...props})=>React.createElement("a",{...props,href},children),

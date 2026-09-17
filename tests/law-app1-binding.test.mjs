@@ -1,0 +1,121 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+import {randomUUID} from "node:crypto";
+import {productionHarness,memoryTransport,seedRows,OWNER_ID,SOURCE_ID} from "./fixtures/app1-production-persistence-harness.mjs";
+const data=JSON.parse(readFileSync(new URL("./fixtures/law-development-cases.json",import.meta.url)));
+async function fixture(){
+ const rows=seedRows();Object.assign(rows.wrong_answer_items[0],{subject_label:"감정평가 및 보상법규",raw_question_text:data.question,raw_answer_text:data.weak});
+ Object.assign(rows.wrong_answer_items[0].raw_payload,{created_from_capture:true});
+ rows.wrong_answer_items[0].raw_payload.user_confirmed_fields.capture_review_provenance={version:"capture_review_provenance.v1",diagnosis:"not_analyzed",learningMaterial:"learner_input",referenceComparison:"not_started"};
+ const store=memoryTransport(rows),app=productionHarness(store.execute,{env:{WCV_C2R_C_L_LAW_ENABLED:"true",WCV_C2R_C_L_OWNER_EMAILS:"synthetic-owner@example.invalid"}});
+ const detail=await app.repository.getWrongAnswerDetail(OWNER_ID,SOURCE_ID);
+ const analysis=app.authority.createApp1AnalysisAuthority({userId:OWNER_ID,detail,draft:data.responses.weak});
+ const args={userId:OWNER_ID,detail,...analysis,repairText:data.corrected,repairDraft:data.responses.corrected,lawBindingInput:data.binding,persistenceOperationId:randomUUID(),persistenceWorkRevisionId:randomUUID()};
+ return {store,app,detail,analysis,args};
+}
+test("Law rejects arbitrary source, missing or mismatched structured applicability before confirmation",async()=>{
+ const f=await fixture();
+ for(const delta of [undefined,{}, {...data.binding,version:"2025-01-01"},{...data.binding,locator:"Article 11"},{...data.binding,effectiveFrom:"2026-08-16"},{...data.binding,applicableAsOf:"2025-08-15"},{...data.binding,effectiveTo:"2026-08-01"},{...data.binding,currentness:"미확인"},{...data.binding,blockerCount:"1"},{...data.binding,verified:true}])
+  assert.throws(()=>f.app.authority.createApp1RepairVerificationAuthority({...f.args,lawBindingInput:delta}));
+ assert.throws(()=>f.app.authority.createApp1AnalysisAuthority({userId:OWNER_ID,detail:{...f.detail,item:{...f.detail.item,rawQuestionText:data.question+" 다른 사안"}},draft:data.responses.weak}));
+});
+test("Law source-bound synthetic confirmation persists once and is readable without free-text proof",async()=>{
+ const f=await fixture();
+ const result=f.app.authority.createApp1RepairVerificationAuthority(f.args);
+ assert.equal(result.verification.state,"repair_confirmed_for_this_session");assert.equal(result.verification.masteryCreated,false);
+ const command={commandVersion:f.app.authority.APP1_PERSISTENCE_COMMAND_VERSION,sourceItemId:SOURCE_ID,...f.analysis,repairText:data.corrected,lawBindingInput:data.binding,persistenceOperationId:f.args.persistenceOperationId,persistenceWorkRevisionId:f.args.persistenceWorkRevisionId,verificationReceipt:result.verificationReceipt};
+ const saved=await f.app.save(command);assert.equal(saved.status,200,JSON.stringify(saved.body));
+ const replay=await f.app.save(command);assert.equal(replay.status,200,JSON.stringify(replay.body));
+ const repairs=f.store.tables.wrong_answer_items.filter(x=>x.id!==SOURCE_ID);assert.equal(repairs.length,1);
+ const reread=await f.app.repository.getWrongAnswerDetail(OWNER_ID,repairs[0].id);assert.equal(reread.item.rawAnswerText,data.corrected);
+ assert.match(reread.item.rawPayload.aiDraft.comparisonPoint,/합성 제10조.*실제 법령.*미검증/);
+ assert.equal(reread.item.rawPayload.user_confirmed_fields.app1_law_binding,undefined);
+ assert.ok(!JSON.stringify(f.store.tables.usage_events).includes(data.corrected));
+ await assert.rejects(async()=>f.app.authority.authorizeApp1PersistenceCommand({userId:OWNER_ID,detail:f.detail,command:{...command,lawBindingInput:{...data.binding,applicableAsOf:"2026-08-16"}}}));
+ const wrongBody=f.app.authority.createApp1RepairVerificationAuthority({...f.args,repairText:data.weak,repairDraft:{...data.responses.corrected,answerEvidenceQuote:"합성 법령"}});assert.equal(wrongBody.verificationReceipt,null);
+ const noteModule=f.app.load("lib/review-os/study-note");
+ const note=noteModule.buildNotebookPreview(reread.item);assert.match(note.noteLabel,/실제 법률 미검증/);
+ const comparison=noteModule.buildRewriteComparisonNote(reread,noteModule.buildDetailStudyNote(reread),f.detail);
+ assert.match(comparison.remainingNextGap,/합성 제10조.*실제 법령.*미검증/);
+ assert.match(comparison.remainingNextGap,/독립 복습·숙달은 확인하지 않았습니다/);
+ const service=f.app.load("lib/review-os/service").reviewOsService;
+ const savedQueue=await f.app.repository.listReviewQueue(OWNER_ID,100);
+ await service.completeReview(OWNER_ID,"synthetic-owner@example.invalid",savedQueue[0].queueId,"second_paragraph_rewrite",{rewriteParagraph:"합성 법령의 버전과 적용일을 다시 대조한 문단이다.",recallOutcome:"fuzzy"});
+ const scheduled=await f.app.repository.listReviewQueue(OWNER_ID,100);
+ const buildToday=f.app.load("lib/review-os/today-plan-engine").buildTodayPlanTasks;
+ const due=Date.parse(scheduled[0].dueAt);
+ const sourceAndRepair=[f.detail.item,reread.item];
+ assert.deepEqual(buildToday({mode:"second",queue:scheduled,items:sourceAndRepair,now:new Date(due-1000)}),[],"unanalyzed original plus future confirmed repair must not create a current learning task");
+ const withOriginalDue=buildToday({mode:"second",queue:scheduled,items:sourceAndRepair,now:new Date(due+1)});
+ assert.equal(withOriginalDue.length,1);assert.equal(withOriginalDue[0].itemId,reread.item.id);
+ const functional={...f.detail.item,rawPayload:{...f.detail.item.rawPayload,user_confirmed_fields:{...f.detail.item.rawPayload.user_confirmed_fields,capture_review_provenance:{version:"capture_review_provenance.v1",diagnosis:"self_assessment",learningMaterial:"ai_example_functional_test",referenceComparison:"deferred"}}}};
+ assert.deepEqual(buildToday({mode:"second",queue:[],items:[functional],now:new Date(due)}),[]);
+ assert.deepEqual(buildToday({mode:"second",queue:scheduled,items:[reread.item],now:new Date(due-1000)}),[],"confirmed repair must not recreate today's task before its saved schedule");
+ const dueTasks=buildToday({mode:"second",queue:scheduled,items:[reread.item],now:new Date(due+1)});
+ assert.equal(dueTasks.length,1);assert.equal(dueTasks[0].queueId,scheduled[0].queueId);
+ assert.match(dueTasks[0].display_reason,/교정한 연결.*회상/);assert.doesNotMatch(dueTasks[0].display_reason,/흔들린|미보완/);
+ f.store.tables.action_seeds=[];
+ const callsBefore=f.app.calls.length;
+ const sourceProjection=await service.getTodayFocus(OWNER_ID,"synthetic-owner@example.invalid","second");
+ const sourceQueries=f.app.calls.slice(callsBefore).filter(q=>q.table==="wrong_answer_items"&&q.columns==="id,raw_payload");
+ assert.equal(sourceQueries.length,1);
+ assert.ok(sourceQueries[0].filters.some(([field,op,value])=>field==="user_id"&&op==="eq"&&value===OWNER_ID));
+ assert.deepEqual(sourceQueries[0].filters.find(([field,op])=>field==="id"&&op==="in")[2],[reread.item.id]);
+ assert.equal(sourceProjection.queue[0].sameSessionRepairConfirmed,true);
+ assert.equal(sourceProjection.sourceQueueId,null);
+ assert.deepEqual(buildToday({mode:"second",queue:sourceProjection.queue,items:[],now:new Date(due-1000)}),[],"queue source projection survives an empty or truncated recent-items list");
+ assert.equal(buildToday({mode:"second",queue:sourceProjection.queue,items:[],now:new Date(due+1)}).length,1);
+ const another={...scheduled[0],itemId:"unrelated-item",queueId:"unrelated-queue",dueAt:new Date(due-2000).toISOString()};
+ const mixed=buildToday({mode:"second",queue:[...scheduled,another],items:sourceAndRepair,now:new Date(due-1000)});
+ assert.equal(mixed.length,1);assert.equal(mixed[0].queueId,"unrelated-queue");
+ const noEvidence=f.app.authority.createApp1RepairVerificationAuthority({...f.args,repairDraft:{...data.responses.corrected,answerEvidenceQuote:"존재하지 않는 문장"}});assert.equal(noEvidence.verificationReceipt,null);
+});
+
+test("Law rejects contradictory corrected prose, stale registry and forged auxiliary fields",async()=>{
+ const f=await fixture();
+ for(const body of [data.corrected.replace("효력이 있고","효력이 없고"),data.corrected.replace("근거는 0개이다","근거는 0개가 아니라 2개이다"),data.corrected+" 단, 효력이 없다.",data.weak,data.corrected.replaceAll("2026-08-15","2026-08-16"),data.corrected.replace("Article 10","Article 11"),data.corrected.replace("적용 가능","적용 불가"),data.corrected.replace("근거는 0개","근거는 1개"),data.corrected+" 또한 2025-08-15에 적용 가능하다."]){
+  const result=f.app.authority.createApp1RepairVerificationAuthority({...f.args,repairText:body,repairDraft:{...data.responses.corrected,answerEvidenceQuote:body}});
+  assert.equal(result.verificationReceipt,null,body);
+ }
+ const sourceBindingModule=f.app.load("lib/review-os/trusted-repair-source-binding");
+ const resolve=sourceBindingModule.resolveTrustedRepairSourceBinding;
+ sourceBindingModule.resolveTrustedRepairSourceBinding=(...args)=>({...resolve(...args),sourceStatus:"UNKNOWN"});
+ assert.throws(()=>f.app.authority.createApp1RepairVerificationAuthority(f.args));
+});
+test("unbound Law generic analysis is denied before any provider request",async()=>{
+ const f=await fixture();let called=0;
+ const provider=f.app.load("lib/evaluate/gemini");
+ provider.structureAnswerReviewWithGemini=async()=>{called++;throw Error("provider_must_not_run_for_unbound_law");};
+ const route=f.app.load("app/api/answer-review/structure/route");
+ const form=new FormData();form.set("subject","감정평가 및 보상법규");form.set("examMode","second");form.set("questionText",data.question);form.set("answerText",data.weak);
+ const response=await route.POST(new Request("http://localhost/api/answer-review/structure",{method:"POST",body:form}));
+ assert.equal(response.status,403);assert.equal((await response.json()).errorCode,"APP1_LAW_SOURCE_UNAVAILABLE");assert.equal(called,0);
+});
+
+test("Law client fields carry no fixture bank and analysis cannot enrich with stored references",()=>{
+ const fields=readFileSync(new URL("../lib/owner-study/app1-law-binding.ts",import.meta.url),"utf8");
+ assert.ok(!fields.includes("trusted-repair-fixtures"));
+ const route=readFileSync(new URL("../app/api/answer-review/structure/route.ts",import.meta.url),"utf8");
+ assert.ok(route.includes('if (subject === "감정평가 및 보상법규") referenceText = "";'));
+ assert.ok(route.includes('ownerTheoryAuthority || app1Detail?.item.subjectLabel === "감정평가 및 보상법규"'));
+});
+
+test("Today reads thirty queued correction markers in one tenant-scoped batch and fails closed on read errors",async()=>{
+ const f=await fixture();const source=f.store.tables.wrong_answer_items[0];
+ source.raw_payload={rewrite_completed:true,rewrite_source_item_id:"original",user_confirmed_fields:{app1_contract_version:"OwnerCaptureToRepairVerticalV1",app1_source_item_id:"original",app1_verification_state:"repair_confirmed_for_this_session",app1_same_session_only:true,app1_mastery_created:false,app1_transfer_created:false}};
+ for(let i=0;i<30;i++){
+  const id="batch-source-"+i;
+  f.store.tables.wrong_answer_items.push({...structuredClone(source),id});
+  f.store.tables.review_queue_items.push({id:"batch-queue-"+i,user_id:OWNER_ID,source_submission_id:id,exam_id:"wrong_answer_os",stage:"alpha",source_kind:"wrong_answer",status:"pending",priority_score:1,raw_payload:{dueAt:"2026-09-19T07:18:58.795Z"},derived_payload:{},created_at:"2026-09-06T10:00:00.000Z"});
+ }
+ f.store.tables.action_seeds=[];
+ const start=f.app.calls.length;
+ const focus=await f.app.load("lib/review-os/service").reviewOsService.getTodayFocus(OWNER_ID,"synthetic-owner@example.invalid","second");
+ assert.equal(focus.queue.length,30);assert.ok(focus.queue.every(q=>q.sameSessionRepairConfirmed));
+ const queries=f.app.calls.slice(start).filter(q=>q.table==="wrong_answer_items"&&q.columns==="id,raw_payload");assert.equal(queries.length,1);
+ assert.ok(queries[0].filters.some(([k,op,v])=>k==="user_id"&&op==="eq"&&v===OWNER_ID));
+ assert.equal(queries[0].filters.find(([k,op])=>k==="id"&&op==="in")[2].length,30);
+ const broken=productionHarness(async q=>q.table==="wrong_answer_items"&&q.columns==="id,raw_payload"?{data:null,error:{code:"synthetic-read-failure"}}:f.store.execute(q));
+ await assert.rejects(()=>broken.load("lib/review-os/service").reviewOsService.getTodayFocus(OWNER_ID,"synthetic-owner@example.invalid","second"),/todayQueuedRepairSources/);
+});
