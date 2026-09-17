@@ -1,6 +1,7 @@
 import "server-only";
 
 import crypto from "node:crypto";
+import { app1LawSourceSnapshot } from "./app1-law-authority";
 
 import type {
   App1PrimaryGap,
@@ -267,6 +268,7 @@ export function app1SourceRevision(detail: WrongAnswerDetail) {
       coreFormula: item.coreFormula ?? null,
       referenceStructure: item.referenceStructure ?? null,
       sourceConfirmation: exactConfirmedSourceFields(detail),
+      ...(item.subjectLabel === "감정평가 및 보상법규" ? { lawSourceBinding: app1LawSourceSnapshot(detail) } : {}),
     }),
   );
 }

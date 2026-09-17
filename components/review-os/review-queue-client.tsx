@@ -56,10 +56,10 @@ export function ReviewQueueClient({
     const metadata = buildReviewCompletionMetadata(
       recallAttemptTextByQueueId[queueId] ?? "",
       recallOutcomeByQueueId[queueId] ?? null,
-      selectedAction === "second_calculation_retry",
+      item.examName === "감정평가사 2차",
     );
-    if (selectedAction === "second_calculation_retry" && (!metadata.rewriteParagraph || metadata.rewriteParagraph.length < 8)) {
-      setInlineErrorByQueueId((prev) => ({ ...prev, [queueId]: "산식·금액 단위·반올림을 포함한 재계산 내용을 먼저 적어 주세요." }));
+    if (item.examName === "감정평가사 2차" && (!metadata.rewriteParagraph || metadata.rewriteParagraph.length < 8 || !metadata.recallOutcome)) {
+      setInlineErrorByQueueId((prev) => ({ ...prev, [queueId]: selectedAction === "second_calculation_retry" ? "산식·금액 단위·반올림을 포함한 재계산 내용과 자기평가를 먼저 남겨 주세요." : "직접 다시 쓴 문단과 자기평가를 먼저 남겨 주세요." }));
       return;
     }
     setInlineErrorByQueueId((prev) => ({ ...prev, [queueId]: "" }));
@@ -129,6 +129,7 @@ export function ReviewQueueClient({
 
   const primaryItem = items.find((item) => item.queueId === selectedQueueId) ?? items[0]!;
   const practiceReview = primaryItem.examName === "감정평가사 2차" && primaryItem.subjectLabel === "감정평가실무";
+  const paragraphReview = primaryItem.examName === "감정평가사 2차" && !practiceReview;
   const candidateItems = items.filter((item) => item.queueId !== primaryItem.queueId);
   const visibleCandidateItems = candidateItems.slice(0, 3);
   const hiddenCandidateCount = Math.max(candidateItems.length - visibleCandidateItems.length, 0);
@@ -203,6 +204,7 @@ export function ReviewQueueClient({
               {practiceReview ? "산식·단위·반올림을 직접 재계산하기" : mode === "second" ? "문단/기준 먼저 떠올리기" : "먼저 떠올리기"}
             </p>
             <p className={mode === "second" ? "v3-type-body ko-keep mt-1 text-[var(--color-text-primary)]" : "mt-1 text-sm leading-7 text-[color:var(--foreground-strong)]"}>{retrievalPrompt}</p>
+            {primaryItem.subjectLabel === "감정평가 및 보상법규" ? <p className="v3-type-caption">법규 복습 작성은 독립 답안의 법적 정확성이나 숙달을 검증하지 않습니다. 합성 제10조 기록은 합성 출처·적용일 확인에만 한정됩니다.</p> : null}
             <textarea
               value={primaryRecallText}
               onChange={(event) =>
@@ -352,7 +354,7 @@ export function ReviewQueueClient({
                   mode={mode}
                   type="button"
                   onClick={() => void complete(primaryItem.queueId)}
-                  disabled={pendingId === primaryItem.queueId || !primaryOutcome || (practiceReview && primaryRecallText.trim().length < 8)}
+                  disabled={pendingId === primaryItem.queueId || !primaryOutcome || ((practiceReview || paragraphReview) && primaryRecallText.trim().length < 8)}
                   className="w-full sm:w-auto"
                   aria-label={`복습 완료: ${primaryItem.problemTitle}`}
                   data-s232d4-review-completion
@@ -410,12 +412,12 @@ export function ReviewQueueClient({
                     tone="quiet"
                     legacyVariant="ghost"
                     type="button"
-                    onClick={() => item.subjectLabel === "감정평가실무" ? setSelectedQueueId(item.queueId) : void complete(item.queueId)}
+                    onClick={() => setSelectedQueueId(item.queueId)}
                     disabled={pendingId === item.queueId}
                     className={mode === "second" ? "min-h-11 px-3 text-xs" : "h-9 px-3 text-xs"}
-                    aria-label={`${item.subjectLabel === "감정평가실무" ? "재계산하기" : "복습 완료"}: ${item.problemTitle}`}
+                    aria-label={`${item.subjectLabel === "감정평가실무" ? "재계산하기" : "직접 복습하기"}: ${item.problemTitle}`}
                   >
-                    {pendingId === item.queueId ? "처리 중" : item.subjectLabel === "감정평가실무" ? "재계산하기" : "복습 완료"}
+                    {pendingId === item.queueId ? "처리 중" : item.subjectLabel === "감정평가실무" ? "재계산하기" : "직접 복습하기"}
                   </QueueActionButton>
                 </div>
                 {inlineErrorByQueueId[item.queueId] ? (
@@ -435,10 +437,10 @@ export function ReviewQueueClient({
   );
 }
 
-function buildReviewCompletionMetadata(recallAttemptText: string, recallOutcome: RecallOutcome | null, practice = false): ReviewCompletionMetadata {
+function buildReviewCompletionMetadata(recallAttemptText: string, recallOutcome: RecallOutcome | null, paragraphOrCalculation = false): ReviewCompletionMetadata {
   const retrievalSentence = recallAttemptText.trim();
   return {
-    ...(retrievalSentence ? practice ? { rewriteParagraph: retrievalSentence } : { retrievalSentence } : {}),
+    ...(retrievalSentence ? paragraphOrCalculation ? { rewriteParagraph: retrievalSentence } : { retrievalSentence } : {}),
     ...(recallOutcome
       ? {
           recallOutcome,

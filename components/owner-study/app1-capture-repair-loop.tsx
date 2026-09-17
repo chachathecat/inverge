@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { APP1_LAW_FIELDS, APP1_LAW_SUBJECT, emptyApp1LawBinding, type App1LawBindingInput } from "@/lib/owner-study/app1-law-binding";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -152,6 +153,7 @@ async function requestStructure(
   failureMessage: string,
   ownerTheoryMode: boolean,
   authority?: Readonly<{
+    lawBindingInput?: App1LawBindingInput;
     primaryGap: App1PrimaryGap;
     analysisBinding: string;
     persistenceOperationId: string;
@@ -171,6 +173,7 @@ async function requestStructure(
   formData.set("sourceItemId", detail.item.id);
   if (requestPurpose === "repair_verification" && authority) {
     formData.set("primaryGap", JSON.stringify(authority.primaryGap));
+    if (authority.lawBindingInput) formData.set("lawBindingInput", JSON.stringify(authority.lawBindingInput));
     formData.set("analysisBinding", authority.analysisBinding);
     formData.set(
       "persistenceOperationId",
@@ -231,6 +234,7 @@ export function App1CaptureRepairLoop({
   const [diagnosis, setDiagnosis] = useState<AnswerReviewStructureDraft | null>(null);
   const [gap, setGap] = useState<App1PrimaryGap | null>(null);
   const [repairText, setRepairText] = useState("");
+  const [lawBindingInput, setLawBindingInput] = useState<App1LawBindingInput>(emptyApp1LawBinding);
   const [verification, setVerification] =
     useState<App1RepairVerification | null>(null);
   const [analysisBinding, setAnalysisBinding] = useState<string | null>(null);
@@ -277,6 +281,7 @@ export function App1CaptureRepairLoop({
         catch { setError("이 브라우저의 이전 초안을 읽지 못했습니다. 저장된 원문은 유지됩니다."); }
         setDiagnosis(null);
         setRepairText(saved?.repairText ?? "");
+        setLawBindingInput(saved?.lawBindingInput ?? emptyApp1LawBinding());
         setGap(null); setAnalysisBinding(null); setVerification(null); setVerificationReceipt(null);
         if (saved?.analysisBinding && saved.gap) {
           const body = new FormData();
@@ -322,7 +327,7 @@ export function App1CaptureRepairLoop({
       if (["completed", "saved_without_queue", "saved_review_already_completed"].includes(phase)) {
         window.sessionStorage.removeItem(app1ResumeDraftKey(ownerScope, itemId));
       } else {
-        writeApp1ResumeDraft(window.sessionStorage, ownerScope, itemId, { repairText, gap, analysisBinding });
+        writeApp1ResumeDraft(window.sessionStorage, ownerScope, itemId, { repairText, gap, analysisBinding, ...(detail.item.subjectLabel === APP1_LAW_SUBJECT ? { lawBindingInput } : {}) });
       }
     }
     catch {
@@ -330,7 +335,7 @@ export function App1CaptureRepairLoop({
       const timer = window.setTimeout(() => setError("이 브라우저에서 교정 초안을 보존하지 못했습니다. 화면을 닫기 전에 입력을 복사해 주세요."), 0);
       return () => window.clearTimeout(timer);
     }
-  }, [analysisBinding, detail, gap, itemId, ownerScope, phase, repairText]);
+  }, [analysisBinding, detail, gap, itemId, ownerScope, phase, repairText, lawBindingInput]);
 
   useEffect(() => {
     if (phase === "loading") return;
@@ -404,7 +409,7 @@ export function App1CaptureRepairLoop({
         enterAuthorityRequired();
         return;
       }
-      setError(analysisError instanceof App1RequestTimeoutError ? analysisError.message : ANALYSIS_FAILURE_MESSAGE);
+      setError(analysisError instanceof App1StructureRequestError && analysisError.errorCode === "APP1_LAW_SOURCE_UNAVAILABLE" ? "현재 법규 검토는 기존 합성 제10조 문제만 지원합니다. 실제 법령 출처·적용일을 확인하지 않은 자료는 분석하지 않으며 입력은 보존합니다." : analysisError instanceof App1RequestTimeoutError ? analysisError.message : ANALYSIS_FAILURE_MESSAGE);
       setPhase("structure_confirmation");
     }
   }
@@ -452,7 +457,7 @@ export function App1CaptureRepairLoop({
     setError(null);
     try {
       const workFingerprint = await sha256Text(
-        `${ownerScope}\u0000${detail.item.id}\u0000${analysisBinding}\u0000${gap.gap}\u0000${canonicalRepair}`,
+        `${ownerScope}\u0000${detail.item.id}\u0000${analysisBinding}\u0000${gap.gap}\u0000${canonicalRepair}\u0000${detail.item.subjectLabel === APP1_LAW_SUBJECT ? JSON.stringify(lawBindingInput) : ""}`,
       );
       const pending = resolvePendingCaptureSaveOperation(
         pendingSaveRef.current,
@@ -466,6 +471,7 @@ export function App1CaptureRepairLoop({
         VERIFICATION_FAILURE_MESSAGE,
         ownerTheoryMode,
         {
+          ...(detail.item.subjectLabel === APP1_LAW_SUBJECT ? { lawBindingInput } : {}),
           primaryGap: gap,
           analysisBinding,
           persistenceOperationId: pending.binding.operationId,
@@ -505,7 +511,7 @@ export function App1CaptureRepairLoop({
       setVerification(preliminary);
       setVerificationReceipt(null);
       pendingSaveRef.current = null;
-      setError(verificationError instanceof App1RequestTimeoutError ? verificationError.message : VERIFICATION_FAILURE_MESSAGE);
+      setError(verificationError instanceof App1StructureRequestError && verificationError.errorCode === "APP1_LAW_BINDING_REQUIRED" ? "합성 출처·버전·조문·효력기간·적용일·차단 근거 입력을 확인해 주세요. AI 재호출 전 단계에서 보류했습니다." : verificationError instanceof App1RequestTimeoutError ? verificationError.message : VERIFICATION_FAILURE_MESSAGE);
       setPhase("repair_verification");
     }
   }
@@ -570,6 +576,7 @@ export function App1CaptureRepairLoop({
         return;
       }
       const body = {
+        ...(detail.item.subjectLabel === APP1_LAW_SUBJECT ? { lawBindingInput } : {}),
         commandVersion: "App1VerifiedRepairPersistenceCommandV1",
         sourceItemId: detail.item.id,
         primaryGap: gap,
@@ -884,6 +891,14 @@ export function App1CaptureRepairLoop({
           <p id="app1-repair-help" className="v3-type-compact text-[var(--color-text-secondary)]">
             AI가 완성 답안을 자동 입력하지 않습니다. 교정 초안은 이 브라우저 탭에 임시 보관되어 새로고침 뒤에도 이어 쓸 수 있습니다. 계정의 학습 기록에는 결과 저장 버튼을 눌러야 저장됩니다. 공용 기기에서는 입력칸을 비운 뒤 탭을 닫아 주세요.
           </p>
+          {detail?.item.subjectLabel === APP1_LAW_SUBJECT ? <fieldset className="space-y-3" data-app1-law-binding>
+            <legend className="v3-type-label-strong">합성 문제의 출처·적용일 직접 확인</legend>
+            <p>기존 합성 제10조 사례만 지원합니다. 실제 법령의 정확성·현재성·포섭은 미검증입니다. 문제에서 버전과 적용일을 찾아 직접 적어 주세요.</p>
+            {APP1_LAW_FIELDS.map(([key, label]) => <label key={key} className="block">{label}
+              <input className="block w-full rounded border p-2" aria-label={label} value={lawBindingInput[key]} maxLength={80}
+                onChange={event => { setLawBindingInput(previous => ({...previous, [key]:event.target.value})); setVerificationReceipt(null); pendingSaveRef.current = null; }} />
+            </label>)}
+          </fieldset> : null}
           <div className="flex flex-col gap-2 sm:flex-row">
             <V3ActionButton type="button" onClick={() => void verifyRepair()} disabled={!canonicalizeApp1RepairBody(repairText)} data-app1-verify-repair>
               복구 확인

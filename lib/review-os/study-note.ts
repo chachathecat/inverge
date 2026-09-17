@@ -92,6 +92,7 @@ export function buildNotebookPreview(item: WrongAnswerItemRecord, tag?: WrongAns
     summaryLine: "입력 보관 · 비교·검증·학습성과 미생성", notebookLine: "개인 감점 진단이나 검증된 학습신호가 아닙니다.",
   };
   const sameSessionRepairConfirmed = isSecond && hasSavedSameSessionRepair(item);
+  const lawScope = getConfirmedFieldString(item.rawPayload, "app1_law_scope") === "synthetic_applicability_only_v1";
   const weakPoint = compact(
     getDraftString(item.rawPayload, isSecond ? "missingIssue" : "comparisonPoint") ??
       item.userReasonText ??
@@ -131,14 +132,14 @@ export function buildNotebookPreview(item: WrongAnswerItemRecord, tag?: WrongAns
     coreLine,
     nextAction,
     nextReviewDate: sameSessionRepairConfirmed ? "복습 큐에서 일정 확인" : getNextReviewDate(item.rawPayload),
-    noteLabel: sameSessionRepairConfirmed ? "같은 세션 교정 확인" : isSecond ? "교정노트" : "오답노트",
+    noteLabel: lawScope ? "합성 법규 적용일 확인 · 실제 법률 미검증" : sameSessionRepairConfirmed ? "같은 세션 교정 확인" : isSecond ? "교정노트" : "오답노트",
     summaryLine: sameSessionRepairConfirmed
       ? "AI 미검토 학습보조 · 요청한 연결 1개를 같은 세션에서 확인했습니다. 숙달이나 독립 복습 성과를 판정하는 결과가 아닙니다."
       : isSecond
       ? "답안에서 빠진 논점과 다음 rewrite 지시를 한 장으로 정리했습니다."
       : "오답 원인과 다음 복습 기준을 한 장으로 정리했습니다.",
     notebookLine: sameSessionRepairConfirmed
-      ? "교정 전 간극을 복습 대상으로 보존했습니다. 현재 남은 간극이나 숙달을 새로 판정한 결과가 아닙니다."
+      ? (lawScope ? "합성 제10조의 출처·버전·적용일만 확인했습니다. 실제 법령의 정확성·현재성·포섭은 미검증입니다." : "교정 전 간극을 복습 대상으로 보존했습니다. 현재 남은 간극이나 숙달을 새로 판정한 결과가 아닙니다.")
       : isSecond
       ? `다음 답안에서는 ${weakPoint}을 먼저 고정합니다.`
       : `다음 복습에서는 ${weakPoint}을 먼저 확인합니다.`,

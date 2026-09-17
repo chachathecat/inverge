@@ -1670,6 +1670,9 @@ export function evaluateApp1SameSessionRepair(input: Readonly<{
       null,
     );
   }
+  if (input.detail.item.subjectLabel === "감정평가 및 보상법규") {
+    return result("guided_path_needed", "법규의 출처·버전·적용일 구조 확인은 서버에서만 수행합니다. 자유문장이나 AI 결과만으로 교정 완료를 판정하지 않습니다.", null);
+  }
   if (!input.repairDraft) {
     return result(
       "guided_path_needed",

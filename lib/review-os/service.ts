@@ -2889,7 +2889,7 @@ export class ReviewOsService {
     }
     // Preserve compatibility with existing Practice clients while storing the actual subject action.
     if (context?.item.subjectLabel === "감정평가실무" && action === "second_paragraph_rewrite") action = "second_calculation_retry";
-    if (action === "second_calculation_retry" && (typeof metadata.rewriteParagraph !== "string" || metadata.rewriteParagraph.trim().length < 8 || !["remembered", "fuzzy", "wrong", "confident_wrong"].includes(metadata.recallOutcome ?? ""))) {
+    if ((action === "second_calculation_retry" || action === "second_paragraph_rewrite") && (typeof metadata.rewriteParagraph !== "string" || metadata.rewriteParagraph.trim().length < 8 || !["remembered", "fuzzy", "wrong", "confident_wrong"].includes(metadata.recallOutcome ?? ""))) {
       throw new ReviewOsInvalidCompletionActionError();
     }
     await reviewOsRepository.completeReviewQueueItem(userId, queueId);
@@ -2963,6 +2963,7 @@ export class ReviewOsService {
       );
     }
     const { rewriteParagraph: _rewriteParagraph, ...safeMetadata } = metadata;
+    delete safeMetadata.retrievalSentence;
     await reviewOsRepository.logUsageEvent(
       userId,
       "review_complete",

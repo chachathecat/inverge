@@ -1,0 +1,101 @@
+{
+  "version": "law-development-20260917",
+  "question": "Inverge 합성 공식법령 제10조는 2026-01-01 버전이며 2026-08-15 현재 적용 가능하다. 정확한 출처·버전·조문 위치·효력기간·적용일·현재성·열린 차단 근거 0개를 하나의 결합으로 설명하라. 기본 조건을 그대로 사용한다.",
+  "weak": "합성 법령의 2026-01-01 버전 Article 10은 2026-01-01부터 효력이 있고 종료일은 없다. 적용일은 2025-08-15로 보아 현재 적용 가능하며 열린 차단 근거는 0개라고 판단한다.",
+  "corrected": "합성 법령의 2026-01-01 버전 Article 10은 2026-01-01부터 효력이 있고 종료일은 없다. 문제의 적용일인 2026-08-15에 적용 가능하며 열린 차단 근거는 0개이다. 이 결합은 합성 자료에 한정되며 실제 법령의 현재성이나 구체적 사안 포섭은 검증하지 않았다.",
+  "insufficient": "합성 법령의 출처 버전과 적용일을 확인하지 못했으므로 지금은 적용 여부를 판단하지 않는다.",
+  "binding": {
+    "version": "2026-01-01",
+    "locator": "Article 10",
+    "effectiveFrom": "2026-01-01",
+    "effectiveTo": "없음",
+    "applicableAsOf": "2026-08-15",
+    "currentness": "가능",
+    "blockerCount": "0"
+  },
+  "responses": {
+    "weak": {
+      "questionSummary": "합성 제10조의 출처·버전·적용일 결합",
+      "coreConcepts": [
+        "출처 버전",
+        "적용일"
+      ],
+      "requiredIssues": "정확한 버전·효력기간·적용일 결합",
+      "userAnswerStructure": "버전 → 효력기간 → 적용일",
+      "referenceStructure": "",
+      "strengths": [],
+      "missingIssueCandidates": [
+        "문제의 적용일 2026-08-15와 답안의 2025-08-15가 다릅니다."
+      ],
+      "weakParagraphPoint": "",
+      "weakLogicPoint": "효력 시작일보다 앞선 적용일을 사용했습니다.",
+      "rewriteTarget": "적용일 결합",
+      "rewriteDraftSuggestion": "",
+      "nextAction": "문제에 제시된 2026-08-15로 적용일을 다시 연결하세요.",
+      "caution": "합성 통제 응답 · 실제 모델 검증 아님 · 실제 법령 또는 공식 채점 아님",
+      "plainExplanation": "버전과 적용일은 서로 다른 값입니다.",
+      "keyTermExplanations": [],
+      "stepByStepExplanation": [],
+      "examAnswerHints": [],
+      "questionRequirementQuote": "2026-08-15 현재 적용 가능하다.",
+      "reviewedAnswerScope": "entire_submitted_answer",
+      "diagnosticStatus": "finding",
+      "userAnswerSummary": "합성 법령 적용일의 결합",
+      "answerEvidenceQuote": "적용일은 2025-08-15로 보아 현재 적용 가능"
+    },
+    "corrected": {
+      "questionSummary": "합성 제10조의 출처·버전·적용일 결합",
+      "coreConcepts": [
+        "출처 버전",
+        "적용일"
+      ],
+      "requiredIssues": "정확한 버전·효력기간·적용일 결합",
+      "userAnswerStructure": "버전 → 효력기간 → 적용일",
+      "referenceStructure": "",
+      "strengths": [],
+      "missingIssueCandidates": [],
+      "weakParagraphPoint": "",
+      "weakLogicPoint": "",
+      "rewriteTarget": "",
+      "rewriteDraftSuggestion": "",
+      "nextAction": "문제의 적용일을 직접 대조하세요.",
+      "caution": "합성 통제 응답 · 실제 모델 검증 아님 · 실제 법령 또는 공식 채점 아님",
+      "plainExplanation": "버전과 적용일은 서로 다른 값입니다.",
+      "keyTermExplanations": [],
+      "stepByStepExplanation": [],
+      "examAnswerHints": [],
+      "questionRequirementQuote": "2026-08-15 현재 적용 가능하다.",
+      "reviewedAnswerScope": "entire_submitted_answer",
+      "diagnosticStatus": "no_clear_gap",
+      "userAnswerSummary": "합성 법령 적용일의 결합",
+      "answerEvidenceQuote": "합성 법령의 2026-01-01 버전 Article 10은 2026-01-01부터 효력이 있고 종료일은 없다. 문제의 적용일인 2026-08-15에 적용 가능하며 열린 차단 근거는 0개이다. 이 결합은 합성 자료에 한정되며 실제 법령의 현재성이나 구체적 사안 포섭은 검증하지 않았다."
+    },
+    "insufficient": {
+      "questionSummary": "합성 제10조의 출처·버전·적용일 결합",
+      "coreConcepts": [
+        "출처 버전",
+        "적용일"
+      ],
+      "requiredIssues": "정확한 버전·효력기간·적용일 결합",
+      "userAnswerStructure": "버전 → 효력기간 → 적용일",
+      "referenceStructure": "",
+      "strengths": [],
+      "missingIssueCandidates": [],
+      "weakParagraphPoint": "",
+      "weakLogicPoint": "",
+      "rewriteTarget": "",
+      "rewriteDraftSuggestion": "",
+      "nextAction": "문제의 적용일을 직접 대조하세요.",
+      "caution": "합성 통제 응답 · 실제 모델 검증 아님 · 실제 법령 또는 공식 채점 아님",
+      "plainExplanation": "버전과 적용일은 서로 다른 값입니다.",
+      "keyTermExplanations": [],
+      "stepByStepExplanation": [],
+      "examAnswerHints": [],
+      "questionRequirementQuote": "2026-08-15 현재 적용 가능하다.",
+      "reviewedAnswerScope": "entire_submitted_answer",
+      "diagnosticStatus": "insufficient_evidence",
+      "userAnswerSummary": "합성 법령 적용일의 결합",
+      "answerEvidenceQuote": ""
+    }
+  }
+}

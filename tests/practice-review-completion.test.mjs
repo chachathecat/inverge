@@ -45,3 +45,24 @@ test("Practice cannot complete from a hint or rating without a preserved calcula
   assert.deepEqual(f.store.tables,before);
  }
 });
+
+for (const subject of ["감정평가이론", "감정평가 및 보상법규"]) {
+ test(subject + " review requires an actual paragraph and self-rating before completing", async()=>{
+  for(const metadata of [{},{recallOutcome:"fuzzy"},{retrievalSentence:"개인 법규 회상 원문",recallOutcome:"fuzzy"},{rewriteParagraph:"문단을 직접 다시 작성하였다."},{rewriteParagraph:"짧음",recallOutcome:"fuzzy"}]) {
+   const f=fixture(subject);await f.service.ensureAccess(OWNER_ID,"synthetic-owner@example.invalid");const before=structuredClone(f.store.tables);
+   await assert.rejects(f.service.completeReview(OWNER_ID,"synthetic-owner@example.invalid","eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee","second_paragraph_rewrite",metadata));
+   assert.deepEqual(f.store.tables,before);
+  }
+ });
+ test(subject + " preserves private rewrite on follow-up without leaking it to usage",async()=>{
+  const f=fixture(subject), paragraph="비공개 합성 문단: 적용일과 법령 버전을 구분하고 요건을 직접 대조하였다.";
+  await f.service.completeReview(OWNER_ID,"synthetic-owner@example.invalid","eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee","second_paragraph_rewrite",{rewriteParagraph:paragraph,retrievalSentence:paragraph,recallOutcome:"fuzzy"});
+  const next=f.store.tables.review_queue_items.find(x=>x.status==="pending");
+  assert.equal(next.raw_payload.rewrite_paragraph,paragraph);
+  assert.equal(next.derived_payload.completionAction,"second_paragraph_rewrite");
+  assert.equal(next.derived_payload.rewriteTaskType,"second_answer_rewrite");
+  assert.ok(!JSON.stringify(f.store.tables.usage_events).includes(paragraph));
+  const queue=await f.app.repository.listReviewQueue(OWNER_ID,100);
+  assert.ok(queue.some(x=>x.subjectLabel===subject));
+ });
+}

@@ -1,4 +1,6 @@
 import "server-only";
+import { APP1_LAW_SUBJECT, APP1_LAW_SCOPE_NOTICE, parseApp1LawBinding, type App1LawBindingInput } from "./app1-law-binding";
+import { app1LawSourceSnapshot, assertApp1LawBinding, evaluateApp1LawRepair } from "./app1-law-authority";
 
 import type { AnswerReviewStructureDraft } from "@/lib/evaluate/answer-review-structure";
 import {
@@ -21,6 +23,7 @@ import {
 import type { WrongAnswerDetail, WrongAnswerItemInput } from "@/lib/review-os/types";
 
 import {
+  app1SourceRevision,
   APP1_VERIFICATION_POLICY_VERSION,
   App1ReceiptError,
   assertApp1AnalysisBinding,
@@ -42,6 +45,7 @@ const UUID_V4_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 
 type App1PersistenceCommand = Readonly<{
+  lawBindingInput?: App1LawBindingInput;
   commandVersion: typeof APP1_PERSISTENCE_COMMAND_VERSION;
   sourceItemId: string;
   primaryGap: App1PrimaryGap;
@@ -54,6 +58,8 @@ type App1PersistenceCommand = Readonly<{
 
 export class App1ServerAuthorityError extends Error {
   readonly code:
+    | "APP1_LAW_SOURCE_UNAVAILABLE"
+    | "APP1_LAW_BINDING_REQUIRED"
     | "APP1_AUTHORITY_REQUIRED"
     | "APP1_SIGNING_SECRET_UNAVAILABLE"
     | "APP1_ANALYSIS_BINDING_INVALID"
@@ -208,6 +214,7 @@ export function parseApp1PersistenceCommand(
   if (
     !input ||
     !exactKeys(input, [
+      ...(input.lawBindingInput !== undefined ? ["lawBindingInput"] : []),
       "commandVersion",
       "sourceItemId",
       "primaryGap",
@@ -229,6 +236,7 @@ export function parseApp1PersistenceCommand(
     reject("APP1_PERSISTENCE_COMMAND_INVALID");
   }
   return Object.freeze({
+    ...(input.lawBindingInput !== undefined ? { lawBindingInput: parseLawCommandBinding(input.lawBindingInput) } : {}),
     commandVersion: APP1_PERSISTENCE_COMMAND_VERSION,
     sourceItemId: input.sourceItemId,
     primaryGap: parseApp1PrimaryGap(input.primaryGap),
@@ -271,6 +279,7 @@ export async function requireApp1AuthorizedSourceDetail(input: Readonly<{
   ) {
     reject("APP1_AUTHORITY_REQUIRED");
   }
+  try { app1LawSourceSnapshot(detail); } catch { reject("APP1_LAW_SOURCE_UNAVAILABLE"); }
   return detail;
 }
 
@@ -310,6 +319,7 @@ export function createApp1RepairVerificationAuthority(input: Readonly<{
   analysisBinding: string;
   repairText: string;
   repairDraft: AnswerReviewStructureDraft;
+  lawBindingInput?: App1LawBindingInput;
   persistenceOperationId: string;
   persistenceWorkRevisionId: string;
 }>) {
@@ -321,7 +331,10 @@ export function createApp1RepairVerificationAuthority(input: Readonly<{
     reject("APP1_PERSISTENCE_COMMAND_INVALID");
   }
   assertApp1RepairVerificationRequestAuthority(input);
-  const verification = evaluateApp1SameSessionRepair({
+  const boundRepairText = app1BoundLawRepairText(input.detail, repairText, input.lawBindingInput);
+  const verification = input.detail.item.subjectLabel === APP1_LAW_SUBJECT
+    ? evaluateApp1LawRepair({detail:input.detail, gap:input.primaryGap, repairText, draft:input.repairDraft, lawBindingInput:input.lawBindingInput, revision:app1SourceRevision(input.detail)})
+    : evaluateApp1SameSessionRepair({
     detail: input.detail,
     requestedGap: input.primaryGap,
     repairText,
@@ -335,7 +348,7 @@ export function createApp1RepairVerificationAuthority(input: Readonly<{
           detail: input.detail,
           gap: input.primaryGap,
           analysisBinding: input.analysisBinding,
-          repairText,
+          repairText: boundRepairText,
           verification,
           persistenceOperationId: input.persistenceOperationId,
           persistenceWorkRevisionId: input.persistenceWorkRevisionId,
@@ -403,7 +416,7 @@ export function authorizeApp1PersistenceCommand(input: Readonly<{
       detail: input.detail,
       gap: input.command.primaryGap,
       analysisBinding: input.command.analysisBinding,
-      repairText,
+      repairText: app1BoundLawRepairText(input.detail, repairText, input.command.lawBindingInput),
       persistenceOperationId: input.command.persistenceOperationId,
       persistenceWorkRevisionId: input.command.persistenceWorkRevisionId,
     });
@@ -423,7 +436,7 @@ function buildAuthorizedApp1PersistenceInput(input: Readonly<{
     state: "repair_confirmed_for_this_session",
     requestedGap: input.command.primaryGap.gap,
     observedGap: null,
-    reason: `서버 검증 정책 ${APP1_VERIFICATION_POLICY_VERSION}에 따라 같은 세션의 요청한 연결을 확인했습니다.`,
+    reason: input.detail.item.subjectLabel === APP1_LAW_SUBJECT ? APP1_LAW_SCOPE_NOTICE : `서버 검증 정책 ${APP1_VERIFICATION_POLICY_VERSION}에 따라 같은 세션의 요청한 연결을 확인했습니다.`,
     sameSessionOnly: true,
     masteryCreated: false,
     transferCreated: false,
@@ -432,13 +445,17 @@ function buildAuthorizedApp1PersistenceInput(input: Readonly<{
     operationId: input.command.persistenceOperationId,
     workRevisionId: input.command.persistenceWorkRevisionId,
   });
-  return buildApp1RepairPersistenceInput({
+  const value = buildApp1RepairPersistenceInput({
     detail: input.detail,
     gap: input.command.primaryGap,
     repairText,
     verification,
     operation,
   });
+  if (input.command.lawBindingInput && value.extractionPayload) {
+    value.extractionPayload.user_confirmed_fields = { ...value.extractionPayload.user_confirmed_fields, app1_law_binding: input.command.lawBindingInput, app1_law_scope: "synthetic_applicability_only_v1" };
+  }
+  return value;
 }
 
 export function authorizeExpiredApp1PersistenceReplayCommand(input: Readonly<{
@@ -461,7 +478,7 @@ export function authorizeExpiredApp1PersistenceReplayCommand(input: Readonly<{
       detail: input.detail,
       gap: input.command.primaryGap,
       analysisBinding: input.command.analysisBinding,
-      repairText,
+      repairText: app1BoundLawRepairText(input.detail, repairText, input.command.lawBindingInput),
       persistenceOperationId: input.command.persistenceOperationId,
       persistenceWorkRevisionId: input.command.persistenceWorkRevisionId,
     });
@@ -472,4 +489,15 @@ export function authorizeExpiredApp1PersistenceReplayCommand(input: Readonly<{
     throw error;
   }
   return buildAuthorizedApp1PersistenceInput(input);
+}
+
+export function app1BoundLawRepairText(detail: WrongAnswerDetail, repairText: string, value?: App1LawBindingInput) {
+  try {
+    const binding = assertApp1LawBinding(detail, value, app1SourceRevision(detail));
+    return binding ? JSON.stringify({repairText, lawBindingInput:binding}) : repairText;
+  } catch { reject("APP1_LAW_BINDING_REQUIRED"); }
+}
+
+function parseLawCommandBinding(value: unknown) {
+  try { return parseApp1LawBinding(value); } catch { reject("APP1_LAW_BINDING_REQUIRED"); }
 }

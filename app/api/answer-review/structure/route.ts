@@ -1,3 +1,4 @@
+import { parseApp1LawBinding, type App1LawBindingInput } from "@/lib/owner-study/app1-law-binding";
 import { createHash } from "node:crypto";
 import { isCaptureFunctionalTest } from "@/lib/review-os/capture-review-provenance";
 import { isOwnerPcTheoryEnabled, OwnerTheoryError, type OwnerTheoryAuthority } from "@/lib/owner-study/owner-pc-theory";
@@ -6,6 +7,7 @@ import { getServerSessionUser } from "@/lib/auth/session";
 import { normalizeAnswerReviewStructureDraft, groundAnswerReviewDiagnosis, type AnswerReviewExplanationLevel } from "@/lib/evaluate/answer-review-structure";
 import { GeminiEnvError, GeminiStructureParseError, isGeminiQuotaExceededError, isGeminiConfigured, structureAnswerReviewWithGemini } from "@/lib/evaluate/gemini";
 import {
+  app1BoundLawRepairText,
   assertApp1RepairVerificationRequestAuthority,
   assertApp1ResumableAnalysisAuthority,
   assertApp1SigningAuthorityReady,
@@ -80,6 +82,7 @@ export async function POST(request: Request) {
   let mode: "first" | "second" = "first";
   let subject = "";
   let requestPurpose: AnswerReviewRequestPurpose = "learning_analysis";
+  let lawBindingInput: App1LawBindingInput | undefined;
   let app1Detail: WrongAnswerDetail | null = null;
   let app1PrimaryGap: ReturnType<typeof parseApp1PrimaryGap> | null = null;
   let app1AnalysisBinding: string | null = null;
@@ -100,6 +103,7 @@ export async function POST(request: Request) {
     const parsedRequestPurpose = parseRequestPurpose(requestPurposeValues[0] ?? null);
     if (!parsedRequestPurpose) return repairVerificationError(400, "INVALID_REQUEST_PURPOSE");
     requestPurpose = parsedRequestPurpose;
+    if (subject === "감정평가 및 보상법규" && requestPurpose === "learning_analysis") return repairVerificationError(403, "APP1_LAW_SOURCE_UNAVAILABLE");
     if (requestPurpose !== "learning_analysis") {
       if (!session.isAuthenticated || !session.userId || !session.email) {
         return repairVerificationError(401, "AUTH_REQUIRED");
@@ -193,6 +197,10 @@ export async function POST(request: Request) {
           return repairVerificationError(400, "INVALID_REPAIR_AUTHORITY");
         }
         app1PrimaryGap = parseApp1PrimaryGap(parsedGap);
+        if (subject === "감정평가 및 보상법규") {
+          try { lawBindingInput = parseApp1LawBinding(JSON.parse(singleFormString(formData, "lawBindingInput") ?? "null")); app1BoundLawRepairText(app1Detail, answerText, lawBindingInput); }
+          catch { return repairVerificationError(400, "APP1_LAW_BINDING_REQUIRED"); }
+        }
         assertApp1RepairVerificationRequestAuthority({
           userId: session.userId,
           detail: app1Detail,
@@ -203,6 +211,7 @@ export async function POST(request: Request) {
         });
       }
     }
+    if (subject === "감정평가 및 보상법규") referenceText = "";
     const explanationLevel = normalizeExplanationLevel(formData.get("explanationLevel")?.toString());
     if (answerFiles.length === 0 && !answerText.trim()) return NextResponse.json({ ok: false, error: "내 답안 파일(answerFiles) 또는 내 답안 텍스트(answerText) 중 하나는 필수입니다." }, { status: 400 });
     const inputQualityIssue = getAnswerReviewInputQualityIssue({ questionText, answerText, referenceText, questionFileCount: questionFiles.length, answerFileCount: answerFiles.length, referenceFileCount: referenceFiles.length });
@@ -228,7 +237,7 @@ export async function POST(request: Request) {
     const repairTarget = requestPurpose === "repair_verification" && app1PrimaryGap
       ? { gap: app1PrimaryGap.gap, repairAction: app1PrimaryGap.repairAction } : undefined;
     const initialDraft = await structureAnswerReviewWithGemini({ subject, ownerTheoryAuthority, repairTarget, questionFiles, answerFiles, referenceFiles, questionText, answerText, referenceText, explanationLevel });
-    const referenceGrounding = ownerTheoryAuthority ? { references: [], displayLabel: "선택한 문제·답안만 검토", promptContext: "" } : buildAnswerReviewReferenceGrounding({ examMode: mode, subject, questionText, answerText, referenceText, normalizedDraft: normalizeAnswerReviewStructureDraft(initialDraft) });
+    const referenceGrounding = (ownerTheoryAuthority || app1Detail?.item.subjectLabel === "감정평가 및 보상법규") ? { references: [], displayLabel: "선택한 문제·답안만 검토", promptContext: "" } : buildAnswerReviewReferenceGrounding({ examMode: mode, subject, questionText, answerText, referenceText, normalizedDraft: normalizeAnswerReviewStructureDraft(initialDraft) });
     const draft = referenceGrounding.references.length > 0 ? await structureAnswerReviewWithGemini({ subject, ownerTheoryAuthority, repairTarget, questionFiles, answerFiles, referenceFiles, questionText, answerText, referenceText, referenceGroundingContext: referenceGrounding.promptContext, explanationLevel }) : initialDraft;
     const normalizedDraft = normalizeAnswerReviewStructureDraft(draft);
     const normalized = app1Detail ? groundAnswerReviewDiagnosis(normalizedDraft, questionText, answerText) : normalizedDraft;
@@ -259,6 +268,7 @@ export async function POST(request: Request) {
             analysisBinding: app1AnalysisBinding,
             repairText: answerText,
             repairDraft: normalized,
+            lawBindingInput,
             persistenceOperationId,
             persistenceWorkRevisionId,
           })
