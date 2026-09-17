@@ -6,6 +6,8 @@ import type { TrialPlanningStore } from "./owner-local-today";
 import { createReviewedBankService, type ReviewedBankStore } from "./reviewed-bank-service";
 import { handleReviewedBank, reviewedBankEnabled } from "./reviewed-bank-http";
 import { reviewedBankCandidates } from "./private-reviewed-content";
+import { activeOwnerOriginalCatalog, catalogForOwnerOriginalHistory } from "./owner-original-context";
+import { OWNER_ORIGINAL_NOTICE, OWNER_ORIGINAL_SCOPE } from "./owner-original-boundary";
 
 type Environment = Readonly<Record<string, string | undefined>>;
 type Session = Readonly<{ isAuthenticated: boolean; userId?: string | null; email?: string | null }>;
@@ -15,8 +17,9 @@ export interface PrivateSessionApplicationDependencies {
   environment(): Environment;
   session(): Promise<Session>;
   catalog(): Promise<PrivateFirstStageCatalog | null>;
-  /** Other server-loaded reviewed subject catalogs used only to validate and
-   * exclude their complete durable rows from this subject's Today projection. */
+  /** Server-loaded reviewed peers validate complete durable history. Other
+   * subjects are excluded from Today; the exact authored lane also preserves
+   * same-subject reviewed continuation through its separate loader capability. */
   peerCatalogs?(): Promise<readonly PrivateFirstStageCatalog[]>;
   repository(): PrivateFirstStageSessionStore;
   planningRepository?(): TrialPlanningStore;
@@ -60,7 +63,7 @@ export function createPrivateSessionApplication(dependencies: PrivateSessionAppl
       if (bankRequest) return handleReviewedBank(request, dependencies, owner.ownerId, catalog);
       const blocker = dependencies.unavailableBlocker ?? "approved_content_required";
       if (request.method === "GET" && !new URL(request.url).search) {
-        const bankPractice = Boolean(reviewedBankEnabled(dependencies.environment()) && catalog && reviewedBankCandidates(catalog));
+        const bankPractice = Boolean(reviewedBankEnabled(dependencies.environment()) && catalog && (reviewedBankCandidates(catalog) || activeOwnerOriginalCatalog(catalog)));
         if (bankPractice && !dependencies.bankRepository) return response({ ok: false, error: "temporarily_unavailable" }, 503);
         let availabilityStore = catalog ? dependencies.repository() : null;
         if (bankPractice && availabilityStore) {
@@ -89,8 +92,18 @@ export function createPrivateSessionApplication(dependencies: PrivateSessionAppl
         }
         const bankStock = bankPractice && catalog && availabilityStore && dependencies.bankRepository
           ? await createReviewedBankService(availabilityStore, dependencies.bankRepository(), catalog,
-              dependencies.now ?? (() => new Date().toISOString())).availability(owner.ownerId)
+              dependencies.now ?? (() => new Date().toISOString()), dependencies.peerCatalogs).availability(owner.ownerId)
           : null;
+        const historyPeers = catalog && activeOwnerOriginalCatalog(catalog) ? await dependencies.peerCatalogs?.() ?? [] : [];
+        const originalHistory = catalog && activeOwnerOriginalCatalog(catalog) && availabilityStore ?
+          (await availabilityStore.listOwnerSnapshot!(owner.ownerId, "first_stage.private_session.v1")).sessions
+            .filter(saved => saved.state.examCycle.questionReferences[0]?.subjectId === "real_estate_principles")
+            .map(saved => createPrivateFirstStageSessionService(availabilityStore,
+              catalogForOwnerOriginalHistory(catalog, historyPeers, saved.catalogDigest), dependencies.now).projectHistory(saved, owner.ownerId))
+            .filter(history => history.attempted)
+            .sort((left, right) => (right.committedAttempts.at(-1)?.submittedAt ?? right.active?.startedAt ?? "").localeCompare(left.committedAttempts.at(-1)?.submittedAt ?? left.active?.startedAt ?? "") || left.sessionId.localeCompare(right.sessionId))
+            .slice(0, 10).map(history => ({ sessionId: history.sessionId, responses: history.committedAttempts.length,
+              reviewCompleted: history.reviews.length > 0 && history.reviews.every(review => review.status === "completed") })) : null;
         // Existing content remains addressable even when every original is reserved.
         // No adapter presentation or explanation construction in availability.
         return response({ ok: true, availability: {
@@ -102,6 +115,7 @@ export function createPrivateSessionApplication(dependencies: PrivateSessionAppl
             questionNumber: item.questionNumber,
           })),
           masteryClaim: false, transferEvidence: false,
+          ...(catalog && activeOwnerOriginalCatalog(catalog) ? { contentStatus: "machine_checked_owner_local", notice: OWNER_ORIGINAL_NOTICE, scope: OWNER_ORIGINAL_SCOPE, humanReviewComplete: false, recentRecords: originalHistory } : {}),
           ...(bankStock ? { bankPractice: true, availableOriginals: bankStock.availableOriginals } : {}),
         }, continuation });
       }
@@ -110,8 +124,17 @@ export function createPrivateSessionApplication(dependencies: PrivateSessionAppl
       }
       const handler = createPrivateSessionHttpHandler({
         requireOwner: async () => owner.ownerId,
-        service: async () => createPrivateFirstStageSessionService(
-          dependencies.repository(), catalog, dependencies.now),
+        service: async (readOwner, sessionId) => {
+          const store = dependencies.repository();
+          let selected = catalog;
+          if (sessionId && activeOwnerOriginalCatalog(catalog)) {
+            const saved = await store.load(readOwner, sessionId);
+            if (saved && saved.catalogDigest !== catalog.digest) selected = catalogForOwnerOriginalHistory(
+              catalog, await dependencies.peerCatalogs?.() ?? [], saved.catalogDigest);
+          }
+          // Existing transport auth/parser and full aggregate validation remain authoritative.
+          return createPrivateFirstStageSessionService(store, selected, dependencies.now);
+        },
       });
       return await handler(request);
     } catch {

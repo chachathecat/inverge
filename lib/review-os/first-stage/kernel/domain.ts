@@ -54,20 +54,23 @@ export type QuestionReference = Readonly<{
   questionId: string;
   questionVersion: string;
   subjectId: FirstStageSubjectId;
-  examYear: number;
-  examRound: number;
   sessionId: string;
-  questionNumber: number;
   choiceCount: 5;
   sourceVersionManifestIds: readonly string[];
 }> & Readonly<{
   schemaVersion: "first_stage.question_reference.v1";
+  examYear: number; examRound: number; questionNumber: number;
   rightsState: "verified_owner_private" | "verified_cleared";
   currentnessState: "verified_exam_date" | "verified_current";
 } | {
   schemaVersion: "first_stage.owner_local_trial_question_reference.v1";
+  examYear: number; examRound: number; questionNumber: number;
   rightsState: "observed_owner_local_only";
   currentnessState: "observed_historical_unreviewed";
+} | {
+  schemaVersion: "first_stage.owner_original_question_reference.v1";
+  examYear: null; examRound: null; questionNumber: null;
+  rightsState: "owner_authorized_original"; currentnessState: "stated_model_only";
 }>;
 
 export type AnswerSubmission = Readonly<{
@@ -129,6 +132,10 @@ export type ReviewedFeedbackEvidence = Readonly<{
   reviewerIdentity: null;
   reviewerClass: null;
   modelAlone: true;
+}> | Readonly<{
+  schemaVersion: "first_stage.owner_original_calculation_feedback.v1";
+  state: "machine_checked_owner_local";
+  receiptReference: null; reviewerIdentity: null; reviewerClass: null; modelAlone: true;
 }>;
 
 export type AttemptEvidenceEnvelope = Readonly<{
@@ -142,6 +149,8 @@ export type AttemptEvidenceEnvelope = Readonly<{
   adapterId: string;
   adapterVersion: string;
   officialKeyReference: ImmutableEvidenceReference | null;
+  /** Authored calculation key only; forbidden on official/reviewed references. */
+  calculationKeyReference?: ImmutableEvidenceReference;
   choiceSetReference: ImmutableEvidenceReference | null;
   sourceReference: ImmutableEvidenceReference;
   versionDecisionReference: ImmutableEvidenceReference;
@@ -180,6 +189,7 @@ export type AttemptEvaluation = ReviewedAttemptEvaluation | UnreviewedAttemptEva
 export type OwnerLocalConceptExposure = Readonly<{
   kind: "concept" | "prerequisite"; aidId: string; aidVersion: string; aidSha256: string; recordedAt: string;
 }>;
+export type OwnerOriginalUse = "practice" | "answer_seen" | "functional_test";
 export type Attempt = Readonly<{
   schemaVersion: "first_stage.attempt.v1";
   attemptId: string;
@@ -192,6 +202,8 @@ export type Attempt = Readonly<{
   assistanceLevel: "none" | "hint_or_scaffold" | "answer_revealed";
   /** Optional only for the explicitly unreviewed local initial-attempt lane. */
   ownerLocalAssistance?: readonly OwnerLocalConceptExposure[];
+  /** Sealed at start, exact authored lane only; never independent evidence. */
+  ownerOriginalUse?: OwnerOriginalUse;
   startedAt: string;
   state: "in_progress" | "evaluated";
   submission: AnswerSubmission | null;
@@ -241,7 +253,7 @@ export type IndependentRetry = Readonly<{
   adapterId: string;
   adapterVersion: string;
   lineageReceipt: IndependentRetryLineageReceipt;
-  assistanceLevel: "none";
+  assistanceLevel: "none" | "answer_revealed";
   startedAt: string;
   completedAt: string | null;
   outcome: "active" | "succeeded" | "failed";
@@ -251,6 +263,8 @@ export type ConceptOperationalState =
   | "review_required"
   | "independent_retry_due"
   | "independent_retry_recorded"
+  | "practice_retry_due"
+  | "practice_retry_recorded"
   | "reopened";
 export type ConceptState = Readonly<{
   schemaVersion: "first_stage.concept_state.v1";
@@ -365,6 +379,18 @@ export function parseQuestionReference(value: unknown): QuestionReference {
     "examRound", "sessionId", "questionNumber", "choiceCount",
     "sourceVersionManifestIds", "rightsState", "currentnessState",
   ]);
+  if (row.schemaVersion === "first_stage.owner_original_question_reference.v1") {
+    if (row.subjectId !== "real_estate_principles" || row.examYear !== null || row.examRound !== null || row.questionNumber !== null ||
+      row.choiceCount !== 5 || row.questionVersion !== "owner-pc-real-estate-direct-capitalization-20260917-v2" ||
+      row.sessionId !== "owner-original-real-estate-v2" || !["owner-re-capitalization-original-v2", "owner-re-capitalization-retry-v2"].includes(String(row.questionId)) ||
+      row.rightsState !== "owner_authorized_original" || row.currentnessState !== "stated_model_only" ||
+      JSON.stringify(row.sourceVersionManifestIds) !== '["owner-original-0a7039441edafa476973383fdd4f8fb1163ae9bee96da55aacc0eaf33b4d9fc9"]') fail();
+    return Object.freeze({ schemaVersion: "first_stage.owner_original_question_reference.v1", questionId: String(row.questionId),
+      questionVersion: String(row.questionVersion), subjectId: "real_estate_principles", examYear: null, examRound: null,
+      sessionId: String(row.sessionId), questionNumber: null, choiceCount: 5,
+      sourceVersionManifestIds: Object.freeze(["owner-original-0a7039441edafa476973383fdd4f8fb1163ae9bee96da55aacc0eaf33b4d9fc9"]),
+      rightsState: "owner_authorized_original", currentnessState: "stated_model_only" });
+  }
   const trial = row.schemaVersion === "first_stage.owner_local_trial_question_reference.v1";
   if ((!trial && row.schemaVersion !== "first_stage.question_reference.v1") || row.choiceCount !== 5) fail();
   if (trial && (row.rightsState !== "observed_owner_local_only" || row.currentnessState !== "observed_historical_unreviewed" ||

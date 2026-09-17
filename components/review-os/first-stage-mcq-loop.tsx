@@ -19,7 +19,7 @@ type AvailabilityPayload = Readonly<{
     questions: ReadonlyArray<Readonly<{
       questionId: string;
       subjectId: string;
-      questionNumber: number;
+      questionNumber: number | null;
     }>>;
   }>;
   continuation?: Readonly<{
@@ -156,7 +156,7 @@ function statusCopy(status: AvailabilityState) {
   if (status.continuation.state !== "ready") return "저장 기록 확인 필요";
   if (status.continuation.action?.kind === "resume_attempt") return "진행 중 · 이어가기";
   if (status.continuation.action?.kind === "resume_ready") return "시작한 문제 · 이어가기";
-  if (status.continuation.action?.kind === "review_due") return "D+1 복습할 차례";
+  if (status.continuation.action?.kind === "review_due") return "예정 복습할 차례";
   if (status.continuation.action?.kind === "review_scheduled") return "응답 저장됨 · D+1 예약";
   if (status.continuation.action?.kind === "review_blocked") return "응답 저장됨 · 복습 재고 대기";
   if (status.bankPractice) return status.availableOriginals === null ? "새 배정 재고 확인 필요"
@@ -169,7 +169,7 @@ function continuationLabel(subject: (typeof REVIEWED_SUBJECTS)[number], continua
   if (!continuation) return null;
   if (continuation.kind === "resume_attempt") return `${subject.label} 진행 중인 문제 이어가기`;
   if (continuation.kind === "resume_ready") return `${subject.label} 시작한 문제 이어가기`;
-  if (continuation.kind === "review_due") return `${subject.label} D+1 복습 시작`;
+  if (continuation.kind === "review_due") return `${subject.label} 예정 복습 시작`;
   if (continuation.kind === "review_blocked") return `${subject.label} 복습 준비 상태 확인`;
   return `${subject.label} 저장 결과·복습 일정 보기`;
 }
@@ -309,7 +309,7 @@ export function FirstStageMcqLoop({
               : continuationSubject
                 ? "서버에 저장된 응답과 복습 시점을 확인해 가장 먼저 이어갈 작업을 표시합니다."
                 : readySubjects.length > 0
-                  ? "검토된 재고가 있는 과목부터 이어갑니다."
+                  ? "사용 가능한 재고가 있는 과목부터 이어갑니다."
                   : localTrialEnabled && localTrial.state === "available"
                     ? "지금 새로 배정할 검토 재고는 없지만, 기존 PC 전용 경제학 시험은 별도 표시로 이어갈 수 있습니다."
                     : hasUnknownAvailability

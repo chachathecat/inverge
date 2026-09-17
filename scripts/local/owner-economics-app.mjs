@@ -75,7 +75,14 @@ export async function prepareOwnerLocalApp(){
   return {personalLocalSchema:"prepared",installationPath:target,boundArtifacts:9,
     supportedQuestions:"determined_by_server_pair_evidence_checks",humanApprovedQuestions:0,recordsReset:false};
 }
-export async function startOwnerLocalApp({legalEvidence=false,theory=false}={}){
+export function ownerLocalOriginalEnvironment(env,installation,contentPath,contentSha256,sqlSha256) {
+  if(env.NODE_ENV!=="development"||env.NEXT_PUBLIC_SUPABASE_URL!=="http://127.0.0.1:55421"||env.VERCEL!==undefined||env.VERCEL_ENV!==undefined||!path.isAbsolute(contentPath)||
+    installation?.schemaVersion!=="owner_original_installation.v1"||installation.enabled!==true||installation.backupRestoreVerified!==true||installation.database!=="inverge_owner_economics_db_loopback/postgres"||
+    installation.contentSha256!==contentSha256||contentSha256!=="0a7039441edafa476973383fdd4f8fb1163ae9bee96da55aacc0eaf33b4d9fc9"||
+    installation.sqlSha256!==sqlSha256||sqlSha256!=="5346dbf1caa872c880ab621ffd91c508791747e9c80112b1030f86642e307a3a") fail("exact_original_installation_required");
+  return {...env,INVERGE_OWNER_ORIGINAL_REAL_ESTATE_ENABLED:"true",INVERGE_OWNER_ORIGINAL_CONTENT_PATH:contentPath,INVERGE_OWNER_REVIEWED_BANK_ENABLED:"true"};
+}
+export async function startOwnerLocalApp({legalEvidence=false,theory=false,originalPractice=false}={}){
   const keys=await guardedEnvironment();
   for(const file of [".env",".env.local",".env.development",".env.development.local"]){if(await access(file).then(()=>true,()=>false))fail("existing_env_file_must_be_preserved");}
   await access(path.join(LOCAL_ROOT,"trial-installation.json"));
@@ -89,6 +96,13 @@ export async function startOwnerLocalApp({legalEvidence=false,theory=false}={}){
     const sql=await readFile(new URL("../../supabase/local-designs/owner-pc-theory-one-case.sql",import.meta.url));
     if(installation.sqlSha256!==createHash("sha256").update(sql).digest("hex")||installation.database!=="inverge_owner_economics_db_loopback/postgres"||installation.backupRestoreVerified!==true)fail("local_theory_schema_installation_required");
     env=ownerLocalTheoryEnvironment(process.env,keys,(await readFile(path.join(root,"signing-secret"),"utf8")).trim());
+  }
+  if(originalPractice) {
+    if(!theory||legalEvidence)fail("local_modes_must_be_explicit");
+    const root=path.join(LOCAL_ROOT,"original-real-estate-20260917"),contentPath=path.join(root,"candidate-v2.json");
+    const installation=JSON.parse(await readFile(path.join(root,"installation.json"),"utf8"));
+    const hash=bytes=>createHash("sha256").update(bytes).digest("hex");
+    env=ownerLocalOriginalEnvironment(env,installation,contentPath,hash(await readFile(contentPath)),hash(await readFile(new URL("../../supabase/local-designs/first-stage-owner-original-bank.sql",import.meta.url))));
   }
   // No secret argument, env file, remote fetch, smoke account or global TLS change.
   const child=spawn(process.execPath,["node_modules/next/dist/bin/next","dev","--hostname","127.0.0.1","--port","3883"],{env,stdio:"inherit",windowsHide:true});
@@ -122,6 +136,6 @@ export async function prepareOwnerLocalCurriculum(){
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href){
   const command=process.argv[2];
-  (command==="prepare"?prepareOwnerLocalApp().then(result=>console.log(JSON.stringify(result))):command==="prepare-planning"?prepareOwnerLocalPlanning().then(result=>console.log(JSON.stringify(result))):command==="prepare-curriculum"?prepareOwnerLocalCurriculum().then(result=>console.log(JSON.stringify(result))):command==="start"?startOwnerLocalApp():command==="start-theory"?startOwnerLocalApp({theory:true}):command==="start-legal-evidence"?startOwnerLocalApp({legalEvidence:true}):Promise.reject(new Error("invalid_local_command")))
+  (command==="prepare"?prepareOwnerLocalApp().then(result=>console.log(JSON.stringify(result))):command==="prepare-planning"?prepareOwnerLocalPlanning().then(result=>console.log(JSON.stringify(result))):command==="prepare-curriculum"?prepareOwnerLocalCurriculum().then(result=>console.log(JSON.stringify(result))):command==="start"?startOwnerLocalApp():command==="start-theory"?startOwnerLocalApp({theory:true}):command==="start-theory-original"?startOwnerLocalApp({theory:true,originalPractice:true}):command==="start-legal-evidence"?startOwnerLocalApp({legalEvidence:true}):Promise.reject(new Error("invalid_local_command")))
     .catch(error=>{const message=String(error.message);console.error(/^[a-z_]+$/.test(message)?message:"local_trial_setup_failed");process.exitCode=1;});
 }

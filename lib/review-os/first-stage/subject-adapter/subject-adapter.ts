@@ -1,4 +1,6 @@
 import crypto from "node:crypto";
+import { activeOwnerOriginalAdapter, activeOwnerOriginalReference, authorizeOwnerOriginalAdapter } from "../runtime/owner-original-context";
+import { isOwnerOriginalAdapter } from "../runtime/owner-original-boundary";
 import { activeOwnerLocalR3TrialAdapter, authorizeOwnerLocalR3TrialAdapter } from "../runtime/owner-local-trial-context";
 import { isOwnerLocalR3TrialAdapter } from "../runtime/owner-local-trial-boundary";
 
@@ -121,7 +123,7 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
     {
       path: "lib/review-os/first-stage/kernel/domain.ts",
       normalization: "utf8_lf",
-      sha256: "992332231069846209dea9d7b925900b4e941dc3bb9b6b37e33cae6730e2e097",
+      sha256: "97cb59a0354e82cc4e8da14be020f954eadf814ecea76f7d439b37f887942aba",
       covers: [
         "QuestionReference", "Attempt", "AnswerSubmission", "Confidence",
         "ElapsedTime", "WorkTrace", "WorkTraceStep", "ErrorCause", "ConceptBinding",
@@ -202,7 +204,7 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
     Attempt: exactTypeKeys<Attempt>()([
       "schemaVersion", "attemptId", "examCycleId", "questionReference", "kind",
       "sourceAttemptId", "reviewTaskId", "exposureState", "assistanceLevel",
-      "startedAt", "state", "submission", "evaluation", "ownerLocalAssistance",
+      "startedAt", "state", "submission", "evaluation", "ownerLocalAssistance", "ownerOriginalUse",
     ]),
     AnswerSubmission: exactTypeKeys<AnswerSubmission>()([
       "schemaVersion", "selectedChoice", "confidence", "elapsedTime", "answerChanged",
@@ -244,7 +246,7 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
     AttemptEvidenceEnvelope: exactTypeKeys<AttemptEvidenceEnvelope>()([
       "schemaVersion", "attemptId", "submissionSha256", "questionId", "questionVersion",
       "questionReferenceSha256", "subjectId", "adapterId", "adapterVersion", "officialKeyReference",
-      "choiceSetReference", "sourceReference", "versionDecisionReference",
+      "calculationKeyReference", "choiceSetReference", "sourceReference", "versionDecisionReference",
       "rightsDecisionReference", "reviewedFeedback",
     ]),
     ImmutableEvidenceReference: exactTypeKeys<ImmutableEvidenceReference>()([
@@ -268,10 +270,10 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
     ]),
     errorCauses: exactValues<ErrorCause>()(ERROR_CAUSES),
     questionRightsStates: exactValues<QuestionReference["rightsState"]>()([
-      "verified_owner_private", "verified_cleared", "observed_owner_local_only",
+      "verified_owner_private", "verified_cleared", "observed_owner_local_only", "owner_authorized_original",
     ]),
     questionCurrentnessStates: exactValues<QuestionReference["currentnessState"]>()([
-      "verified_exam_date", "verified_current", "observed_historical_unreviewed",
+      "verified_exam_date", "verified_current", "observed_historical_unreviewed", "stated_model_only",
     ]),
     attemptKinds: exactValues<AttemptKind>()(["initial", "independent_retry"]),
     attemptEvaluationDecisions: exactValues<AttemptEvaluationDecision>()([
@@ -282,7 +284,7 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
     ]),
     conceptBindingRoles: exactValues<ConceptBinding["role"]>()(["primary", "supporting"]),
     reviewedFeedbackStates: exactValues<ReviewedFeedbackEvidence["state"]>()([
-      "reviewed_available", "withheld_rights_or_version", "not_emitted_unavailable", "human_unreviewed_owner_local",
+      "reviewed_available", "withheld_rights_or_version", "not_emitted_unavailable", "human_unreviewed_owner_local", "machine_checked_owner_local",
     ]),
     reviewerClasses: exactValues<Exclude<ReviewedFeedbackEvidence["reviewerClass"], null>>()([
       "named_owner_authorized_human_reviewer", "owner_approved_personal_feedback_reviewer",
@@ -333,7 +335,7 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
 // SHA-256 over RFC-8785-equivalent recursively-key-sorted JSON for the exact
 // descriptor above. The focused contract test recomputes and binds this value.
 export const SUBJECT_ADAPTER_V1_INTERFACE_DIGEST =
-  "274661ef36eb2592b0ee744015ab19dac0b19ee68769b0cdaf32b6c1fbddf705" as const;
+  "84504769d72c80567ed54e145a1808ee17d14e2fec13a7255d95b4906cba7d6b" as const;
 
 function fail(): never {
   throw new FirstStageKernelError("adapter_mismatch");
@@ -359,6 +361,7 @@ function sameReference(left: QuestionReference, right: QuestionReference) {
 
 export function assertAdapterIdentity(adapter: SubjectAdapterV1) {
   if (isOwnerLocalR3TrialAdapter(adapter) && !activeOwnerLocalR3TrialAdapter(adapter)) fail();
+  if (isOwnerOriginalAdapter(adapter) && !activeOwnerOriginalAdapter(adapter)) fail();
   const exactKeys = [
     "schemaVersion", "adapterId", "adapterVersion", "subjectId",
     "assertQuestionReference", "presentQuestion", "evaluateSubmission",
@@ -382,6 +385,8 @@ export function assertAdapterIdentity(adapter: SubjectAdapterV1) {
 function assertQuestionMode(adapter: SubjectAdapterV1, reference: QuestionReference) {
   const trial = reference.schemaVersion === "first_stage.owner_local_trial_question_reference.v1";
   if (trial !== isOwnerLocalR3TrialAdapter(adapter) || (trial && !activeOwnerLocalR3TrialAdapter(adapter))) fail();
+  const authored = reference.schemaVersion === "first_stage.owner_original_question_reference.v1";
+  if (authored !== isOwnerOriginalAdapter(adapter) || (authored && !activeOwnerOriginalReference(adapter, reference))) fail();
 }
 
 export function validatePresentation(
@@ -468,7 +473,9 @@ function parseEvidenceEnvelope(
   value: unknown,
   decision: AttemptEvaluation["decision"],
 ) {
+  const authored = activeOwnerOriginalReference(adapter, input.questionReference);
   const row = exactObject(value, [
+    ...(authored ? ["calculationKeyReference"] : []),
     "schemaVersion", "attemptId", "submissionSha256", "questionId", "questionVersion",
     "questionReferenceSha256", "subjectId", "adapterId", "adapterVersion", "officialKeyReference",
     "choiceSetReference", "sourceReference", "versionDecisionReference",
@@ -492,12 +499,15 @@ function parseEvidenceEnvelope(
     "reviewerClass", "modelAlone",
   ]);
   const localTrial = isOwnerLocalR3TrialAdapter(adapter);
+  if (authored && (feedback.schemaVersion !== "first_stage.owner_original_calculation_feedback.v1" ||
+    feedback.state !== "machine_checked_owner_local" || feedback.modelAlone !== true ||
+    feedback.receiptReference !== null || feedback.reviewerIdentity !== null || feedback.reviewerClass !== null)) fail();
   if (localTrial && (!activeOwnerLocalR3TrialAdapter(adapter) ||
     feedback.schemaVersion !== "first_stage.owner_local_unreviewed_feedback.v1" ||
     feedback.state !== "human_unreviewed_owner_local" || feedback.modelAlone !== true ||
     feedback.receiptReference !== null || feedback.reviewerIdentity !== null || feedback.reviewerClass !== null)) fail();
   if (
-    !localTrial && (
+    !localTrial && !authored && (
     feedback.schemaVersion !== "first_stage.reviewed_feedback_evidence.v1" ||
     !["reviewed_available", "withheld_rights_or_version", "not_emitted_unavailable"].includes(String(feedback.state)) ||
     feedback.modelAlone !== false)
@@ -508,7 +518,7 @@ function parseEvidenceEnvelope(
     ? "not_emitted_unavailable"
     : decision === "withheld"
       ? "withheld_rights_or_version"
-      : localTrial ? "human_unreviewed_owner_local" : "reviewed_available";
+      : authored ? "machine_checked_owner_local" : localTrial ? "human_unreviewed_owner_local" : "reviewed_available";
   if (
     feedback.state !== requiredFeedbackState ||
     reviewedAvailable !== (feedback.receiptReference !== null) ||
@@ -522,7 +532,10 @@ function parseEvidenceEnvelope(
       "owner_approved_personal_feedback_reviewer",
     ].includes(String(feedback.reviewerClass))
   ) fail();
-  const reviewedFeedback: ReviewedFeedbackEvidence = localTrial ? Object.freeze({
+  const reviewedFeedback: ReviewedFeedbackEvidence = authored ? Object.freeze({
+    schemaVersion: "first_stage.owner_original_calculation_feedback.v1", state: "machine_checked_owner_local",
+    receiptReference: null, reviewerIdentity: null, reviewerClass: null, modelAlone: true,
+  }) : localTrial ? Object.freeze({
     schemaVersion: "first_stage.owner_local_unreviewed_feedback.v1", state: "human_unreviewed_owner_local",
     receiptReference: null, reviewerIdentity: null, reviewerClass: null, modelAlone: true,
   }) : Object.freeze({
@@ -535,13 +548,15 @@ function parseEvidenceEnvelope(
       : null,
     modelAlone: false as const,
   });
+  const calculationKeyReference = authored ? parseEvidenceReference(row.calculationKeyReference) : undefined;
   const officialKeyReference = row.officialKeyReference === null
     ? null : parseEvidenceReference(row.officialKeyReference);
   const choiceSetReference = row.choiceSetReference === null
     ? null : parseEvidenceReference(row.choiceSetReference);
   if (
     (unreviewed && (reviewedAvailable || officialKeyReference !== null || choiceSetReference !== null)) ||
-    (!unreviewed && (!(reviewedAvailable || localTrial) || !officialKeyReference || !choiceSetReference))
+    (!unreviewed && (!(reviewedAvailable || localTrial || authored) || (!authored && !officialKeyReference) || !choiceSetReference)) ||
+    (authored && (officialKeyReference !== null || !calculationKeyReference))
   ) fail();
   return Object.freeze({
     schemaVersion: "first_stage.attempt_evidence_envelope.v1" as const,
@@ -554,6 +569,7 @@ function parseEvidenceEnvelope(
     adapterId: adapter.adapterId,
     adapterVersion: adapter.adapterVersion,
     officialKeyReference,
+    ...(authored ? { calculationKeyReference: calculationKeyReference! } : {}),
     choiceSetReference,
     sourceReference: parseEvidenceReference(row.sourceReference),
     versionDecisionReference: parseEvidenceReference(row.versionDecisionReference),
@@ -643,8 +659,8 @@ export function validateAttemptEvaluation(
     (selectedChoice === null && row.decision !== "unanswered") ||
     (selectedChoice !== null && row.decision === "unanswered") ||
     (row.decision === "correct" && errorCause !== null) ||
-    (row.decision === "incorrect" && errorCause === null && !(activeOwnerLocalR3TrialAdapter(adapter) &&
-      input.questionReference.questionVersion === "issue883-economics-curriculum-v1")) ||
+    (row.decision === "incorrect" && errorCause === null && !(activeOwnerOriginalReference(adapter, input.questionReference) ||
+      (activeOwnerLocalR3TrialAdapter(adapter) && input.questionReference.questionVersion === "issue883-economics-curriculum-v1"))) ||
     (row.decision === "unanswered" && errorCause !== null)
   ) fail();
   const reviewAfterMs = requiredSafeInteger(row.reviewAfterMs, 0, 2_592_000_000);
@@ -691,6 +707,7 @@ export class SubjectAdapterRegistry {
     // Only a previously authorized source object can authorize its frozen
     // registry snapshot, and only while the authenticated local request is open.
     if (activeOwnerLocalR3TrialAdapter(adapter)) authorizeOwnerLocalR3TrialAdapter(snapshot);
+    if (activeOwnerOriginalAdapter(adapter)) authorizeOwnerOriginalAdapter(snapshot);
     this.#adapters.set(snapshot.subjectId, snapshot);
     return this;
   }

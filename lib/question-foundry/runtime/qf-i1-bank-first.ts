@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { activeOwnerOriginalCandidate } from "../../review-os/first-stage/runtime/owner-original-context";
 
 import {
   QFS3_CONTRACT_VERSION,
@@ -61,8 +62,8 @@ export type QfI1CandidateV1 = Readonly<{
   bankClass: QuestionBankClass;
   origin: "BANK_STOCK" | "GENERATED";
   contentAuthority: "LEARNING_ONLY" | "VERIFIED_TRANSFER" | "MEASUREMENT";
-  rightsStatus: "VERIFIED";
-  sourceStatus: "CURRENT";
+  rightsStatus: "VERIFIED" | "OWNER_AUTHORIZED_ORIGINAL";
+  sourceStatus: "CURRENT" | "STATED_MODEL_ONLY";
   releaseChainComplete: boolean;
   unseenEligibilitySnapshotSealed: boolean;
   nonSameSurfaceAsSource: boolean;
@@ -203,6 +204,17 @@ function assertCandidate(candidate: QfI1CandidateV1) {
     );
   }
   assertChronology(candidate);
+  // Exact Owner-approved private calculation lane is not a reviewed release.
+  // Its request-local loader capability cannot be minted by candidate fields.
+  if (candidate.rightsStatus === "OWNER_AUTHORIZED_ORIGINAL") {
+    if (!activeOwnerOriginalCandidate(candidate) || candidate.sourceStatus !== "STATED_MODEL_ONLY" ||
+      candidate.releaseChainComplete !== false || candidate.bankClass !== "LEARNING_PRACTICE" ||
+      candidate.contentAuthority !== "LEARNING_ONLY" || candidate.origin !== "BANK_STOCK" ||
+      candidate.unseenEligibilitySnapshotSealed !== false || candidate.nonSameSurfaceAsSource !== false ||
+      candidate.familyIsolated !== false || candidate.calibrationState !== "UNASSESSED" || candidate.timedProtocolBound !== false) reject("AUTHORITY_BINDING_MISMATCH");
+    return;
+  }
+  if (candidate.sourceStatus !== "CURRENT") reject("AUTHORITY_BINDING_MISMATCH");
   admitQuestionToBankV1({
     schemaVersion: CORE_BLITZ_WAVE1_CONTRACT_VERSION,
     bankClass: candidate.bankClass,

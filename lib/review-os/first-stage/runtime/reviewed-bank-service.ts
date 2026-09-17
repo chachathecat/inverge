@@ -1,6 +1,7 @@
 import { FirstStageKernelError, requiredIdentifier, requiredUtcInstant } from "../kernel/domain";
 import { selectQfI1BankFirstAssignmentV1, type QfI1CandidateV1 } from "../../../question-foundry/runtime/qf-i1-bank-first";
 import { reviewedBankCandidates } from "./private-reviewed-content";
+import { ownerOriginalBankCandidates, activeOwnerOriginalCatalog, catalogForOwnerOriginalHistory } from "./owner-original-context";
 import { createPrivateFirstStageSessionService, privateFirstStageSessionId, privateSessionDigest,
   type PrivateFirstStageCatalog, type PrivateFirstStageSession, type PrivateFirstStageSessionStore } from "./session-service";
 
@@ -19,24 +20,32 @@ const request = (scope: string, at: string, candidates: readonly QfI1CandidateV1
 });
 
 export function createReviewedBankService(sessions: PrivateFirstStageSessionStore, bank: ReviewedBankStore,
-  catalog: PrivateFirstStageCatalog, now: () => string) {
+  catalog: PrivateFirstStageCatalog, now: () => string, loadPeerCatalogs?: () => Promise<readonly PrivateFirstStageCatalog[]>) {
   const service = createPrivateFirstStageSessionService(sessions, catalog, now);
   const subject = catalog.initialReferences[0]?.subjectId;
   function stock() {
-    const candidates = reviewedBankCandidates(catalog);
+    // Only the exact catalog object admitted inside an authenticated local
+    // authored request has this capability; all other catalogs retain the old gate.
+    const candidates = reviewedBankCandidates(catalog) ?? ownerOriginalBankCandidates(catalog);
     if (!candidates || !["economics_principles", "real_estate_principles"].includes(subject)) fail();
     return candidates;
   }
+  async function savedCatalog(saved: PrivateFirstStageSession) {
+    if (saved.catalogDigest === catalog.digest || !activeOwnerOriginalCatalog(catalog)) return catalog;
+    return catalogForOwnerOriginalHistory(catalog, await loadPeerCatalogs?.() ?? [], saved.catalogDigest);
+  }
   async function readWinner(ownerId: string, sessionId: string, winner: ReviewedBankRecord) {
-    const history = service.projectHistory(winner.session, ownerId);
+    const selected = await savedCatalog(winner.session);
+    const winnerService = selected === catalog ? service : createPrivateFirstStageSessionService(sessions, selected, now);
+    const history = winnerService.projectHistory(winner.session, ownerId);
     if (history.sessionId !== sessionId || history.contentMode !== "first_stage.private_session.v1") fail();
     const assignedAt = requiredUtcInstant(winner.assignment.assignedAt);
     if (Date.parse(assignedAt) > Date.parse(now())) fail();
-    const candidate = stock().find(item => item.candidateId === history.questionId);
+    const candidate = (selected === catalog ? stock() : reviewedBankCandidates(selected))?.find(item => item.candidateId === history.questionId);
     if (!candidate) fail();
     const expected = selectQfI1BankFirstAssignmentV1(request(sessionId, assignedAt, [candidate], subject));
     if (expected.status !== "ASSIGNED" || privateSessionDigest(expected) !== privateSessionDigest(winner.assignment)) fail();
-    return service.view(ownerId, sessionId);
+    return winnerService.view(ownerId, sessionId);
   }
   async function available(ownerId: string) {
     const candidates = stock();
@@ -50,7 +59,9 @@ export function createReviewedBankService(sessions: PrivateFirstStageSessionStor
       if (reference?.subjectId !== subject) continue;
       // Validate complete aggregates before treating readiness, exposure or a
       // processed review as history. A ready reservation is NOT an exposure.
-      reserved.add(service.projectHistory(value, ownerId).questionId);
+      const selected = await savedCatalog(value);
+      const history = (selected === catalog ? service : createPrivateFirstStageSessionService(sessions, selected, now)).projectHistory(value, ownerId);
+      if (selected === catalog) reserved.add(history.questionId);
     }
     return candidates.filter(item => !reserved.has(item.candidateId));
   }

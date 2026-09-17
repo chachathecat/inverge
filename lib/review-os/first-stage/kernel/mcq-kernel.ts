@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { activeOwnerOriginalReference } from "../runtime/owner-original-context";
 import { activeOwnerLocalR3TrialAdapter } from "../runtime/owner-local-trial-context";
 
 import {
@@ -37,6 +38,7 @@ export type CreateExamCycleInput = Readonly<{
 }>;
 
 export type BeginAttemptInput = Readonly<{
+  ownerOriginalUse?: import("./domain").OwnerOriginalUse;
   trustedOwnerId: string;
   trustedExamCycleDefinitionSha256: string;
   expectedRevision: number;
@@ -56,6 +58,7 @@ export type SubmitAnswerInput = Readonly<{
 }>;
 
 export type BeginIndependentRetryInput = Readonly<{
+  ownerOriginalUse?: import("./domain").OwnerOriginalUse;
   trustedOwnerId: string;
   trustedExamCycleDefinitionSha256: string;
   expectedRevision: number;
@@ -147,6 +150,7 @@ function validateKernelState(
       "sourceAttemptId", "reviewTaskId", "exposureState", "assistanceLevel",
       "startedAt", "state", "submission", "evaluation",
       ...("ownerLocalAssistance" in attempt ? ["ownerLocalAssistance"] : []),
+      ...("ownerOriginalUse" in attempt ? ["ownerOriginalUse"] : []),
     ]);
     const reference = parseQuestionReference(attempt.questionReference);
     const adapter = registry.require(reference.subjectId);
@@ -162,6 +166,9 @@ function validateKernelState(
       !["first_exposure", "repeated_exposure", "verified_variant", "unreviewed_local_variant"].includes(attempt.exposureState) ||
       !["none", "hint_or_scaffold", "answer_revealed"].includes(attempt.assistanceLevel)
     ) throw new FirstStageKernelError("invalid_input");
+    const originalUse = ownerOriginalUse(adapter, reference, attempt.ownerOriginalUse);
+    if (originalUse !== attempt.ownerOriginalUse) throw new FirstStageKernelError("invalid_input");
+    if (attempt.sourceAttemptId && state.attempts.find(row => row.attemptId === attempt.sourceAttemptId)?.ownerOriginalUse === "functional_test" && originalUse !== "functional_test") throw new FirstStageKernelError("invalid_input");
     const exposures=attempt.ownerLocalAssistance;
     if(exposures!==undefined) {
       if(!activeOwnerLocalR3TrialAdapter(adapter)||reference.questionVersion!=="issue883-economics-curriculum-v1"||attempt.kind!=="initial"||
@@ -184,16 +191,16 @@ function validateKernelState(
       if (
         attempt.sourceAttemptId !== null ||
         (attempt.state === "in_progress" && attempt.reviewTaskId !== null) ||
-        attempt.exposureState !== "first_exposure" ||
-        (exposures===undefined && attempt.assistanceLevel !== "none") ||
+        attempt.exposureState !== ((originalUse === "answer_seen" || originalUse === "functional_test") ? "repeated_exposure" : "first_exposure") ||
+        (exposures===undefined && attempt.assistanceLevel !== ((originalUse === "answer_seen" || originalUse === "functional_test") ? "answer_revealed" : "none")) ||
         !cycleReference ||
         canonicalJson(cycleReference) !== canonicalJson(reference)
       ) throw new FirstStageKernelError("invalid_input");
     } else if (
       requiredIdentifier(attempt.sourceAttemptId) !== attempt.sourceAttemptId ||
       requiredIdentifier(attempt.reviewTaskId) !== attempt.reviewTaskId ||
-      attempt.exposureState !== (activeOwnerLocalR3TrialAdapter(adapter) ? "unreviewed_local_variant" : "verified_variant") ||
-      attempt.assistanceLevel !== "none"
+      attempt.exposureState !== (activeOwnerLocalR3TrialAdapter(adapter) || activeOwnerOriginalReference(adapter, reference) ? "unreviewed_local_variant" : "verified_variant") ||
+      attempt.assistanceLevel !== ((originalUse === "answer_seen" || originalUse === "functional_test") ? "answer_revealed" : "none")
     ) throw new FirstStageKernelError("invalid_input");
     if (attempt.state === "in_progress") {
       if (attempt.submission !== null || attempt.evaluation !== null) {
@@ -354,12 +361,14 @@ function validateKernelState(
       "sourceAttemptId", "reviewTaskId", "exposureState", "assistanceLevel",
       "startedAt", "state", "submission", "evaluation",
       ...("ownerLocalAssistance" in sourceAttempt ? ["ownerLocalAssistance"] : []),
+      ...("ownerOriginalUse" in sourceAttempt ? ["ownerOriginalUse"] : []),
     ]);
     exactObject(retryAttempt, [
       "schemaVersion", "attemptId", "examCycleId", "questionReference", "kind",
       "sourceAttemptId", "reviewTaskId", "exposureState", "assistanceLevel",
       "startedAt", "state", "submission", "evaluation",
       ...("ownerLocalAssistance" in retryAttempt ? ["ownerLocalAssistance"] : []),
+      ...("ownerOriginalUse" in retryAttempt ? ["ownerOriginalUse"] : []),
     ]);
     const retryReference = parseQuestionReference(retry.questionReference);
     const retryAttemptReference = parseQuestionReference(retryAttempt.questionReference);
@@ -383,10 +392,10 @@ function validateKernelState(
           : retryAttempt.evaluation?.decision === "correct");
     if (
       retry.schemaVersion !== "first_stage.independent_retry.v1" ||
-      retry.assistanceLevel !== "none" ||
+      retry.assistanceLevel !== ((retryAttempt.ownerOriginalUse === "answer_seen" || retryAttempt.ownerOriginalUse === "functional_test") ? "answer_revealed" : "none") ||
       !["active", "succeeded", "failed"].includes(retry.outcome) ||
       receipt.schemaVersion !== "first_stage.independent_retry_lineage_receipt.v1" ||
-      receipt.decision !== (activeOwnerLocalR3TrialAdapter(adapter) ? "unreviewed_owner_local_practice_retry" : "verified_variant_for_independent_retry") ||
+      receipt.decision !== (activeOwnerLocalR3TrialAdapter(adapter) || activeOwnerOriginalReference(adapter, retryReference) ? "unreviewed_owner_local_practice_retry" : "verified_variant_for_independent_retry") ||
       retry.adapterId !== receipt.adapterId ||
       retry.adapterVersion !== receipt.adapterVersion ||
       retry.adapterId !== adapter.adapterId ||
@@ -412,8 +421,8 @@ function validateKernelState(
       retryAttempt.sourceAttemptId !== sourceAttempt.attemptId ||
       retryAttempt.reviewTaskId !== task.reviewTaskId ||
       retryAttempt.examCycleId !== task.examCycleId ||
-      retryAttempt.exposureState !== (activeOwnerLocalR3TrialAdapter(adapter) ? "unreviewed_local_variant" : "verified_variant") ||
-      retryAttempt.assistanceLevel !== "none" ||
+      retryAttempt.exposureState !== (activeOwnerLocalR3TrialAdapter(adapter) || activeOwnerOriginalReference(adapter, retryReference) ? "unreviewed_local_variant" : "verified_variant") ||
+      retryAttempt.assistanceLevel !== ((retryAttempt.ownerOriginalUse === "answer_seen" || retryAttempt.ownerOriginalUse === "functional_test") ? "answer_revealed" : "none") ||
       retryAttempt.startedAt !== retry.startedAt ||
       state.attempts.indexOf(sourceAttempt) >= state.attempts.indexOf(retryAttempt) ||
       canonicalJson(retryAttemptReference) !== canonicalJson(retryReference) ||
@@ -775,6 +784,7 @@ export function beginAttempt(
   const row = exactObject(input, [
     "trustedOwnerId", "trustedExamCycleDefinitionSha256", "expectedRevision",
     "attemptId", "questionId", "trustedStartedAt",
+    ...("ownerOriginalUse" in input ? ["ownerOriginalUse"] : []),
   ]);
   state = stale(
     state,
@@ -790,6 +800,7 @@ export function beginAttempt(
   const reference = referenceForInitialAttempt(state, requiredIdentifier(row.questionId));
   const adapter = registry.require(reference.subjectId);
   adapter.assertQuestionReference(reference);
+  ownerOriginalUse(adapter, reference, row.ownerOriginalUse);
   const startedAt = requireNondecreasingActivity(state, requiredUtcInstant(row.trustedStartedAt));
   const attempt: Attempt = Object.freeze({
     schemaVersion: "first_stage.attempt.v1",
@@ -799,8 +810,9 @@ export function beginAttempt(
     kind: "initial",
     sourceAttemptId: null,
     reviewTaskId: null,
-    exposureState: "first_exposure",
-    assistanceLevel: "none",
+    exposureState: (row.ownerOriginalUse === "answer_seen" || row.ownerOriginalUse === "functional_test") ? "repeated_exposure" : "first_exposure",
+    ...(activeOwnerOriginalReference(adapter, reference) ? { ownerOriginalUse: ownerOriginalUse(adapter, reference, row.ownerOriginalUse) } : {}),
+    assistanceLevel: (row.ownerOriginalUse === "answer_seen" || row.ownerOriginalUse === "functional_test") ? "answer_revealed" : "none",
     startedAt,
     state: "in_progress",
     submission: null,
@@ -943,7 +955,7 @@ function rebuildConceptStates(
           attempt.attemptId,
           submission.submittedAt,
           instantMs(dueAt) <= instantMs(submission.submittedAt)
-            ? "independent_retry_due"
+            ? (attempt.ownerOriginalUse ? "practice_retry_due" : "independent_retry_due")
             : "review_required",
         );
       }
@@ -960,7 +972,7 @@ function rebuildConceptStates(
       task.conceptBindings,
       retry.retryAttemptId,
       retry.startedAt,
-      "independent_retry_due",
+      attempt.ownerOriginalUse ? "practice_retry_due" : "independent_retry_due",
       false,
     );
     if (retry.outcome !== "active" && evaluation && submission && isReviewedEvaluation(evaluation)) {
@@ -969,7 +981,7 @@ function rebuildConceptStates(
         task.conceptBindings,
         attempt.attemptId,
         submission.submittedAt,
-        retry.outcome === "succeeded" ? "independent_retry_recorded" : "reopened",
+        retry.outcome === "succeeded" ? (attempt.ownerOriginalUse ? "practice_retry_recorded" : "independent_retry_recorded") : "reopened",
       );
     }
   }
@@ -1088,7 +1100,7 @@ export function submitAnswer(
       completedAt: null,
     });
     const conceptState = instantMs(dueAt) <= instantMs(submission.submittedAt)
-      ? "independent_retry_due" as const
+      ? (attempt.ownerOriginalUse ? "practice_retry_due" as const : "independent_retry_due" as const)
       : "review_required" as const;
     return Object.freeze({
       ...state,
@@ -1146,7 +1158,7 @@ export function submitAnswer(
       state.reviewTasks[taskIndex].conceptBindings,
       attempt.attemptId,
       submission.submittedAt,
-      succeeded ? "independent_retry_recorded" : "reopened",
+      succeeded ? (attempt.ownerOriginalUse ? "practice_retry_recorded" : "independent_retry_recorded") : "reopened",
     ),
   });
 }
@@ -1160,6 +1172,7 @@ export function beginIndependentRetry(
     "trustedOwnerId", "trustedExamCycleDefinitionSha256", "expectedRevision",
     "reviewTaskId", "independentRetryId", "retryAttemptId",
     "trustedStartedAt",
+    ...("ownerOriginalUse" in input ? ["ownerOriginalUse"] : []),
   ]);
   state = stale(
     state,
@@ -1221,7 +1234,7 @@ export function beginIndependentRetry(
     !Array.isArray(lineage.targetConceptBindingKeys) ||
     JSON.stringify(lineage.targetConceptBindingKeys) !== JSON.stringify(targetConceptBindingKeys) ||
     lineage.priorRetryCount !== priorRetries.length ||
-    lineage.decision !== (activeOwnerLocalR3TrialAdapter(adapter) ? "unreviewed_owner_local_practice_retry" : "verified_variant_for_independent_retry")
+    lineage.decision !== (activeOwnerLocalR3TrialAdapter(adapter) || activeOwnerOriginalReference(adapter, retryReference) ? "unreviewed_owner_local_practice_retry" : "verified_variant_for_independent_retry")
   ) throw new FirstStageKernelError("adapter_mismatch");
   if (
     retryReference.subjectId !== adapter.subjectId ||
@@ -1260,18 +1273,21 @@ export function beginIndependentRetry(
     variantQuestionReferenceSha256: questionReferenceSha256(retryReference),
     targetConceptBindingKeys: Object.freeze(targetConceptBindingKeys),
     priorRetryCount: priorRetries.length,
-    decision: activeOwnerLocalR3TrialAdapter(adapter) ? "unreviewed_owner_local_practice_retry" as const : "verified_variant_for_independent_retry" as const,
+    decision: activeOwnerLocalR3TrialAdapter(adapter) || activeOwnerOriginalReference(adapter, retryReference) ? "unreviewed_owner_local_practice_retry" as const : "verified_variant_for_independent_retry" as const,
   });
+  const use = ownerOriginalUse(adapter, retryReference, row.ownerOriginalUse);
+  if (sourceAttempt.ownerOriginalUse === "functional_test" && use !== "functional_test") throw new FirstStageKernelError("invalid_transition");
   const retryAttempt: Attempt = Object.freeze({
     schemaVersion: "first_stage.attempt.v1",
     attemptId: retryAttemptId,
     examCycleId: state.examCycle.examCycleId,
     questionReference: retryReference,
+    ...(use ? { ownerOriginalUse: use } : {}),
     kind: "independent_retry",
     sourceAttemptId: sourceAttempt.attemptId,
     reviewTaskId: task.reviewTaskId,
-    exposureState: activeOwnerLocalR3TrialAdapter(adapter) ? "unreviewed_local_variant" : "verified_variant",
-    assistanceLevel: "none",
+    exposureState: activeOwnerLocalR3TrialAdapter(adapter) || activeOwnerOriginalReference(adapter, retryReference) ? "unreviewed_local_variant" : "verified_variant",
+    assistanceLevel: use === "answer_seen" || use === "functional_test" ? "answer_revealed" : "none",
     startedAt,
     state: "in_progress",
     submission: null,
@@ -1287,7 +1303,7 @@ export function beginIndependentRetry(
     adapterId: adapter.adapterId,
     adapterVersion: adapter.adapterVersion,
     lineageReceipt,
-    assistanceLevel: "none" as const,
+    assistanceLevel: (use === "answer_seen" || use === "functional_test") ? "answer_revealed" as const : "none" as const,
     startedAt,
     completedAt: null,
     outcome: "active" as const,
@@ -1303,8 +1319,14 @@ export function beginIndependentRetry(
       task.conceptBindings,
       retryAttempt.attemptId,
       startedAt,
-      "independent_retry_due",
+      retryAttempt.ownerOriginalUse ? "practice_retry_due" : "independent_retry_due",
       false,
     ),
   });
+}
+
+function ownerOriginalUse(adapter: object, reference: import("./domain").QuestionReference, value: unknown): import("./domain").OwnerOriginalUse | undefined {
+  if (!activeOwnerOriginalReference(adapter, reference)) { if (value !== undefined) throw new FirstStageKernelError("invalid_input"); return undefined; }
+  if (value !== "practice" && value !== "answer_seen" && value !== "functional_test") throw new FirstStageKernelError("invalid_input");
+  return value;
 }

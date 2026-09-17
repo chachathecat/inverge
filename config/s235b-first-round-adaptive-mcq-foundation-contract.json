@@ -5083,23 +5083,55 @@
       "retryReceiptVersion": "appraiser.first.private_modified_retry_release.v1",
       "retryRequiredFieldsDerivation": {
         "base": "releaseReceiptContract.requiredFields",
-        "removeExactly": ["official_exam_round_id", "session_profile_id", "official_question_number", "verified_official_key_receipt_reference"],
-        "addExactly": ["item_kind", "authority", "original_release_reference", "independent_answer_key_reference"]
+        "removeExactly": [
+          "official_exam_round_id",
+          "session_profile_id",
+          "official_question_number",
+          "verified_official_key_receipt_reference"
+        ],
+        "addExactly": [
+          "item_kind",
+          "authority",
+          "original_release_reference",
+          "independent_answer_key_reference"
+        ]
       },
       "retryItemKind": "private_modified_retry",
       "retryAuthority": "LEARNING_ONLY",
       "retryDecision": "approved_personal_only",
       "independentAnswerKeyRequiredFields": [
-        "receipt_id", "receipt_version", "receipt_sha256", "item_id", "item_version", "subject_id",
-        "question_item_object_reference", "choice_set_digest", "answer_position_1_to_5", "original_release_reference",
-        "answer_reasoning_object_reference", "authority", "reviewer", "reviewed_at", "decision"
+        "receipt_id",
+        "receipt_version",
+        "receipt_sha256",
+        "item_id",
+        "item_version",
+        "subject_id",
+        "question_item_object_reference",
+        "choice_set_digest",
+        "answer_position_1_to_5",
+        "original_release_reference",
+        "answer_reasoning_object_reference",
+        "authority",
+        "reviewer",
+        "reviewed_at",
+        "decision"
       ],
       "independentAnswerKeyDecision": "verified_independent_private_retry_key",
       "independentAnswerKeyReviewerClass": "named_owner_authorized_human_answer_key_reviewer",
       "variantProvenanceFieldsDerivation": {
         "base": "questionItemObjectProvenanceReceiptShape.requiredFields",
-        "removeExactly": ["extraction_method_id", "extraction_method_version", "extraction_configuration_digest", "ocr_benchmark_gate_receipt_reference_or_null"],
-        "addExactly": ["original_release_reference", "original_question_object_reference", "concept_binding_digest", "derivation_kind"]
+        "removeExactly": [
+          "extraction_method_id",
+          "extraction_method_version",
+          "extraction_configuration_digest",
+          "ocr_benchmark_gate_receipt_reference_or_null"
+        ],
+        "addExactly": [
+          "original_release_reference",
+          "original_question_object_reference",
+          "concept_binding_digest",
+          "derivation_kind"
+        ]
       },
       "variantProvenanceDecision": "verified_exact_private_variant_lineage",
       "variantProvenanceDerivationKind": "private_modified_practice_only",
@@ -40132,5 +40164,36 @@
     "O4B": "queued_unapproved",
     "firstRoundLearnerRuntime": "not_started_by_s235b",
     "automaticDownstreamTransitionAllowed": false
+  },
+  "exactOwnerOriginalException": {
+    "decision": "docs/decisions/2026-09-06-owner-appraiser-first-private-continuation.md",
+    "ownerDecisionDate": "2026-09-17",
+    "packetSha256": "0a7039441edafa476973383fdd4f8fb1163ae9bee96da55aacc0eaf33b4d9fc9",
+    "questionIds": [
+      "owner-re-capitalization-original-v2",
+      "owner-re-capitalization-retry-v2"
+    ],
+    "subject": "real_estate_principles",
+    "use": "exact_owner_pc_private_practice_only",
+    "humanReviewComplete": false,
+    "officialExamMetadata": null,
+    "feedbackState": "machine_checked_owner_local",
+    "rightsState": "owner_authorized_original",
+    "currentnessState": "stated_model_only",
+    "calculationScope": "stated_model_only",
+    "automaticAddition": false,
+    "transferEvidence": false,
+    "measurementEvidence": false,
+    "masteryClaim": false,
+    "existingHumanReviewRequirementsUnchanged": true,
+    "failClosed": [
+      "wrong_packet_hash",
+      "wrong_owner_or_environment",
+      "unapproved_item",
+      "calculation_or_unit_mismatch",
+      "absent_or_forged_request_capability",
+      "human_review_claim",
+      "unknown_use_or_lost_functional_lineage"
+    ]
   }
 }

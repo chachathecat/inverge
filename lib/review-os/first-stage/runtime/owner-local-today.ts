@@ -192,6 +192,7 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
     const actions: TrialPlanAction[] = [];
     function add(value: Omit<TrialPlanAction,"id">) { actions.push({ ...value, id: actionId(value) }); }
     for (const row of observed.rows) {
+      if (row.questionNumber === null) throw new Error("trial_reference_mismatch");
       const base = { questionId: row.questionId, questionNumber: row.questionNumber,
         questionVersion: row.questionVersion,
         sessionId: row.sessionId, revision: row.revision, estimatedMinutes: 15 };
@@ -206,6 +207,7 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
     // session actions while declining all new-stock absence claims until resolved.
     if (!observed.unavailableQuestions.includes("unknown")) for (const original of catalog.initialReferences) {
       if(observed.unavailableQuestions.includes(original.questionId))continue;
+      if (original.questionNumber === null) throw new Error("trial_reference_mismatch");
       if (!observed.rows.some(row => row.questionId === original.questionId)) add({ kind:"new",
         questionId:original.questionId, questionNumber:original.questionNumber, sessionId:null,
         questionVersion:original.questionVersion,

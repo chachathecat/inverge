@@ -1,4 +1,6 @@
 import crypto from "node:crypto";
+import { activeOwnerOriginalCatalog, activeOwnerOriginalReference, compatibleOwnerOriginalReviewedCatalog } from "./owner-original-context";
+import { OWNER_ORIGINAL_NOTICE, OWNER_ORIGINAL_SCOPE } from "./owner-original-boundary";
 import { activeOwnerLocalR3TrialCatalog, acceptsOwnerLocalR3PreviousCatalog } from "./owner-local-trial-context";
 import { OWNER_LOCAL_R3_TRIAL_NOTICE } from "./owner-local-trial-boundary";
 
@@ -206,10 +208,11 @@ export function createPrivateFirstStageSessionService(
   async function execute(ownerId: string, sessionId: string, input: unknown, assertTrustedStartTime?: (at: string) => void) {
     if (!input || typeof input !== "object" || Array.isArray(input)) fail();
     const action = (input as Record<string, unknown>).action;
+    const useFields = activeOwnerOriginalCatalog(catalog) && (action === "begin" || action === "retry") ? ["ownerOriginalUse"] : [];
     const fields = action === "begin" ? ["questionId"]
       : action === "submit" ? ["attemptId", "submission"]
         : action === "retry" ? ["reviewTaskId"] : action === "help" ? ["attemptId","kind"] : fail();
-    const row = exactObject(input, ["action", "requestId", "expectedRevision", ...fields]);
+    const row = exactObject(input, ["action", "requestId", "expectedRevision", ...fields, ...useFields]);
     const requestId = requiredIdentifier(row.requestId);
     const expectedRevision = requiredSafeInteger(row.expectedRevision, 1, Number.MAX_SAFE_INTEGER);
     const requestDigest = privateSessionDigest(row);
@@ -221,7 +224,7 @@ export function createPrivateFirstStageSessionService(
     // Optional server-only planner guard, after durable load and replay checks.
     // It observes the exact timestamp the kernel seals; HTTP cannot supply it.
     if(action==="begin"||action==="retry")assertTrustedStartTime?.(trustedAt);
-    const binding = { trustedOwnerId: ownerId,
+    const binding = { ...(useFields.length ? {ownerOriginalUse: row.ownerOriginalUse as import("../kernel/domain").OwnerOriginalUse} : {}), trustedOwnerId: ownerId,
       trustedExamCycleDefinitionSha256: current.state.examCycle.definitionSha256,
       expectedRevision };
     let state: FirstStageKernelState;
@@ -279,7 +282,9 @@ export function createPrivateFirstStageSessionService(
     // Construct reference assistance only from a durably evaluated attempt.
     const explanation = !active && latest?.state === "evaluated" &&
       (latest.evaluation?.evidenceEnvelope.reviewedFeedback.state === "reviewed_available" ||
-        (trial && latest.evaluation?.evidenceEnvelope.reviewedFeedback.state === "human_unreviewed_owner_local"))
+        (trial && latest.evaluation?.evidenceEnvelope.reviewedFeedback.state === "human_unreviewed_owner_local") ||
+        (activeOwnerOriginalCatalog(catalog) && activeOwnerOriginalReference(catalog.registry.require(latest.questionReference.subjectId), latest.questionReference) &&
+          latest.evaluation?.evidenceEnvelope.reviewedFeedback.state === "machine_checked_owner_local"))
       ? catalog.explanation(latest.questionReference) : null;
     return {
       sessionId, revision: saved.state.revision, state: saved.state.examCycle.state,
@@ -301,8 +306,10 @@ export function createPrivateFirstStageSessionService(
         confidence: latest.submission.confidence, answerChanged: latest.submission.answerChanged,
         previousChoice: latest.submission.previousChoice, submittedAt: latest.submission.submittedAt,
         assistanceLevel: latest.assistanceLevel, contentMode: saved.schemaVersion,
+        ...(latest.ownerOriginalUse ? { ownerOriginalUse: latest.ownerOriginalUse } : {}),
       } : null,
       explanation,
+      ...(activeOwnerOriginalCatalog(catalog) ? { contentStatus: "machine_checked_owner_local" as const, notice: OWNER_ORIGINAL_NOTICE, scope: OWNER_ORIGINAL_SCOPE, humanReviewComplete: false as const, measurementEvidence: false as const } : {}),
       ...(trial && saved.state.examCycle.questionReferences[0].questionVersion==="issue883-economics-curriculum-v1" ? {assistanceLevel:active?.assistanceLevel??latest?.assistanceLevel??"none",
         availableConceptAids:active?.kind==="initial" ? (["concept","prerequisite"] as const).filter(kind=>
           !active.ownerLocalAssistance?.some(exposure=>exposure.kind===kind)&&Boolean(catalog.conceptAidDescriptor?.(active.questionReference,kind))) : [],
@@ -339,6 +346,7 @@ export function createPrivateFirstStageSessionService(
       committedAttempts: saved.state.attempts.filter(item => item.state === "evaluated")
         .map(item => ({ attemptId: item.attemptId, submittedAt: item.submission?.submittedAt,
           assistanceLevel:item.assistanceLevel,
+          ...(item.ownerOriginalUse ? { ownerOriginalUse: item.ownerOriginalUse, independentEvidence: false as const } : {}),
           practiceDecision: item.evaluation?.decision })),
       reviews: saved.state.reviewTasks.map(task => ({ reviewTaskId: task.reviewTaskId,
         dueAt: task.dueAt, status: task.status, completedAt: task.completedAt, priority: task.priority,
@@ -374,21 +382,25 @@ export function createPrivateFirstStageSessionService(
     if (subjectIds.size !== 1) fail("adapter_mismatch");
     const [subjectId] = subjectIds;
     const histories: ReturnType<typeof projectHistory>[] = [];
-    let peerValidators: ReturnType<typeof createPrivateFirstStageSessionService>[] | null = null;
+    let peerValidators: { service: ReturnType<typeof createPrivateFirstStageSessionService>; sameSubject: boolean }[] | null = null;
 
-    async function validatesAsAnotherSubject(candidate: PrivateFirstStageSession) {
+    async function validatesAsPeer(candidate: PrivateFirstStageSession) {
       if (!loadPeerCatalogs) return false;
       if (!peerValidators) {
         const peers = await loadPeerCatalogs();
         peerValidators = peers.flatMap((peer) => {
           const peerSubjectIds = new Set(peer.initialReferences.map((item) => item.subjectId));
-          if (peerSubjectIds.size !== 1 || peerSubjectIds.has(subjectId)) return [];
-          return [createPrivateFirstStageSessionService(store, peer, now)];
+          if (peerSubjectIds.size !== 1) return [];
+          const sameSubject = peerSubjectIds.has(subjectId);
+          if (sameSubject && !compatibleOwnerOriginalReviewedCatalog(catalog, peer)) return [];
+          return [{ service: createPrivateFirstStageSessionService(store, peer, now), sameSubject }];
         });
       }
       for (const peer of peerValidators) {
         try {
-          peer.projectHistory(candidate, ownerId);
+          const history = peer.service.projectHistory(candidate, ownerId);
+          // Same-subject reviewed work remains a Today action, never silently skipped.
+          if (peer.sameSubject) histories.push(history);
           return true;
         } catch {
           // A row may be ignored only after another server-loaded subject catalog
@@ -402,7 +414,7 @@ export function createPrivateFirstStageSessionService(
       try {
         histories.push(projectHistory(candidate, ownerId));
       } catch {
-        if (await validatesAsAnotherSubject(candidate)) continue;
+        if (await validatesAsPeer(candidate)) continue;
         return {
           schemaVersion: "first_stage.private_today_continuation.v1",
           state: "history_incomplete",

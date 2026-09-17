@@ -49,7 +49,7 @@ export function authorizeOwnerLocalCurriculumCatalog(catalog: PrivateFirstStageC
     compatibleSampleDigests.length!==8 || compatibleSampleDigests.some(value=>!/^[a-f0-9]{64}$/u.test(value)) ||
     previous.initialReferences.some(reference=>!catalog.initialReferences.some(row=>privateSessionDigest(row)===privateSessionDigest(reference)))) throw new Error("owner_local_trial_unavailable");
   const added=catalog.initialReferences.filter(reference=>!previous.initialReferences.some(old=>privateSessionDigest(old)===privateSessionDigest(reference)));
-  if(new Set(added.map(row=>row.questionNumber)).size!==added.length || added.some(row=>![58,62,65].includes(row.questionNumber)) ||
+  if(new Set(added.map(row=>row.questionNumber)).size!==added.length || added.some(row=>row.questionNumber===null || ![58,62,65].includes(row.questionNumber)) ||
     added.some(row=>row.questionVersion!=="issue883-economics-curriculum-v1" || row.questionId!==`qnet-2025-36-s1-A-${row.questionNumber}`)) throw new Error("owner_local_trial_unavailable");
   const compatible=new Map(prior.compatible);
   compatible.set(previous.digest,new Set(previous.initialReferences.map(privateSessionDigest)));

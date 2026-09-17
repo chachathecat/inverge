@@ -305,3 +305,49 @@ this delegation without routine next-step approval. Stop when the agreed
 private five-subject flows and verification are complete, reporting usable
 features, actual content coverage and remaining external/operational gates
 separately. Do not automatically start a broader release or further scope.
+
+## Exact authored two-item Owner-PC continuation (Owner, 2026-09-17)
+
+The Owner explicitly approved the proposal SHA-256
+`e82f790bea5f394d063439e3dd9434def2d219239c0bc5a581a33628eb798519`,
+content `0a7039441edafa476973383fdd4f8fb1163ae9bee96da55aacc0eaf33b4d9fc9`,
+and conditional personal SQL `5346dbf1caa872c880ab621ffd91c508791747e9c80112b1030f86642e307a3a`.
+This exception owns only the two original real-estate calculation items
+`owner-re-capitalization-original-v2` and `owner-re-capitalization-retry-v2`,
+version `owner-pc-real-estate-direct-capitalization-20260917-v2`.
+
+Reuse the existing single PC writer, normal authenticated menus, assignment,
+private session row, replay/CAS, Review Queue and Today. The minimal kernel and
+adapter delta uses explicit null official year/round/number, a distinct authored
+reference, a calculation-key reference separate from the null official key,
+request-local server capabilities, and human-unreviewed practice retry lineage.
+No matching string, client flag, synthetic receipt or adapter ID alone grants
+admission. The reviewed/r3 guards remain unchanged outside these two references.
+The bank represents OWNER_AUTHORIZED_ORIGINAL / STATED_MODEL_ONLY with
+releaseChainComplete=false, never VERIFIED/CURRENT reviewed-release metadata.
+
+For this exact packet only, the Foundation human release/key/feedback receipt
+requirements are replaced by Owner private-use authorization plus pinned bytes
+and deterministic arithmetic checks, not a human review claim. Foundry automatic
+release stays false. No additional item, subject, public route or source exception
+is authorized. Human reviewer/date remain null. Display AI authorship, checked
+calculation, no human review and private practice; the calculation proves only
+the stated model. Preserve answer exposure and functional-test provenance; do not
+create independent learning, transfer, measurement or mastery claims from them.
+
+Personal installation is conditional on actual isolated Next.js normal-login
+assignment/attempt/save/reconnect/review/history/Today verification, final-head
+native checks, independent clean review and protected squash. Immediately before
+apply recheck the exact local `inverge_owner_economics_db_loopback/postgres`
+target and both hashes; make a backup and verify restoration in isolation.
+Only the approved nullable assignment column, binding CHECK, protection function/
+trigger, reservation RPC and lookup index may be added. Preserve all rows,
+existing economics/theory settings, drafts, schedules and budget. No new permanent
+table, record transformation, reset, broader grants or full migration. A changed
+SQL/content hash or install scope requires approval for that delta. Disable the
+new bundle on failure and retain its records and additive database objects.
+
+Paid calls and new costs are zero. Theory 7/7, Practice 5/5, USD 5 shared cap,
+USD 4.388969 reservations, USD 0.611031 remainder and unmeasured entries remain.
+Q96 stays deferred. Legal collection, remote databases, Production, external
+users and redistribution remain outside this exception.
