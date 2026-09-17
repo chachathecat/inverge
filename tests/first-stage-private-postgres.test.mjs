@@ -16,7 +16,7 @@ import { economicsCatalog } from "./fixtures/first-stage-economics-content-harne
 import { loadEconomicsContent } from "../lib/review-os/first-stage/runtime/economics-content.ts";
 import { economicsReleaseInput } from "./fixtures/first-stage-economics-applicability-harness.mjs";
 import { accountingCatalog } from "./fixtures/first-stage-accounting-content-harness.mjs";
-import { remainingCatalogs, SUBJECT_CASES } from "./fixtures/first-stage-remaining-content-harness.mjs";
+import { remainingCatalogs, remainingInput, SUBJECT_CASES } from "./fixtures/first-stage-remaining-content-harness.mjs";
 import { trialHarness, startTrial, syntheticTrialInput } from "./fixtures/first-stage-owner-local-trial-harness.mjs";
 import { ORACLE_IMAGE, ORACLE_PLATFORM } from "../scripts/automation/wcv-c3-pre-p-postgresql-security-state-oracle.mjs";
 
@@ -93,7 +93,7 @@ test(`local PostgreSQL ${label} enforces actual route/browser durable retry/CAS 
     child.on("error", reject);
     child.on("close", code => {
       if (code === 0) resolve(out.trim());
-      else { const error = new Error("isolated-sql-rejected"); error.code = err.match(/ERROR:\s+([0-9A-Z]{5}):/u)?.[1] ?? "unknown"; reject(error); }
+      else { const error = new Error("isolated-sql-rejected"); error.code = err.match(/ERROR:\s+([0-9A-Z]{5}):/u)?.[1] ?? "unknown"; error.constraint = err.match(/CONSTRAINT NAME:\s+([a-z0-9_]+)/u)?.[1]; reject(error); }
     });
     child.stdin.end("\\set VERBOSITY verbose\n" + (role
       ? `begin; set local role ${role}; set local statement_timeout='15s'; ${statement}; commit;`
@@ -371,6 +371,7 @@ test(`local PostgreSQL ${label} enforces actual route/browser durable retry/CAS 
       process.stdout.write("legacy personal-table upgrade: denied before upgrade; reviewed/trial records and other constraints preserved across reapply; RLS/privileges unchanged\n");
       process.stdout.write("trial isolated PG: actual loader/HTTP/repository, lost durable response, concurrent replay, reconnect, D+1 and reviewed-mixing denial passed; synthetic only\n");
     }
+    if(subject==="real_estate_principles") await verifyReviewedBankPostgres({sql,sdk,repository,contentInput:remainingInput(subject),catalog});
     process.stdout.write(JSON.stringify({ subject, browser: "passed", screenshot: browserResult.screenshot,
       externalRequests: browserResult.externalRequests, browserErrors: browserResult.browserErrors }) + "\n");
     await sql(`delete from auth.users where id in (${literal(OWNER)},${literal(OTHER)})`, null);

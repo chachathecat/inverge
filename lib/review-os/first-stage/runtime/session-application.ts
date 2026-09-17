@@ -5,7 +5,7 @@ import { createPrivateFirstStageSessionService,
 import type { TrialPlanningStore } from "./owner-local-today";
 import type { ReviewedBankStore } from "./reviewed-bank-service";
 import { handleReviewedBank, reviewedBankEnabled } from "./reviewed-bank-http";
-import { reviewedEconomicsBankCandidates } from "./private-reviewed-content";
+import { reviewedBankCandidates } from "./private-reviewed-content";
 
 type Environment = Readonly<Record<string, string | undefined>>;
 type Session = Readonly<{ isAuthenticated: boolean; userId?: string | null; email?: string | null }>;
@@ -84,7 +84,7 @@ export function createPrivateSessionApplication(dependencies: PrivateSessionAppl
             questionNumber: item.questionNumber,
           })),
           masteryClaim: false, transferEvidence: false,
-          ...(reviewedBankEnabled(dependencies.environment()) && catalog && reviewedEconomicsBankCandidates(catalog)
+          ...(reviewedBankEnabled(dependencies.environment()) && catalog && reviewedBankCandidates(catalog)
             ? { bankPractice: true } : {}),
         }, continuation });
       }

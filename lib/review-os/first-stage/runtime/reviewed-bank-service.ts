@@ -1,6 +1,6 @@
 import { FirstStageKernelError, requiredIdentifier, requiredUtcInstant } from "../kernel/domain";
 import { selectQfI1BankFirstAssignmentV1, type QfI1CandidateV1 } from "../../../question-foundry/runtime/qf-i1-bank-first";
-import { reviewedEconomicsBankCandidates } from "./private-reviewed-content";
+import { reviewedBankCandidates } from "./private-reviewed-content";
 import { createPrivateFirstStageSessionService, privateFirstStageSessionId, privateSessionDigest,
   type PrivateFirstStageCatalog, type PrivateFirstStageSession, type PrivateFirstStageSessionStore } from "./session-service";
 
@@ -12,18 +12,19 @@ export interface ReviewedBankStore {
   reserve(session: PrivateFirstStageSession, assignment: ReviewedBankAssignment): Promise<ReviewedBankRecord | null>;
 }
 function fail(code: FirstStageKernelError["code"] = "adapter_mismatch"): never { throw new FirstStageKernelError(code); }
-const request = (scope: string, at: string, candidates: readonly QfI1CandidateV1[]) => ({
-  purpose: "LEARNING_PRACTICE" as const, learnerScopeId: scope, sourceCandidateId: "reviewed-economics-initial",
-  sourceFamilyId: "reviewed-economics-initial", sourceSurfaceId: "reviewed-economics-initial",
+const request = (scope: string, at: string, candidates: readonly QfI1CandidateV1[], subject: string) => ({
+  purpose: "LEARNING_PRACTICE" as const, learnerScopeId: scope, sourceCandidateId: subject === "economics_principles" ? "reviewed-economics-initial" : "reviewed-real-estate-initial",
+  sourceFamilyId: subject === "economics_principles" ? "reviewed-economics-initial" : "reviewed-real-estate-initial", sourceSurfaceId: subject === "economics_principles" ? "reviewed-economics-initial" : "reviewed-real-estate-initial",
   asOf: at, candidates, exposures: [],
 });
 
 export function createReviewedBankService(sessions: PrivateFirstStageSessionStore, bank: ReviewedBankStore,
   catalog: PrivateFirstStageCatalog, now: () => string) {
   const service = createPrivateFirstStageSessionService(sessions, catalog, now);
+  const subject = catalog.initialReferences[0]?.subjectId;
   function stock() {
-    const candidates = reviewedEconomicsBankCandidates(catalog);
-    if (!candidates) fail();
+    const candidates = reviewedBankCandidates(catalog);
+    if (!candidates || !["economics_principles", "real_estate_principles"].includes(subject)) fail();
     return candidates;
   }
   async function readWinner(ownerId: string, sessionId: string, winner: ReviewedBankRecord) {
@@ -33,7 +34,7 @@ export function createReviewedBankService(sessions: PrivateFirstStageSessionStor
     if (Date.parse(assignedAt) > Date.parse(now())) fail();
     const candidate = stock().find(item => item.candidateId === history.questionId);
     if (!candidate) fail();
-    const expected = selectQfI1BankFirstAssignmentV1(request(sessionId, assignedAt, [candidate]));
+    const expected = selectQfI1BankFirstAssignmentV1(request(sessionId, assignedAt, [candidate], subject));
     if (expected.status !== "ASSIGNED" || privateSessionDigest(expected) !== privateSessionDigest(winner.assignment)) fail();
     return service.view(ownerId, sessionId);
   }
@@ -46,7 +47,7 @@ export function createReviewedBankService(sessions: PrivateFirstStageSessionStor
     for (const value of snapshot.sessions) {
       if (value.ownerId !== ownerId || value.schemaVersion !== "first_stage.private_session.v1") fail();
       const reference = value.state.examCycle.questionReferences[0];
-      if (reference?.subjectId !== "economics_principles") continue;
+      if (reference?.subjectId !== subject) continue;
       // Validate complete aggregates before treating readiness, exposure or a
       // processed review as history. A ready reservation is NOT an exposure.
       reserved.add(service.projectHistory(value, ownerId).questionId);
@@ -72,7 +73,7 @@ export function createReviewedBankService(sessions: PrivateFirstStageSessionStor
         fail("invalid_transition");
       }
       const at = requiredUtcInstant(now());
-      const selected = selectQfI1BankFirstAssignmentV1(request(sessionId, at, await available(ownerId)));
+      const selected = selectQfI1BankFirstAssignmentV1(request(sessionId, at, await available(ownerId), subject));
       if (selected.status !== "ASSIGNED") {
         // A concurrent identical request may have consumed the last original
         // after both initial reads, but before this complete history snapshot.

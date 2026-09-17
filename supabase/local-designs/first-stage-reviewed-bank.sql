@@ -13,14 +13,15 @@ do $$ begin
 end $$;
 
 alter table public.first_stage_private_sessions add column if not exists reviewed_bank_assignment jsonb;
-do $$ begin
-  if not exists(select 1 from pg_constraint where conrelid='public.first_stage_private_sessions'::regclass
-    and conname='first_stage_reviewed_bank_binding') then
-    alter table public.first_stage_private_sessions add constraint first_stage_reviewed_bank_binding check (
+-- Compare exact parsed definitions. Upgrade only the known prior binding; custom
+-- constraints fail closed. The temporary reference table never contains rows.
+do $reviewed_bank_binding$
+declare
+  current_check constant text := $binding$check (
       reviewed_bank_assignment is null or (
         jsonb_typeof(reviewed_bank_assignment)='object' and octet_length(reviewed_bank_assignment::text)<=8192 and
         payload->>'schemaVersion'='first_stage.private_session.v1' and
-        payload->'state'->'examCycle'->'questionReferences'->0->>'subjectId'='economics_principles' and
+        payload->'state'->'examCycle'->'questionReferences'->0->>'subjectId' in ('economics_principles','real_estate_principles') and
         reviewed_bank_assignment->>'contractVersion'='QFI1BankFirstAssignmentV1' and
         reviewed_bank_assignment->>'status'='ASSIGNED' and
         reviewed_bank_assignment->>'purpose'='LEARNING_PRACTICE' and
@@ -45,9 +46,35 @@ do $$ begin
         length(reviewed_bank_assignment->>'surfaceId') between 1 and 160 and
         reviewed_bank_assignment->>'assignedAt' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]{3}Z$'
       ) is true
-    );
+    )$binding$;
+  legacy_check text;
+  current_definition text;
+  legacy_definition text;
+  existing_definition text;
+begin
+  legacy_check := replace(current_check,
+    $new$payload->'state'->'examCycle'->'questionReferences'->0->>'subjectId' in ('economics_principles','real_estate_principles')$new$,
+    $old$payload->'state'->'examCycle'->'questionReferences'->0->>'subjectId'='economics_principles'$old$);
+  create temporary table inverge_reviewed_bank_binding_reference
+    (payload jsonb, reviewed_bank_assignment jsonb, session_id text) on commit drop;
+  execute 'alter table pg_temp.inverge_reviewed_bank_binding_reference add constraint expected_current ' || current_check;
+  execute 'alter table pg_temp.inverge_reviewed_bank_binding_reference add constraint expected_legacy ' || legacy_check;
+  select pg_get_constraintdef(oid) into current_definition from pg_constraint
+    where conrelid='pg_temp.inverge_reviewed_bank_binding_reference'::regclass and conname='expected_current';
+  select pg_get_constraintdef(oid) into legacy_definition from pg_constraint
+    where conrelid='pg_temp.inverge_reviewed_bank_binding_reference'::regclass and conname='expected_legacy';
+  lock table public.first_stage_private_sessions in access exclusive mode;
+  select pg_get_constraintdef(oid) into existing_definition from pg_constraint
+    where conrelid='public.first_stage_private_sessions'::regclass and conname='first_stage_reviewed_bank_binding' and contype='c';
+  if existing_definition = legacy_definition then
+    alter table public.first_stage_private_sessions drop constraint first_stage_reviewed_bank_binding;
+  elsif existing_definition is not null and existing_definition is distinct from current_definition then
+    raise exception 'unknown reviewed bank binding; preserve and inspect';
   end if;
-end $$;
+  if existing_definition is null or existing_definition = legacy_definition then
+    execute 'alter table public.first_stage_private_sessions add constraint first_stage_reviewed_bank_binding ' || current_check;
+  end if;
+end $reviewed_bank_binding$;
 
 create or replace function public.inverge_reviewed_bank_insert_guard()
 returns trigger language plpgsql security invoker set search_path=pg_catalog,public as $$
@@ -65,7 +92,7 @@ begin
     return new;
   end if;
   if new.payload->>'schemaVersion'='first_stage.private_session.v1' and
-    new.payload->'state'->'examCycle'->'questionReferences'->0->>'subjectId'='economics_principles' then
+    new.payload->'state'->'examCycle'->'questionReferences'->0->>'subjectId' in ('economics_principles','real_estate_principles') then
     question_id:=new.payload->'state'->'examCycle'->'questionReferences'->0->>'questionId';
     if question_id is null or length(question_id)>160 then raise exception 'invalid reviewed original'; end if;
     -- One transaction lock shared by manual insert and bank reserve. Manual
@@ -74,6 +101,7 @@ begin
     if exists(select 1 from public.first_stage_private_sessions s where s.owner_id=new.owner_id and
       s.payload->>'schemaVersion'='first_stage.private_session.v1' and
       s.payload->'state'->'examCycle'->'questionReferences'->0->>'questionId'=question_id and
+      s.payload->'state'->'examCycle'->'questionReferences'->0->>'subjectId'=new.payload->'state'->'examCycle'->'questionReferences'->0->>'subjectId' and
       (new.reviewed_bank_assignment is not null or s.reviewed_bank_assignment is not null)) then
       raise unique_violation using message='reviewed original already reserved';
     end if;
@@ -106,7 +134,8 @@ begin
   perform pg_advisory_xact_lock(hashtextextended('reviewed-bank:' || p_owner::text || ':' || question_id,0));
   if exists(select 1 from public.first_stage_private_sessions where owner_id=p_owner and
       payload->>'schemaVersion'='first_stage.private_session.v1' and
-      payload->'state'->'examCycle'->'questionReferences'->0->>'questionId'=question_id) then return null; end if;
+      payload->'state'->'examCycle'->'questionReferences'->0->>'questionId'=question_id and
+      payload->'state'->'examCycle'->'questionReferences'->0->>'subjectId'=p_payload->'state'->'examCycle'->'questionReferences'->0->>'subjectId') then return null; end if;
   insert into public.first_stage_private_sessions(owner_id,session_id,revision,payload,reviewed_bank_assignment)
     values(p_owner,p_session,1,p_payload,p_assignment);
   return jsonb_build_object('session',p_payload,'assignment',p_assignment);

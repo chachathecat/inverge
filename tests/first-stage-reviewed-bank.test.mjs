@@ -4,16 +4,19 @@ import { createPrivateSessionApplication } from "../lib/review-os/first-stage/ru
 import { loadEconomicsContent } from "../lib/review-os/first-stage/runtime/economics-content.ts";
 import { economicsReleaseInput } from "./fixtures/first-stage-economics-applicability-harness.mjs";
 import { harness } from "./fixtures/first-stage-private-session-harness.mjs";
-import { reviewedEconomicsBankCandidates } from "../lib/review-os/first-stage/runtime/private-reviewed-content.ts";
+import { reviewedBankCandidates } from "../lib/review-os/first-stage/runtime/private-reviewed-content.ts";
 import { economicsCatalog } from "./fixtures/first-stage-economics-content-harness.mjs";
 import { privateRoute, ENVIRONMENT } from "./fixtures/first-stage-private-route-harness.mjs";
 import { verifyPrivateBrowser } from "./fixtures/first-stage-private-browser-harness.mjs";
+
+import { remainingInput, remainingCatalogs } from "./fixtures/first-stage-remaining-content-harness.mjs";
+import { loadRealEstatePrinciplesContent } from "../lib/review-os/first-stage/runtime/remaining-subject-content.ts";
 
 const OWNER = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const URL = "http://127.0.0.1/api/review-os/first-stage/sessions?view=bank";
 const NOW = "2026-09-09T08:00:00.000Z";
 async function bankHarness(options = {}) {
-  const { input } = await economicsReleaseInput();
+  const input = options.input ?? (await economicsReleaseInput()).input;
   const catalog = options.catalog ?? await loadEconomicsContent(input);
   assert.ok(catalog);
   const h = harness({ catalog });
@@ -41,7 +44,8 @@ async function bankHarness(options = {}) {
         const key = `${session.ownerId}:${session.sessionId}`;
         if (assignments.has(key)) return assignments.get(key);
         if ([...h.rows.values()].some(row => row.state.examCycle.questionReferences[0].questionId ===
-          session.state.examCycle.questionReferences[0].questionId)) return null;
+          session.state.examCycle.questionReferences[0].questionId && row.ownerId === session.ownerId &&
+          row.state.examCycle.questionReferences[0].subjectId === session.state.examCycle.questionReferences[0].subjectId)) return null;
         const saved = await store.create(session);
         const value = { session: saved, assignment };
         assignments.set(key, value);
@@ -89,7 +93,7 @@ test("OFF, unauthenticated, non-Owner and every deployment deny before stock or 
 
 test("legacy six-check or cloned catalog and client authority cannot enter bank assignment", async () => {
   const valid = await bankHarness();
-  assert.ok(reviewedEconomicsBankCandidates(valid.catalog));
+  assert.ok(reviewedBankCandidates(valid.catalog));
   for (const catalog of [economicsCatalog, { ...valid.catalog }]) {
     const h = await bankHarness({ catalog }); assert.equal((await assign(h.app)).status, 503);
     assert.equal(h.rows?.size ?? h.h.rows.size, 0);
@@ -200,4 +204,44 @@ for(const point of ["afterMissingBank","beforeSnapshot"]) test(`identical reques
   const response=await assign(h.app,"interleaved");
   assert.equal(response.status,200);assert.deepEqual(await response.json(),winner);
   assert.equal(h.h.rows.size,h.catalog.initialReferences.length);
+});
+
+async function realEstateBank() {
+  const input=remainingInput("real_estate_principles");
+  return bankHarness({input,catalog:await loadRealEstatePrinciplesContent(input)});
+}
+test("real-estate Foundation stock advertises Bank practice, assigns once, and never opens another subject",async()=>{
+  const h=await realEstateBank(), bytes=Buffer.from(await h.input.readBytes());
+  const availability=await h.app(new Request(URL.replace("?view=bank","")));
+  assert.equal(availability.status,200);assert.equal((await availability.json()).availability.bankPractice,true);
+  assert.equal(reviewedBankCandidates(h.catalog).length,1);
+  const first=await assign(h.app,"real-estate");assert.equal(first.status,200);
+  assert.deepEqual(await (await assign(h.app,"real-estate")).json(),await first.json());
+  assert.equal((await assign(h.app,"exhausted")).status,409);
+  assert.equal(h.assignments.size,1);assert.equal([...h.h.rows.values()][0].state.attempts.length,0);
+  for(const catalog of [{...h.catalog},remainingCatalogs.civil_law,remainingCatalogs.appraiser_related_law]) {
+    const other=await bankHarness({catalog});assert.equal((await assign(other.app)).status,503);
+    assert.equal(other.assignments.size,0);
+  }
+  assert.deepEqual(Buffer.from(await h.input.readBytes()),bytes);
+});
+test("other-subject history with the same question ID does not consume real-estate stock",async()=>{
+  const h=await realEstateBank();
+  assert.equal((await assign(h.app,"seed")).status,200);
+  const row=structuredClone([...h.h.rows.values()][0]);
+  h.h.rows.clear();h.assignments.clear();
+  row.sessionId="foreign-subject-history";
+  row.state.examCycle.questionReferences[0].subjectId="economics_principles";
+  h.h.rows.set(row.sessionId,row);
+  assert.equal((await assign(h.app,"real-estate-next")).status,200);
+  assert.equal(h.h.rows.size,2);assert.equal(h.assignments.size,1);
+});
+test("real-estate source expiry revokes bank replay and new assignment without mutating source",async t=>{
+  t.mock.timers.enable({apis:["Date"],now:new Date("2099-12-30T00:00:00.000Z")});
+  const h=await realEstateBank();const before=JSON.stringify(h.input.applicability);
+  assert.equal((await assign(h.app)).status,200);
+  t.mock.timers.setTime(Date.parse("2099-12-31T00:00:00.000Z"));
+  assert.equal((await assign(h.app)).status,503);assert.equal((await assign(h.app,"new")).status,503);
+  assert.equal(await loadRealEstatePrinciplesContent(h.input),null);
+  assert.equal(JSON.stringify(h.input.applicability),before);assert.equal(h.assignments.size,1);
 });
