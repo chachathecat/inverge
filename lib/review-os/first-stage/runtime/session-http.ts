@@ -4,7 +4,7 @@ import {
   parseJsonRejectingDuplicateKeys,
   requiredIdentifier,
 } from "../kernel/domain";
-import type { createPrivateFirstStageSessionService } from "./session-service";
+import { privateFirstStageSessionId, type createPrivateFirstStageSessionService } from "./session-service";
 
 // Below the unchanged kernel parser's 20,000-character guard. This narrow
 // selection-only endpoint carries no question, answer text or content authority.
@@ -24,7 +24,7 @@ export interface PrivateSessionHttpDependencies {
   /** Existing authenticated Owner/default-off/non-Production gate, before I/O. */
   requireOwner(): Promise<string | null>;
   /** Trusted server catalog and durable repository only; never built from input. */
-  service(ownerId: string): Promise<SessionService>;
+  service(ownerId: string, sessionId?: string): Promise<SessionService>;
 }
 
 export class RequestTooLarge extends Error {}
@@ -87,7 +87,7 @@ export function createPrivateSessionHttpHandler(dependencies: PrivateSessionHttp
         const entries = [...url.searchParams.entries()];
         if (entries.length !== 1 || entries[0][0] !== "sessionId") invalid();
         const sessionId = requiredIdentifier(entries[0][1]);
-        const service = await dependencies.service(ownerId);
+        const service = await dependencies.service(ownerId, sessionId);
         return response({ ok: true, view: await service.view(ownerId, sessionId) });
       }
       if (!requestOriginAllowed(request)) {
@@ -101,13 +101,13 @@ export function createPrivateSessionHttpHandler(dependencies: PrivateSessionHttp
         exactObject(row, ["action", "requestId", "questionId"]);
         const input = { requestId: requiredIdentifier(row.requestId),
           questionId: requiredIdentifier(row.questionId) };
-        const service = await dependencies.service(ownerId);
+        const service = await dependencies.service(ownerId, privateFirstStageSessionId(ownerId, input.requestId));
         const saved = await service.create(ownerId, input);
         return response({ ok: true, view: await service.view(ownerId, saved.sessionId) });
       }
       exactObject(row, ["sessionId", "command"]);
       const sessionId = requiredIdentifier(row.sessionId);
-      const service = await dependencies.service(ownerId);
+      const service = await dependencies.service(ownerId, sessionId);
       await service.execute(ownerId, sessionId, row.command);
       return response({ ok: true, view: await service.view(ownerId, sessionId) });
     } catch (error) {

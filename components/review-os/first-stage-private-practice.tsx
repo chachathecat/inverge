@@ -193,7 +193,7 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
       expectedRevision: view.revision, ...(view.contentStatus === "machine_checked_owner_local" && (action === "begin" || action === "retry") ? { ownerOriginalUse: originalUse } : {}), ...fields } });
   }
 
-  const original = (view?.contentStatus ?? availability?.contentStatus) === "machine_checked_owner_local";
+  const original = (view ? view.contentStatus : availability?.contentStatus) === "machine_checked_owner_local";
   const bankStockKnown = Number.isSafeInteger(availability?.availableOriginals) && (availability?.availableOriginals ?? -1) >= 0;
   const bankCanAssign = bankStockKnown && (availability?.availableOriginals ?? 0) > 0;
   const unavailable = availability?.state === "blocked" && !view;

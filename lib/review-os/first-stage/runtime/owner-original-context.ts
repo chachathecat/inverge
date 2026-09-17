@@ -3,6 +3,7 @@ import type { PrivateSessionApplicationDependencies } from "./session-applicatio
 import type { PrivateFirstStageCatalog } from "./session-service";
 import type { QfI1CandidateV1 } from "../../../question-foundry/runtime/qf-i1-bank-first";
 import { genuineTrialSession } from "./owner-local-trial-boundary";
+import { reviewedBankCandidates } from "./private-reviewed-content";
 import type { QuestionReference } from "../kernel/domain";
 import { isOwnerOriginalAdapter, ownerOriginalEnvironment, OWNER_ORIGINAL_IDS, OWNER_ORIGINAL_VERSION, OWNER_ORIGINAL_PACKET_SHA256 } from "./owner-original-boundary";
 
@@ -77,4 +78,18 @@ export function createOwnerOriginalPeerReadApplication(dependencies: PrivateSess
     const {createPrivateSessionApplication} = await import("./session-application");
     return createPrivateSessionApplication(dependencies)(request);
   };
+}
+
+/** Preserve reviewed real-estate history beside this exact authored catalog.
+ * The reviewed loader's object capability is required; a digest alone is not authority. */
+export function compatibleOwnerOriginalReviewedCatalog(primary: PrivateFirstStageCatalog, peer: PrivateFirstStageCatalog) {
+  return activeOwnerOriginalCatalog(primary) && peer.digest !== primary.digest &&
+    peer.initialReferences.length > 0 && peer.initialReferences.every(reference => reference.subjectId === "real_estate_principles") &&
+    reviewedBankCandidates(peer) !== null;
+}
+export function catalogForOwnerOriginalHistory(primary: PrivateFirstStageCatalog, peers: readonly PrivateFirstStageCatalog[], digest: string) {
+  if (primary.digest === digest) return primary;
+  const matches = peers.filter(peer => peer.digest === digest && compatibleOwnerOriginalReviewedCatalog(primary, peer));
+  if (matches.length !== 1) throw new Error("owner_original_history_catalog_mismatch");
+  return matches[0];
 }

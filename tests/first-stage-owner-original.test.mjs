@@ -40,3 +40,46 @@ test("other-subject availability validates authored peer history without enablin
  await app(new Request(url+"?invalid=true"));await app(new Request(url,{method:"POST",body:JSON.stringify({invalid:true})}));assert.equal(peerLoads,1);assert.equal(rows.size,1);
  const saved=[...rows.values()][0];rows.set(saved.sessionId,{...saved,catalogDigest:"0".repeat(64)});assert.equal((await app(new Request(url))).status,503);
 });
+
+test("same-subject reviewed history retains resume, save, bank replay and Today beside authored stock",async()=>{
+ const {harness}=await import("./fixtures/first-stage-private-session-harness.mjs");
+ const {remainingCatalogs}=await import("./fixtures/first-stage-remaining-content-harness.mjs");
+ const {createReviewedBankService}=await import("../lib/review-os/first-stage/runtime/reviewed-bank-service.ts");
+ const reviewed=remainingCatalogs.real_estate_principles,h=harness({catalog:reviewed}),assignments=new Map();
+ const bank={async load(owner,id){const assignment=assignments.get(id);return assignment?{session:await h.store.load(owner,id),assignment}:null;},async reserve(value,assignment){const session=await h.store.create(value);assignments.set(session.sessionId,assignment);return {session,assignment};}};
+ const now=()=>"2026-09-17T12:00:00.000Z";
+ const previous=createReviewedBankService(h.store,bank,reviewed,now);
+ const allocated=await previous.assign(auth.userId,"old-reviewed");assert.equal(allocated.status,"assigned");
+ const oldId=allocated.view.sessionId,oldQuestion=reviewed.initialReferences[0].questionId;
+ const oldService=createPrivateFirstStageSessionService(h.store,reviewed,now);
+ const started=await oldService.execute(auth.userId,oldId,{action:"begin",requestId:"old-begin",expectedRevision:1,questionId:oldQuestion});
+ const deps={environment:()=>({...env,INVERGE_OWNER_REVIEWED_BANK_ENABLED:"true"}),session:async()=>auth,catalog:async()=>catalog(),peerCatalogs:async()=>[reviewed],repository:()=>h.store,bankRepository:()=>bank,now};
+ const app=createOwnerOriginalApplication(deps),url="http://127.0.0.1:3884/api/review-os/first-stage/real-estate-principles/sessions";
+ const get=()=>app(new Request(url));const post=(body,suffix="")=>app(new Request(url+suffix,{method:"POST",headers:{origin:"http://127.0.0.1:3884","content-type":"application/json"},body:JSON.stringify(body)}));
+ let result=await get();assert.equal(result.status,200);assert.equal((await result.json()).continuation.action.sessionId,oldId);
+ result=await post({action:"assign_next",requestId:"new-authored"},"?view=bank");assert.equal(result.status,200);const authoredId=(await result.json()).view.sessionId;assert.notEqual(authoredId,oldId);
+ result=await post({action:"assign_next",requestId:"old-reviewed"},"?view=bank");assert.equal(result.status,200);assert.equal((await result.json()).view.sessionId,oldId);assert.equal(h.rows.size,2);
+ const command=submit(started.state.attempts[0].attemptId,2,"old-submit",2);
+ result=await post({sessionId:oldId,command});assert.equal(result.status,200);const saved=await result.json();assert.ok(saved.view.explanation);assert.equal(saved.view.ownerOriginalContent,undefined);
+ assert.deepEqual(await (await post({sessionId:oldId,command})).json(),saved);
+ result=await app(new Request(url+"?sessionId="+oldId));assert.equal(result.status,200);assert.deepEqual(await result.json(),saved);
+ result=await get();assert.equal(result.status,200);const available=await result.json();assert.equal(available.availability.availableOriginals,0);assert.equal(available.availability.recentRecords[0].sessionId,oldId);
+ await scoped(async()=>{const continuation=await createPrivateFirstStageSessionService({...h.store,listOwnerSnapshot:async()=>({complete:true,sessions:[await h.store.load(auth.userId,oldId)]})},catalog(),()=>"2026-09-19T12:00:00.000Z").getTodayContinuation(auth.userId,async()=>[reviewed]);assert.equal(continuation.action.sessionId,oldId);assert.equal(continuation.action.kind,"review_due");});
+ const cloned=createOwnerOriginalApplication({...deps,peerCatalogs:async()=>[{...reviewed}]});assert.equal((await cloned(new Request(url))).status,503);assert.equal((await cloned(new Request(url+"?sessionId="+oldId))).status,503);
+ const oldKey=`${auth.userId}/${oldId}`,intact=structuredClone(h.rows.get(oldKey));h.rows.get(oldKey).catalogDigest="0".repeat(64);
+ assert.equal((await get()).status,503);assert.equal((await post({action:"assign_next",requestId:"invalid-history"},"?view=bank")).status,503);assert.equal(h.rows.size,2);h.rows.set(oldKey,intact);
+ const unauthorized=createOwnerOriginalApplication({...deps,session:async()=>({...auth,email:"wrong@example.test"}),repository:()=>{assert.fail("must deny before storage");}});assert.equal((await unauthorized(new Request(url+"?sessionId="+oldId))).status,404);
+});
+
+test("lost manual create response replays only an existing validated reviewed winner",async()=>{
+ const {harness}=await import("./fixtures/first-stage-private-session-harness.mjs"),{remainingCatalogs}=await import("./fixtures/first-stage-remaining-content-harness.mjs");
+ const reviewed=remainingCatalogs.real_estate_principles,h=harness({catalog:reviewed}),now=()=>"2026-09-17T12:00:00.000Z";
+ const oldService=createPrivateFirstStageSessionService(h.store,reviewed,now),input={requestId:"previous-manual-create",questionId:reviewed.initialReferences[0].questionId};
+ const saved=await oldService.create(auth.userId,input),expected=await oldService.view(auth.userId,saved.sessionId);
+ const app=createOwnerOriginalApplication({environment:()=>env,session:async()=>auth,catalog:async()=>catalog(),peerCatalogs:async()=>[reviewed],repository:()=>h.store,now});
+ const post=body=>app(new Request("http://127.0.0.1:3884/api/review-os/first-stage/real-estate-principles/sessions",{method:"POST",headers:{origin:"http://127.0.0.1:3884","content-type":"application/json"},body:JSON.stringify(body)}));
+ const replay=await post({action:"create",...input});assert.equal(replay.status,200);assert.deepEqual((await replay.json()).view,expected);assert.equal(h.rows.size,1);
+ const unauthorizedNew=await post({action:"create",...input,requestId:"new-old-question"});assert.notEqual(unauthorizedNew.status,200);assert.equal(h.rows.size,1);
+ const altered=await post({action:"create",...input,questionId:reference().questionId});assert.equal(altered.status,409);assert.equal(h.rows.size,1);
+ const original=await post({action:"create",requestId:"new-original",questionId:reference().questionId});assert.equal(original.status,200);assert.equal(h.rows.size,2);
+});

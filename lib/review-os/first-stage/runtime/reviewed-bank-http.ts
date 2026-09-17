@@ -24,7 +24,7 @@ export async function handleReviewedBank(request: Request, dependencies: Private
     if (input && input.action !== "assign_next") throw new FirstStageKernelError("invalid_input");
     if (!catalog || !dependencies.bankRepository) return response({ ok: false, error: "approved_content_required" }, 503);
     const service = createReviewedBankService(dependencies.repository(), dependencies.bankRepository(), catalog,
-      dependencies.now ?? (() => new Date().toISOString()));
+      dependencies.now ?? (() => new Date().toISOString()), dependencies.peerCatalogs);
     if (!input) return response({ ok: true, bank: await service.availability(ownerId) });
     const result = await service.assign(ownerId, requiredIdentifier(input.requestId));
     return result.status === "assigned" ? response({ ok: true, view: result.view })

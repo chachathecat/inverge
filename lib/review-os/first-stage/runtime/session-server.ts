@@ -63,7 +63,7 @@ const originalRealEstateSession = createOwnerOriginalApplication({
   session: getServerSessionUser,
   catalog: () => loadOwnerOriginalContent(() => readPrivateEconomicsContent(process.env.INVERGE_OWNER_ORIGINAL_CONTENT_PATH ?? "")),
   peerCatalogs: async () => (await Promise.all(Object.entries(REVIEWED_CATALOG_LOADERS)
-    .filter(([subject]) => subject !== "real_estate_principles").map(([, load]) => load())))
+    .map(([, load]) => load())))
     .filter((catalog): catalog is PrivateFirstStageCatalog => catalog !== null),
   repository: () => {
     const client = getSupabasePersistenceClient();

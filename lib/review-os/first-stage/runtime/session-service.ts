@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { activeOwnerOriginalCatalog, activeOwnerOriginalReference } from "./owner-original-context";
+import { activeOwnerOriginalCatalog, activeOwnerOriginalReference, compatibleOwnerOriginalReviewedCatalog } from "./owner-original-context";
 import { OWNER_ORIGINAL_NOTICE, OWNER_ORIGINAL_SCOPE } from "./owner-original-boundary";
 import { activeOwnerLocalR3TrialCatalog, acceptsOwnerLocalR3PreviousCatalog } from "./owner-local-trial-context";
 import { OWNER_LOCAL_R3_TRIAL_NOTICE } from "./owner-local-trial-boundary";
@@ -382,21 +382,25 @@ export function createPrivateFirstStageSessionService(
     if (subjectIds.size !== 1) fail("adapter_mismatch");
     const [subjectId] = subjectIds;
     const histories: ReturnType<typeof projectHistory>[] = [];
-    let peerValidators: ReturnType<typeof createPrivateFirstStageSessionService>[] | null = null;
+    let peerValidators: { service: ReturnType<typeof createPrivateFirstStageSessionService>; sameSubject: boolean }[] | null = null;
 
-    async function validatesAsAnotherSubject(candidate: PrivateFirstStageSession) {
+    async function validatesAsPeer(candidate: PrivateFirstStageSession) {
       if (!loadPeerCatalogs) return false;
       if (!peerValidators) {
         const peers = await loadPeerCatalogs();
         peerValidators = peers.flatMap((peer) => {
           const peerSubjectIds = new Set(peer.initialReferences.map((item) => item.subjectId));
-          if (peerSubjectIds.size !== 1 || peerSubjectIds.has(subjectId)) return [];
-          return [createPrivateFirstStageSessionService(store, peer, now)];
+          if (peerSubjectIds.size !== 1) return [];
+          const sameSubject = peerSubjectIds.has(subjectId);
+          if (sameSubject && !compatibleOwnerOriginalReviewedCatalog(catalog, peer)) return [];
+          return [{ service: createPrivateFirstStageSessionService(store, peer, now), sameSubject }];
         });
       }
       for (const peer of peerValidators) {
         try {
-          peer.projectHistory(candidate, ownerId);
+          const history = peer.service.projectHistory(candidate, ownerId);
+          // Same-subject reviewed work remains a Today action, never silently skipped.
+          if (peer.sameSubject) histories.push(history);
           return true;
         } catch {
           // A row may be ignored only after another server-loaded subject catalog
@@ -410,7 +414,7 @@ export function createPrivateFirstStageSessionService(
       try {
         histories.push(projectHistory(candidate, ownerId));
       } catch {
-        if (await validatesAsAnotherSubject(candidate)) continue;
+        if (await validatesAsPeer(candidate)) continue;
         return {
           schemaVersion: "first_stage.private_today_continuation.v1",
           state: "history_incomplete",

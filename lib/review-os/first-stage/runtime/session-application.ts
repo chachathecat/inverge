@@ -6,7 +6,7 @@ import type { TrialPlanningStore } from "./owner-local-today";
 import { createReviewedBankService, type ReviewedBankStore } from "./reviewed-bank-service";
 import { handleReviewedBank, reviewedBankEnabled } from "./reviewed-bank-http";
 import { reviewedBankCandidates } from "./private-reviewed-content";
-import { activeOwnerOriginalCatalog } from "./owner-original-context";
+import { activeOwnerOriginalCatalog, catalogForOwnerOriginalHistory } from "./owner-original-context";
 import { OWNER_ORIGINAL_NOTICE, OWNER_ORIGINAL_SCOPE } from "./owner-original-boundary";
 
 type Environment = Readonly<Record<string, string | undefined>>;
@@ -17,8 +17,9 @@ export interface PrivateSessionApplicationDependencies {
   environment(): Environment;
   session(): Promise<Session>;
   catalog(): Promise<PrivateFirstStageCatalog | null>;
-  /** Other server-loaded reviewed subject catalogs used only to validate and
-   * exclude their complete durable rows from this subject's Today projection. */
+  /** Server-loaded reviewed peers validate complete durable history. Other
+   * subjects are excluded from Today; the exact authored lane also preserves
+   * same-subject reviewed continuation through its separate loader capability. */
   peerCatalogs?(): Promise<readonly PrivateFirstStageCatalog[]>;
   repository(): PrivateFirstStageSessionStore;
   planningRepository?(): TrialPlanningStore;
@@ -91,12 +92,14 @@ export function createPrivateSessionApplication(dependencies: PrivateSessionAppl
         }
         const bankStock = bankPractice && catalog && availabilityStore && dependencies.bankRepository
           ? await createReviewedBankService(availabilityStore, dependencies.bankRepository(), catalog,
-              dependencies.now ?? (() => new Date().toISOString())).availability(owner.ownerId)
+              dependencies.now ?? (() => new Date().toISOString()), dependencies.peerCatalogs).availability(owner.ownerId)
           : null;
+        const historyPeers = catalog && activeOwnerOriginalCatalog(catalog) ? await dependencies.peerCatalogs?.() ?? [] : [];
         const originalHistory = catalog && activeOwnerOriginalCatalog(catalog) && availabilityStore ?
           (await availabilityStore.listOwnerSnapshot!(owner.ownerId, "first_stage.private_session.v1")).sessions
-            .filter(saved => saved.catalogDigest === catalog.digest)
-            .map(saved => createPrivateFirstStageSessionService(availabilityStore, catalog, dependencies.now).projectHistory(saved, owner.ownerId))
+            .filter(saved => saved.state.examCycle.questionReferences[0]?.subjectId === "real_estate_principles")
+            .map(saved => createPrivateFirstStageSessionService(availabilityStore,
+              catalogForOwnerOriginalHistory(catalog, historyPeers, saved.catalogDigest), dependencies.now).projectHistory(saved, owner.ownerId))
             .filter(history => history.attempted)
             .sort((left, right) => (right.committedAttempts.at(-1)?.submittedAt ?? right.active?.startedAt ?? "").localeCompare(left.committedAttempts.at(-1)?.submittedAt ?? left.active?.startedAt ?? "") || left.sessionId.localeCompare(right.sessionId))
             .slice(0, 10).map(history => ({ sessionId: history.sessionId, responses: history.committedAttempts.length,
@@ -121,8 +124,17 @@ export function createPrivateSessionApplication(dependencies: PrivateSessionAppl
       }
       const handler = createPrivateSessionHttpHandler({
         requireOwner: async () => owner.ownerId,
-        service: async () => createPrivateFirstStageSessionService(
-          dependencies.repository(), catalog, dependencies.now),
+        service: async (readOwner, sessionId) => {
+          const store = dependencies.repository();
+          let selected = catalog;
+          if (sessionId && activeOwnerOriginalCatalog(catalog)) {
+            const saved = await store.load(readOwner, sessionId);
+            if (saved && saved.catalogDigest !== catalog.digest) selected = catalogForOwnerOriginalHistory(
+              catalog, await dependencies.peerCatalogs?.() ?? [], saved.catalogDigest);
+          }
+          // Existing transport auth/parser and full aggregate validation remain authoritative.
+          return createPrivateFirstStageSessionService(store, selected, dependencies.now);
+        },
       });
       return await handler(request);
     } catch {
