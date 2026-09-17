@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { profileForQuestion, ORIGINAL_2026_PROFILE } from "./foundation-official-profile";
 import { exactObject, requiredIdentifier } from "../kernel/domain";
 import { privateSessionDigest as digest } from "./session-service";
 import { applicabilityFailure as fail, requireSame as same, requiredHash, type FoundationEvidence } from "./foundation-applicability";
@@ -13,6 +14,13 @@ export const REAL_ESTATE_PROJECTION_FIELDS = ("receipt_id receipt_version receip
 export const REAL_ESTATE_METHOD = Object.freeze({ method: "foundation-real-estate-bound-subject-projection", version: "1",
   examDate: "2026-04-04", canonicalization: "RFC8785", arithmetic: "bounded-exact-rational-binary-expression-v1",
   rounding: ["none", "half_up", "toward_zero"], unitBases: ["COUNT", "KRW", "M", "YEAR"] });
+// Preserve the existing 2026 method/digest byte-for-byte. Historical source
+// evidence must bind its own date and method version; dates are never inferred.
+export const REAL_ESTATE_2025_METHOD = Object.freeze({ ...REAL_ESTATE_METHOD, version: "2", examDate: "2025-04-05" });
+export function realEstateMethod(reference: Row) {
+  if (reference.subjectId !== "real_estate_principles") fail();
+  return profileForQuestion(reference) === ORIGINAL_2026_PROFILE ? REAL_ESTATE_METHOD : REAL_ESTATE_2025_METHOD;
+}
 const sha = (value: string) => crypto.createHash("sha256").update(value, "utf8").digest("hex");
 type Rational = { n: bigint; d: bigint };
 type Quantity = Rational & { unit: Record<string, number> };
@@ -146,7 +154,7 @@ export function realEstateFacts(evidence: FoundationEvidence, projectionReferenc
   const projection = evidence.resolve(projectionReference, REAL_ESTATE_PROJECTION_FIELDS), ref = question.reference as Row;
   same(projection.item_id, ref.questionId); same(projection.item_version, ref.questionVersion);
   if (projection.subject_id !== "real_estate_principles" || ref.subjectId !== projection.subject_id ||
-    projection.exam_date !== REAL_ESTATE_METHOD.examDate) fail();
+    projection.exam_date !== realEstateMethod(ref).examDate) fail();
   same(requiredHash(projection.question_body_sha256), sha(JSON.stringify({ stem: question.stem, choices: question.choices })));
   same(requiredHash(projection.choice_texts_sha256), digest(question.choices)); same(projection.concept_binding_digest, digest(question.concept));
   const expectedAnchors = [...new Set(choices.flatMap(value => rows((value as Row).source_anchor_ids).map(value => requiredIdentifier(value))))].sort();

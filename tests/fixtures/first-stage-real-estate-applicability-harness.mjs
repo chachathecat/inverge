@@ -1,27 +1,32 @@
 import { createHash } from "node:crypto";
 import { privateSessionDigest as digest } from "../../lib/review-os/first-stage/runtime/session-service.ts";
 import { FIVE } from "../../lib/review-os/first-stage/runtime/foundation-release-contract.ts";
-import { REAL_ESTATE_METHOD } from "../../lib/review-os/first-stage/runtime/foundation-real-estate-facts.ts";
+import { REAL_ESTATE_METHOD, REAL_ESTATE_2025_METHOD } from "../../lib/review-os/first-stage/runtime/foundation-real-estate-facts.ts";
 import { finalReleaseFixture, finalReleaseSources } from "./first-stage-final-release-harness.mjs";
 
 // SYNTHETIC only. Independently specified expected facts, not the consumer's
 // calculated result. No official content, real human or runtime installation.
 const HUMAN = "synthetic-not-a-human-law-review", AT = "2026-09-06T10:00:00.000Z";
-const DATE = "2026-04-04", STATUS = "not_applicable_verified", MANIFEST = "synthetic-real-estate-source-manifest-v1";
+const STATUS = "not_applicable_verified", MANIFEST = "synthetic-real-estate-source-manifest-v1";
 const sha = text => createHash("sha256").update(text, "utf8").digest("hex");
 const packetRef = ref => ({ schemaVersion: "first_stage.immutable_evidence_reference.v1", evidenceId: ref.evidence_id,
   evidenceVersion: ref.evidence_version, evidenceSha256: ref.evidence_sha256 });
-export function realEstateApplicability(packet, mutate = () => {}, mode = "both") {
+export function realEstateApplicability(packet, mutate = () => {}, mode = "both", historical2025 = false) {
+  const DATE = historical2025 ? "2025-04-05" : "2026-04-04";
+  const method = historical2025 ? REAL_ESTATE_2025_METHOD : REAL_ESTATE_METHOD;
+  if(historical2025) for(const row of packet.questions) {
+    row.reference.examYear=2025;row.reference.examRound=36;row.reference.sessionId="qnet-2025-36-s1-A";row.reference.questionNumber=81;
+  }
   const receipts = [], manifests = [], projections = [], expected = [], bodyRefs = [];
   const add = (id, fields) => {
     const row = { receipt_id: `synthetic-${id}`, receipt_version: "1", ...fields }; mutate(id, row);
     row.receipt_sha256 = digest(row); receipts.push(row);
     return { evidence_id: row.receipt_id, evidence_version: row.receipt_version, evidence_sha256: row.receipt_sha256 };
   };
-  const sources = finalReleaseSources(packet, receipts, add), pair = sources.sourcePairs[0];
+  const sources = finalReleaseSources(packet, receipts, add, historical2025), pair = sources.sourcePairs[0];
   const items = packet.questions.map((row, index) => {
     const ref = row.reference;
-    ref.sourceVersionManifestIds = [MANIFEST]; ref.sessionId = "first_2026_session_1";
+    ref.sourceVersionManifestIds = [MANIFEST]; ref.sessionId = historical2025 ? "qnet-2025-36-s1-A" : "first_2026_session_1";
     ref.currentnessState = "verified_exam_date";
     const anchorIds = row.choices.map((_, i) => `synthetic-estate-anchor-${index}-${i}`);
     const relations = row.choices.map((_, i) => ({ relation_id: `relation-${i}`, subject: "synthetic-object", predicate: "synthetic-relation",
@@ -97,7 +102,7 @@ export function realEstateApplicability(packet, mutate = () => {}, mode = "both"
         question_item_object_reference: object, choice_set_digest: fact.choice_set_digest,
         [variant ? "independent_answer_key_reference" : "verified_official_key_receipt_reference"]: key,
         validator_input_facts_schema_version: definition.inputProjectionSchemaVersion, validator_input_facts: value.facts, validator_input_facts_digest: digest(value.facts),
-        derivation_method_id: REAL_ESTATE_METHOD.method, derivation_method_version: REAL_ESTATE_METHOD.version, derivation_configuration_digest: digest(REAL_ESTATE_METHOD),
+        derivation_method_id: method.method, derivation_method_version: method.version, derivation_configuration_digest: digest(method),
         evidence_observed_at: AT, reviewer: HUMAN, reviewed_at: AT, decision: "verified_deterministic_validator_input_derivation" });
       const input = { item_id: fact.item_id, item_version: fact.item_version, subject_id: fact.subject_id, question_item_object_sha256: object.object_sha256,
         choice_set_digest: fact.choice_set_digest, [variant ? "independent_answer_key_receipt_sha256" : "verified_official_key_receipt_sha256"]: key.evidence_sha256,
@@ -105,7 +110,7 @@ export function realEstateApplicability(packet, mutate = () => {}, mode = "both"
         validator_input_facts_schema_version: definition.inputProjectionSchemaVersion, validator_input_facts_derivation_receipt_reference: derivation,
         validator_input_facts: value.facts };
       const shared = { ...common, validator_configuration_digest: digest({ registryVersion: FIVE.deterministicValidatorRegistry.registryVersion,
-        definition, canonicalization: "RFC8785", method: REAL_ESTATE_METHOD }), input_projection_digest: digest(input),
+        definition, canonicalization: "RFC8785", method }), input_projection_digest: digest(input),
       validator_input_facts_derivation_receipt_reference: derivation, assertion_count: 3, failed_assertion_count: 0, unresolved_assertion_count: 0 };
       const assertions = definition.requiredAssertionIdsExactly.slice().sort().map(id => {
         const rule = definition.assertionToleranceAndUnitById[id]; return { assertion_id: id, assertion_contract_version: definition.contractVersion,

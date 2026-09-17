@@ -1,6 +1,14 @@
 <!-- 2026-09-16 PR #945 second source correction: exact-head review identified per-item reads in paginated learner lists and an APP1 repair-skip source contract regression. Map selected page rows locally with established timestamp normalization; regression proves three queries for 230 rows and mapper parity. Preserve repair-verification skip precedence while keeping functional-test signal exclusion. Personal runtime/data/provider remain untouched pending final checks/review. -->
 # Inverge Owner Study OS
 
+## 2026-09-17 preserved 2025 real-estate source connection
+
+PR #955 merged at 00eb3a58 after all nine native gates, 1980 full-suite tests, eight actual isolated SQL/browser cases and exact-head independent 0/0/0 review. PC code is updated with unchanged fourteen-table and thirty-two private configuration/budget-file snapshots; Production was canceled by the Ignored Build Step. Reuse this assignment/save/reconnect/review/Today evidence.
+
+Issue #956 closes the first actual source mismatch: the already preserved 2025/36th first-session real-estate material cannot enter a 2026-only applicability path. Bind its exact historical profile, positions 81–120, 2025-04-05 date, source/key lineage and separate method v2 configuration while preserving the existing 2026 v1 digest. Other historical subjects/years remain closed. Related regressions pass 35/35; actual isolated historical SQL/browser and final-head checks/review remain required.
+
+Prepared one existing-source item and one independently authored retry in the existing private execution record. Preserved PDF/key hashes and AI visual table/key observations agree; independent JavaScript/Python integer comparison agrees. The review-only packet passes the existing validator, but human review, attachment/booklet binding, content approval and runtime installation remain pending. No private source text or synthetic review receipt is installed or published. No provider call, private/remote SQL apply, activation or budget change. Continue independent connection work; actual review/installation requires the separate Owner gate.
+
 ## 2026-09-17 reviewed real-estate stock continuation
 
 PR #953 is merged at 53bfa38b after all nine native checks and exact-head review; the PC runs that version with fourteen personal tables and thirty-two private configuration/budget files preserved. Reuse its actual Next.js photo/PDF separation, confirmation and authenticated save/reconnect evidence; actual OCR remains unverified.
