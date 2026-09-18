@@ -3,6 +3,7 @@ import { execFile } from "node:child_process";
 import { mkdtemp, writeFile, readFile, readdir, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { LOCAL_OCR_REQUEST_MS, LOCAL_OCR_UPLOAD_MS } from "./local-ocr-limits";
 
 const MAX_BYTES = 8 * 1024 * 1024;
 const ENGINE = "windows_builtin_ko";
@@ -23,31 +24,39 @@ export function canUseOwnerLocalOcr(email: string | null | undefined, env: NodeJ
 export function resolveLocalOcrRequest(engine: string | null, enabled: boolean) {
   if (engine !== null && engine !== ENGINE) throw new LocalOcrError("LOCAL_OCR_UNSUPPORTED_ENGINE");
   if (engine === ENGINE && !enabled) throw new LocalOcrError("LOCAL_OCR_DISABLED");
-  return enabled;
+  return engine === ENGINE;
 }
-export async function readLocalOcrForm(request: Request) {
+export function assertLocalOcrTime(deadline: number, signal?: AbortSignal) {
+  if (Date.now() >= deadline || signal?.aborted) throw new LocalOcrError("LOCAL_OCR_TIMEOUT");
+}
+export async function readLocalOcrForm(request: Request, requestDeadline = Date.now() + LOCAL_OCR_REQUEST_MS) {
+  assertLocalOcrTime(requestDeadline, request.signal);
   const reader = request.body?.getReader();
   if (!reader) throw new LocalOcrError("LOCAL_OCR_INPUT_REQUIRED");
   const chunks: Uint8Array[] = [];
   let length = 0;
-  const timer = setTimeout(() => { void reader.cancel(); }, 30000);
-  const deadline = Date.now() + 30000;
+  const deadline = Math.min(requestDeadline, Date.now() + LOCAL_OCR_UPLOAD_MS);
+  const cancel = () => { void reader.cancel().catch(() => {}); };
+  const timer = setTimeout(cancel, Math.max(0, deadline - Date.now()));
+  request.signal.addEventListener("abort", cancel, { once: true });
   try {
     while (true) {
       const next = await reader.read();
-      if (Date.now() >= deadline || request.signal.aborted) throw new LocalOcrError("LOCAL_OCR_TIMEOUT");
+      assertLocalOcrTime(deadline, request.signal);
       if (next.done) break;
       length += next.value.byteLength;
       if (length > MAX_BYTES + 65536) throw new LocalOcrError("LOCAL_OCR_SIZE_LIMIT");
       chunks.push(next.value);
     }
-    return await new Response(Buffer.concat(chunks), {
+    const form = await new Response(Buffer.concat(chunks), {
       headers: { "content-type": request.headers.get("content-type") ?? "" },
     }).formData();
+    assertLocalOcrTime(requestDeadline, request.signal);
+    return form;
   } catch (error) {
     await reader.cancel().catch(() => {});
     throw error instanceof LocalOcrError ? error : new LocalOcrError("LOCAL_OCR_INVALID_FORM");
-  } finally { clearTimeout(timer); reader.releaseLock(); }
+  } finally { clearTimeout(timer); request.signal.removeEventListener("abort", cancel); reader.releaseLock(); }
 }
 export function validateLocalOcrFiles(files: readonly Pick<File, "type" | "size">[]) {
   if (files.length < 1 || files.length > 4 || files.reduce((sum, file) => sum + file.size, 0) > MAX_BYTES) throw new LocalOcrError("LOCAL_OCR_SIZE_LIMIT");
@@ -63,7 +72,7 @@ export function validateLocalOcrSignature(type: string, bytes: Buffer) {
 export function validateLocalOcrResponse(value: unknown): string[] {
   const response = value as { schemaVersion?: unknown; engine?: unknown; needsReview?: unknown; texts?: unknown };
   if (!response || response.schemaVersion !== "local_ocr_draft.v1" || response.engine !== ENGINE || response.needsReview !== true ||
-    !Array.isArray(response.texts) || response.texts.length !== 1 || response.texts.some(text => typeof text !== "string" || text.length > 40000)) throw new LocalOcrError("LOCAL_OCR_INVALID_RESPONSE");
+    !Array.isArray(response.texts) || response.texts.length !== 1 || response.texts.some(text => typeof text !== "string" || !text.trim() || text.length > 40000)) throw new LocalOcrError("LOCAL_OCR_INVALID_RESPONSE");
   return response.texts as string[];
 }
 export function readPdfPageCount(info: string) {
@@ -85,8 +94,10 @@ async function loadBuild() {
   } catch (error) { throw error instanceof LocalOcrError ? error : new LocalOcrError("LOCAL_OCR_ENGINE_UNAVAILABLE"); }
 }
 let active = false;
-export async function extractWithLocalWindowsOcr(files: File[]) {
+export async function extractWithLocalWindowsOcr(files: File[], options: { deadline?: number; signal?: AbortSignal } = {}) {
   if (!isOwnerLocalOcrEnabled()) throw new LocalOcrError("LOCAL_OCR_DISABLED");
+  const deadline = options.deadline ?? Date.now() + LOCAL_OCR_REQUEST_MS;
+  assertLocalOcrTime(deadline, options.signal);
   validateLocalOcrFiles(files);
   if (active) throw new LocalOcrError("LOCAL_OCR_BUSY");
   active = true;
@@ -94,11 +105,12 @@ export async function extractWithLocalWindowsOcr(files: File[]) {
   const tempRoot = path.resolve(os.tmpdir());
   try {
     const build = await loadBuild();
+    assertLocalOcrTime(deadline, options.signal);
     directory = await mkdtemp(path.join(tempRoot, "inverge-local-ocr-"));
-    const deadline = Date.now() + 60000;
     const run = async (executable: string, args: string[]) => {
-      if (Date.now() >= deadline) throw new LocalOcrError("LOCAL_OCR_TIMEOUT");
+      assertLocalOcrTime(deadline, options.signal);
       return new Promise<string>((resolve, reject) => execFile(executable, args, {
+        signal: options.signal,
         windowsHide: true, timeout: Math.min(45000, deadline - Date.now()), maxBuffer: 1024 * 1024, encoding: "utf8",
         env: { NODE_ENV: "development", SystemRoot: process.env.SystemRoot, TEMP: tempRoot, TMP: tempRoot },
       }, (error, stdout) => error ? reject(new LocalOcrError("LOCAL_OCR_PROCESS_FAILED")) : resolve(stdout)));
@@ -131,6 +143,7 @@ export async function extractWithLocalWindowsOcr(files: File[]) {
       const [text] = validateLocalOcrResponse(parsed);
       pages.push({ pageNumber: pages.length + 1, name: `${pages.length + 1}페이지`, text });
     }
+    assertLocalOcrTime(deadline, options.signal);
     return pages;
   } finally {
     try {

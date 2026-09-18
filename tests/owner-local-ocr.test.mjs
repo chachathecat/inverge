@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {isOwnerLocalOcrEnabled,canUseOwnerLocalOcr,resolveLocalOcrRequest,validateLocalOcrFiles,validateLocalOcrSignature,validateLocalOcrResponse,readLocalOcrForm,readPdfPageCount} from '../lib/owner-study/local-ocr.ts';
+import {isOwnerLocalOcrEnabled,canUseOwnerLocalOcr,resolveLocalOcrRequest,validateLocalOcrFiles,validateLocalOcrSignature,validateLocalOcrResponse,readLocalOcrForm,readPdfPageCount,assertLocalOcrTime} from '../lib/owner-study/local-ocr.ts';
 const env={NODE_ENV:'development',INVERGE_LOCAL_OCR_ENABLED:'true',NEXT_PUBLIC_SUPABASE_URL:'http://127.0.0.1:55431',ALPHA_ADMIN_EMAILS:'owner-test@localhost.test'};
 const code=expected=>error=>error.code===expected;
 test('local OCR is explicit Windows/loopback/Owner-only and never enabled in Preview/Production/CI',()=>{
@@ -15,6 +15,7 @@ test('stale local page fails closed after disable instead of selecting Gemini',(
  assert.throws(()=>resolveLocalOcrRequest('windows_builtin_ko',false),code('LOCAL_OCR_DISABLED'));
  assert.throws(()=>resolveLocalOcrRequest('other',false),code('LOCAL_OCR_UNSUPPORTED_ENGINE'));
  assert.equal(resolveLocalOcrRequest(null,false),false);
+ assert.equal(resolveLocalOcrRequest(null,true),false);
 });
 test('images and one PDF obey aggregate bytes, MIME and file-count limits',()=>{
  const png={type:'image/png',size:2048},pdf={type:'application/pdf',size:2048};
@@ -27,7 +28,7 @@ test('images and one PDF obey aggregate bytes, MIME and file-count limits',()=>{
 test('only bounded, explicitly unconfirmed OCR output is accepted',()=>{
  const draft={schemaVersion:'local_ocr_draft.v1',engine:'windows_builtin_ko',needsReview:true,texts:['2,222 / 0.06 = 37,033.33']};
  assert.deepEqual(validateLocalOcrResponse(draft),draft.texts);
- for(const change of [{needsReview:false},{engine:'provider'},{texts:['x'.repeat(40001)]},{texts:[]},{texts:['one','unexpected second']}]) assert.throws(()=>validateLocalOcrResponse({...draft,...change}),code('LOCAL_OCR_INVALID_RESPONSE'));
+ for(const change of [{needsReview:false},{engine:'provider'},{texts:['x'.repeat(40001)]},{texts:[]},{texts:['']},{texts:['  \n\t']},{texts:['one','unexpected second']}]) assert.throws(()=>validateLocalOcrResponse({...draft,...change}),code('LOCAL_OCR_INVALID_RESPONSE'));
 });
 test('encrypted, unknown and excessive PDF page counts fail before rendering',()=>{
  assert.equal(readPdfPageCount('Pages: 2\nEncrypted: no\n'),2);
@@ -46,10 +47,10 @@ test('real OCR route denies stale local mode, other accounts, quota and helper f
  for(const scenario of ['disabled','unauthenticated','wrong_owner','quota','helper_failure','success']) {
   let providerCalls=0,helperCalls=0,quotaCalls=0;
   class Blocked extends Error {code='CAPTURE_UPLOAD_LIMIT';feature='capture';}
-  const app=productionHarness(memoryTransport().execute,{overrides:({session})=>{
+  const app=productionHarness(memoryTransport().execute,{now:new Date().toISOString(),overrides:({session})=>{
    if(scenario==='unauthenticated')session.userId=null;
    return {
-    '@/lib/owner-study/local-ocr':{...localOcr,isOwnerLocalOcrEnabled:()=>scenario!=='disabled',canUseOwnerLocalOcr:()=>scenario!=='wrong_owner',extractWithLocalWindowsOcr:async()=>{helperCalls++;if(scenario==='helper_failure')throw new localOcr.LocalOcrError('LOCAL_OCR_PROCESS_FAILED');return [{pageNumber:1,name:'1페이지',text:'합성 원문 2222'}];}},
+    '@/lib/owner-study/local-ocr':{...localOcr,isOwnerLocalOcrEnabled:()=>scenario!=='disabled',canUseOwnerLocalOcr:()=>scenario!=='wrong_owner',extractWithLocalWindowsOcr:async(files,options)=>{assert.ok(options.deadline>Date.now() && options.deadline<=Date.now()+60000);assert.ok(options.signal instanceof AbortSignal);helperCalls++;if(scenario==='helper_failure')throw new localOcr.LocalOcrError('LOCAL_OCR_PROCESS_FAILED');return [{pageNumber:1,name:'1페이지',text:'합성 원문 2222'}];}},
     '@/lib/review-os/entitlement-enforcement':{EntitlementBlockedError:Blocked,assertCanUploadCapture:async()=>{quotaCalls++;if(scenario==='quota')throw new Blocked();}},
     '@/lib/evaluate/gemini':{extractStructuredDraftWithGemini:async()=>{providerCalls++;throw Error('forbidden');},extractTranscriptionFromImages:async()=>{providerCalls++;throw Error('forbidden');}},
     '@/lib/owner-study/owner-pc-theory':{isOwnerPcTheoryEnabled:()=>false},
@@ -65,4 +66,34 @@ test('real OCR route denies stale local mode, other accounts, quota and helper f
   assert.equal(quotaCalls,['quota','helper_failure','success'].includes(scenario)?1:0,scenario);
   if(scenario==='success'){assert.equal(payload.externalTransmission,false);assert.equal(payload.ocrVerification,'unconfirmed');assert.equal(payload.needs_review,true);}
  }
+});
+
+
+test('upload consumes the request deadline and abort cancels a stalled body',async()=>{
+ assert.throws(()=>assertLocalOcrTime(Date.now()-1),code('LOCAL_OCR_TIMEOUT'));
+ const controller=new AbortController();let cancelled=false;
+ const body=new ReadableStream({cancel(){cancelled=true;}});
+ const request=new Request('http://localhost',{method:'POST',body,duplex:'half',signal:controller.signal});
+ const pending=readLocalOcrForm(request,Date.now()+5000);
+ controller.abort();
+ await assert.rejects(pending,code('LOCAL_OCR_TIMEOUT'));
+ assert.equal(cancelled,true);
+ let expiredCancelled=false;
+ const slow=new ReadableStream({cancel(){expiredCancelled=true;}});
+ await assert.rejects(readLocalOcrForm(new Request('http://localhost',{method:'POST',body:slow,duplex:'half'}),Date.now()+25),code('LOCAL_OCR_TIMEOUT'));
+ assert.equal(expiredCancelled,true);
+});
+
+test('legacy provider intent is preserved when local OCR is enabled',async()=>{
+ let localCalls=0,providerCalls=0;
+ const app=productionHarness(memoryTransport().execute,{now:new Date().toISOString(),overrides:()=>({
+  '@/lib/owner-study/local-ocr':{...localOcr,isOwnerLocalOcrEnabled:()=>true,extractWithLocalWindowsOcr:async()=>{localCalls++;throw Error('wrong_engine');}},
+  '@/lib/review-os/entitlement-enforcement':{EntitlementBlockedError:class extends Error{},assertCanUploadCapture:async()=>{}},
+  '@/lib/evaluate/gemini':{extractTranscriptionFromImages:async()=>{providerCalls++;return 'controlled legacy response';}},
+  '@/lib/owner-study/owner-pc-theory':{isOwnerPcTheoryEnabled:()=>false},
+  '@/lib/review-os/repository':{reviewOsRepository:{logUsageEvent:async()=>{}}},
+ })});
+ const body=new FormData();body.set('images',new File(['synthetic'],'test.png',{type:'image/png'}));
+ const response=await app.load('app/api/inverge/ocr/route').POST(new Request('http://localhost',{method:'POST',body}));
+ assert.equal(response.status,200);assert.equal(localCalls,0);assert.equal(providerCalls,1);
 });

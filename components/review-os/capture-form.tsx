@@ -26,6 +26,7 @@ import {
   isApp1SubjectAuthorized,
   type App1TrustedRepairSubject,
 } from "@/lib/owner-study/app1-capture-repair-view-model";
+import { LOCAL_OCR_CLIENT_MS } from "@/lib/owner-study/local-ocr-limits";
 import { moveCaptureSelectionToAnswer } from "@/lib/review-os/capture-input-separation";
 import { buildCaptureToNoteDraft } from "@/lib/capture/capture-to-note";
 import {
@@ -1049,7 +1050,7 @@ export function WrongAnswerCaptureForm({
       if (localOcrEnabled) body.append("ocr_engine", "windows_builtin_ko");
       body.append("text", text);
       body.append("source_label", form.sourceLabel);
-      const response = await fetch("/api/inverge/ocr", { method: "POST", body, ...(localOcrEnabled ? {headers:{"x-inverge-ocr-engine":"windows_builtin_ko"}} : {}) });
+      const response = await fetch("/api/inverge/ocr", { method: "POST", body, ...(localOcrEnabled ? {headers:{"x-inverge-ocr-engine":"windows_builtin_ko"},signal:AbortSignal.timeout(LOCAL_OCR_CLIENT_MS)} : {}) });
       const extraction = (await response.json()) as ({ ok?: boolean; error?: string } & ExtractionPipelineResult);
       if (!requestIsCurrent(requestRevision)) return;
       if (!response.ok || !extraction.ok) {
@@ -1174,7 +1175,7 @@ export function WrongAnswerCaptureForm({
       if (localOcrEnabled) body.append("ocr_engine", "windows_builtin_ko");
       for (const file of files) body.append("images", file);
       setExtractionState("extracting");
-      const response = await fetch("/api/inverge/ocr", { method: "POST", body, ...(localOcrEnabled ? {headers:{"x-inverge-ocr-engine":"windows_builtin_ko"},signal:AbortSignal.timeout(65000)} : {}) });
+      const response = await fetch("/api/inverge/ocr", { method: "POST", body, ...(localOcrEnabled ? {headers:{"x-inverge-ocr-engine":"windows_builtin_ko"},signal:AbortSignal.timeout(LOCAL_OCR_CLIENT_MS)} : {}) });
       const result = (await response.json()) as ({
         ok?: boolean;
         text?: string;

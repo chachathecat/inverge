@@ -1,4 +1,5 @@
 import { canUseOwnerLocalOcr, isOwnerLocalOcrEnabled, resolveLocalOcrRequest, readLocalOcrForm, extractWithLocalWindowsOcr, LocalOcrError } from "@/lib/owner-study/local-ocr";
+import { LOCAL_OCR_REQUEST_MS } from "@/lib/owner-study/local-ocr-limits";
 import { isOwnerPcTheoryEnabled } from "@/lib/owner-study/owner-pc-theory";
 import { NextResponse } from "next/server";
 import { getServerSessionUser } from "@/lib/auth/session";
@@ -19,7 +20,8 @@ export async function POST(request: Request) {
     const localOcr = resolveLocalOcrRequest(request.headers.get("x-inverge-ocr-engine"), isOwnerLocalOcrEnabled());
     if (localOcr && (!session.userId || session.isDemo || !canUseOwnerLocalOcr(session.email))) return NextResponse.json({ok:false,errorCode:"LOCAL_OCR_FORBIDDEN"},{status:403});
     if (session.userId) await assertCanUploadCapture(session.userId);
-    const formData = localOcr ? await readLocalOcrForm(request) : await request.formData();
+    const localDeadline = startedAt + LOCAL_OCR_REQUEST_MS;
+    const formData = localOcr ? await readLocalOcrForm(request, localDeadline) : await request.formData();
     mode = parseAppraisalMode(formData.get("mode")?.toString()) ?? "first";
     const pastedText = formData.get("text")?.toString() ?? formData.get("raw_text")?.toString() ?? "";
     const sourceLabel = formData.get("source_label")?.toString() ?? "";
@@ -27,7 +29,7 @@ export async function POST(request: Request) {
     if (isOwnerPcTheoryEnabled() && !localOcr && imageFiles.length > 0) return NextResponse.json({ ok: false, errorCode: "OWNER_THEORY_TEXT_ONLY", error: "이론 모드는 텍스트 입력만 지원합니다. 사진·PDF 분석은 미지원입니다." }, {status: 400});
     if (imageFiles.length === 0 && !pastedText.trim()) return NextResponse.json({ ok: false, error: "이미지 또는 텍스트를 하나 이상 입력해 주세요.", errorCode: "OCR_FAILED", recovery: "retry" }, { status: 400 });
     const ocrPages = imageFiles.length > 0
-      ? localOcr ? await extractWithLocalWindowsOcr(imageFiles) : await Promise.all(
+      ? localOcr ? await extractWithLocalWindowsOcr(imageFiles, { deadline: localDeadline, signal: request.signal }) : await Promise.all(
           imageFiles.map(async (file, index) => ({
             pageNumber: index + 1,
             name: file.name || `${index + 1}페이지`,
