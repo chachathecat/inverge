@@ -253,6 +253,93 @@ Do not use `db push --include-all` for M418. This evidence includes no push
 endpoint, `p256dh`, `auth`, VAPID private key, Supabase service-role key,
 `CRON_SECRET`, or other subscription credential.
 
+## M421B Source-Level Recovery - 2026-06-24
+
+M421B adds bounded, secret-safe source-level classification around the Web Push
+test-send path. It does not claim live delivery has passed yet. Owner-run
+Preview verification is still required after deployment, using only safe HTTP
+status and bounded aggregate categories.
+
+Bounded send categories:
+
+- `sent`
+- `expired`
+- `vapid_configuration_error`
+- `subscription_format_error`
+- `push_provider_rejected`
+- `push_transport_failure`
+- `payload_validation_error`
+
+Test-send aggregate responses include only:
+
+- `ok`
+- safe top-level `status`
+- `sent`
+- `expired`
+- `failed`
+- bounded `failureCategoryCounts`
+
+The route must not return subscription IDs, push endpoints, `p256dh`, `auth`,
+user identifiers, VAPID values, raw provider response bodies, raw error
+messages, stack traces, or learner data. Provider `404` and `410` remain
+`expired`; other provider `4xx` responses are `push_provider_rejected`; provider
+`5xx`, timeout, and network failures are `push_transport_failure`.
+
+Successful test sends must update both `last_test_sent_at` and `updated_at`.
+If an OS push is sent but persistence fails, the response reports
+`sent_persistence_failed` instead of full success. Expired endpoint revocation
+persistence is likewise checked and reported as `expired_persistence_failed`
+when needed.
+
+Notification payloads remain metadata-only. No raw OCR text, problem text,
+answer text, formulas, numbers, units, CASIO values, scores, pass/fail
+predictions, or instructor content may enter payloads.
+
+Scheduler status is unchanged: arbitrary reminder-time scheduling remains
+blocked on the current Vercel Hobby plan, and this PR must not add an hourly
+`vercel.json` cron. VAPID rotation remains prohibited unless later evidence
+specifically proves the key pair itself must be replaced and a subscription
+replacement plan is approved.
+
+## 2026-06-24 M421B Owner Runtime Evidence
+
+This owner runtime pass replaced the previous unclassified HTTP 500 with a
+bounded, secret-safe runtime classification. Presence-only VAPID checks pass,
+but runtime VAPID initialization fails before Push provider delivery.
+Subscription persistence is not the current blocker.
+
+| Check | Result |
+| --- | --- |
+| Preview deployment | PASS |
+| Authenticated notification settings page | PASS |
+| Active durable Push subscriptions | PASS |
+| Safe error classification path | PASS |
+| `POST /api/notifications/test` | HTTP 503 |
+| Top-level status | `vapid_configuration_error` |
+| Sent | 0 |
+| Expired | 0 |
+| Failed | 2 |
+| `failureCategoryCounts.vapid_configuration_error` | 2 |
+| `failureCategoryCounts.subscription_format_error` | 0 |
+| `failureCategoryCounts.push_provider_rejected` | 0 |
+| `failureCategoryCounts.push_transport_failure` | 0 |
+| `failureCategoryCounts.payload_validation_error` | 0 |
+| `failureCategoryCounts.sent_persistence_failed` | 0 |
+| `failureCategoryCounts.expired_persistence_failed` | 0 |
+| OS notification received | BLOCKED |
+| `last_test_sent_at` | BLOCKED |
+| Test notification click to `/app` | NOT VERIFIED |
+| Review click to `/app/review` | NOT VERIFIED |
+| Unsubscribe after successful delivery | NOT VERIFIED |
+
+Do not re-subscribe repeatedly. Do not rotate VAPID keys. Do not add a debug
+endpoint. Do not claim live delivery. PR #423 must remain Draft. Web Push
+returns to HOLD.
+
+**WEB PUSH HOLD — VAPID CONFIGURATION ERROR SAFELY CLASSIFIED**
+
+**SCHEDULER BLOCKED BY VERCEL HOBBY PLAN**
+
 ## Not Verified Locally
 
 These require deployed HTTPS, real VAPID keys, migrated Supabase tables, active authenticated accounts, and physical/OS browser testing:
