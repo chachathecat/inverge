@@ -2163,3 +2163,22 @@ zero stock and a 409 denial while exact stored replays and history remain valid.
 Focused regressions 81/81, typecheck and lint pass. Full native checks, final
 exact-head review, protected merge and conditional personal installation remain
 pending; GitHub posting is separately blocked by automatic approval review.
+
+
+## 2026-09-18 approved-content connection reuse
+
+#965/07ae22ff market installation and its 5-session/10-response acceptance are
+complete. The same PC writer continues codex/owner-approved-content-registration.
+Centralize only the three existing server-authorized bundles' pins, closed
+validator selectors, installation metadata and historical compositions. Preserve
+all ten identities, payloads, digest/evidence versions, OFF behavior and the
+request-local capability. No new content approval, activation, schema or paid call.
+
+Actual changed-code isolated normal login, five stored-session refresh/reconnect,
+exact assignment replay, OFF denial and records/Today passed with all learning
+rows unchanged. Sixteen installed/OFF combinations match 07ae22ff catalog,
+presentation, explanation and stock. Final-head CI/review remains required.
+The next private draft is two market qualitative-judgment pairs; current numeric
+validation is not concept verification. Its new bounded relation validator,
+policy/use/install exception require one separate exact-bundle Owner decision.
+Q96, real OCR, real Law source/model and Theory paraphrase remain incomplete.

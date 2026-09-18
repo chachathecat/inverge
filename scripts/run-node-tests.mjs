@@ -124,6 +124,7 @@ const defaultTestFiles = [
   "tests/first-stage-owner-original.test.mjs",
   "tests/first-stage-owner-investment.test.mjs",
   "tests/first-stage-owner-market.test.mjs",
+  "tests/owner-content-registration.test.mjs",
   "tests/first-stage-owner-home.test.mjs",
   "tests/second-stage-owner-home.test.mjs",
   "tests/first-stage-private-session.test.mjs",

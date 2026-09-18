@@ -1,0 +1,158 @@
+{
+  "schemaVersion": "owner_approved_content_registration.v1",
+  "subjectId": "real_estate_principles",
+  "database": "inverge_owner_economics_db_loopback/postgres",
+  "sqlSha256": "5346dbf1caa872c880ab621ffd91c508791747e9c80112b1030f86642e307a3a",
+  "bundles": [
+    {
+      "key": "original",
+      "version": "owner-pc-real-estate-direct-capitalization-20260917-v2",
+      "sha256": "0a7039441edafa476973383fdd4f8fb1163ae9bee96da55aacc0eaf33b4d9fc9",
+      "ids": [
+        "owner-re-capitalization-original-v2",
+        "owner-re-capitalization-retry-v2"
+      ],
+      "sessionId": "owner-original-real-estate-v2",
+      "validator": "legacy_direct_capitalization",
+      "flag": "INVERGE_OWNER_ORIGINAL_REAL_ESTATE_ENABLED",
+      "pathVariable": "INVERGE_OWNER_ORIGINAL_CONTENT_PATH",
+      "installationSchema": "owner_original_installation.v1",
+      "directory": "original-real-estate-20260917",
+      "file": "candidate-v2.json",
+      "activationModes": [
+        "start-theory-original",
+        "start-theory-investment",
+        "start-theory-market",
+        "start-theory-approved"
+      ],
+      "concepts": [
+        "stated-direct-capitalization"
+      ],
+      "families": [
+        "owner-original-direct-capitalization-v2"
+      ],
+      "evidencePrefix": "owner-original",
+      "evaluationPolicy": "owner-original-stated-model-v1",
+      "rightsScope": "exact-two-private-only",
+      "availableAt": "2026-09-17T00:00:00.000Z",
+      "installationKind": "original_schema",
+      "compositionKey": "",
+      "compositionPolicy": ""
+    },
+    {
+      "key": "investment",
+      "version": "owner-pc-real-estate-investment-finance-20260918-v1",
+      "sha256": "5a89a838a1c8873176a0bd8e137fbc3338df8ed53107379b9e12fad73e04bd81",
+      "ids": [
+        "owner-re-npv-initial-v1",
+        "owner-re-npv-retry-v1",
+        "owner-re-equity-initial-v1",
+        "owner-re-equity-retry-v1"
+      ],
+      "sessionId": "owner-original-investment-finance-v1",
+      "validator": "investment_calculation",
+      "models": [
+        "npv_two_years",
+        "npv_zero_price",
+        "equity_cash_yield",
+        "equity_required_income"
+      ],
+      "concepts": [
+        "stated-two-period-npv",
+        "stated-equity-cash-yield"
+      ],
+      "titles": [
+        "명시 모형: 2기간 현금흐름 할인",
+        "명시 모형: 자기자본 현금수익률"
+      ],
+      "families": [
+        "owner-investment-npv-v1",
+        "owner-investment-equity-v1"
+      ],
+      "unitId": "re_investment_finance",
+      "availableAt": "2026-09-17T16:12:49.000Z",
+      "evidencePrefix": "owner-investment",
+      "evaluationPolicy": "owner-investment-stated-model-v1",
+      "rightsScope": "exact-four-private-only",
+      "compositionKey": "addition",
+      "compositionPolicy": "owner-original-exact-union-v1",
+      "flag": "INVERGE_OWNER_INVESTMENT_ASSIGNMENT_ENABLED",
+      "pathVariable": "INVERGE_OWNER_INVESTMENT_CONTENT_PATH",
+      "installationSchema": "owner_investment_installation.v1",
+      "directory": "original-investment-finance-20260918",
+      "file": "candidate-v1.json",
+      "activationModes": [
+        "start-theory-investment",
+        "start-theory-market",
+        "start-theory-approved"
+      ],
+      "installationKind": "content_only"
+    },
+    {
+      "key": "market",
+      "version": "owner-pc-real-estate-market-20260918-v1",
+      "sha256": "ce4b6892ac36c2e9fc7983f10ba63d2f167760c722315b2da817a1a4791eb35c",
+      "ids": [
+        "owner-re-market-equilibrium-initial-v1",
+        "owner-re-market-shift-retry-v1",
+        "owner-re-market-elasticity-initial-v1",
+        "owner-re-market-quantity-retry-v1"
+      ],
+      "sessionId": "owner-original-market-v1",
+      "validator": "market_calculation",
+      "models": [
+        "linear_rent_equilibrium",
+        "demand_intercept_shift",
+        "midpoint_arc_elasticity",
+        "midpoint_target_quantity"
+      ],
+      "concepts": [
+        "stated-linear-rental-equilibrium",
+        "stated-midpoint-demand-elasticity"
+      ],
+      "titles": [
+        "명시 모형: 임대시장 균형과 수요 이동",
+        "명시 모형: 중점법 수요 호탄력성"
+      ],
+      "families": [
+        "owner-market-equilibrium-v1",
+        "owner-market-elasticity-v1"
+      ],
+      "unitId": "re_market",
+      "availableAt": "2026-09-18T01:39:52.000Z",
+      "evidencePrefix": "owner-market",
+      "evaluationPolicy": "owner-market-stated-model-v1",
+      "rightsScope": "exact-four-private-only",
+      "compositionKey": "market",
+      "compositionPolicy": "owner-original-market-exact-union-v1",
+      "flag": "INVERGE_OWNER_MARKET_ASSIGNMENT_ENABLED",
+      "pathVariable": "INVERGE_OWNER_MARKET_CONTENT_PATH",
+      "installationSchema": "owner_market_installation.v1",
+      "directory": "original-market-20260918",
+      "file": "candidate-v1.json",
+      "activationModes": [
+        "start-theory-market",
+        "start-theory-approved"
+      ],
+      "installationKind": "content_only"
+    }
+  ],
+  "catalogs": [
+    [
+      "original"
+    ],
+    [
+      "original",
+      "investment"
+    ],
+    [
+      "original",
+      "market"
+    ],
+    [
+      "original",
+      "investment",
+      "market"
+    ]
+  ]
+}

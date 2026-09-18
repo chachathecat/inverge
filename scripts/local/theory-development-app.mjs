@@ -1,3 +1,4 @@
+import { OWNER_CONTENT_BUNDLES, ownerContentBundle } from "../../lib/review-os/first-stage/runtime/owner-content-registration.mjs";
 /** Isolated actual Next.js + GoTrue + PostgREST. Never reads or copies personal DB rows. */
 import {readFile,writeFile,mkdir} from "node:fs/promises";
 import path from "node:path";import http from "node:http";
@@ -102,10 +103,10 @@ async function serve(production=false, controlledPractice=false, paidPractice=fa
  Object.assign(env,{NODE_ENV:production?"production":"development",NEXT_TELEMETRY_DISABLED:"1",NEXT_PUBLIC_SUPABASE_URL:"http://127.0.0.1:55431",NEXT_PUBLIC_SUPABASE_ANON_KEY:c.anon,SUPABASE_SERVICE_ROLE_KEY:c.service,DEV_SMOKE_AUTH:"false",ALPHA_ADMIN_EMAILS:email,INVERGE_OWNER_PC_THEORY_ENABLED:"true",INVERGE_OWNER_PC_THEORY_DEVELOPMENT_ENABLED:"true",WCV_C2R_C_T_THEORY_ENABLED:"true",WCV_C2R_C_T_OWNER_EMAILS:email,APP1_VERIFICATION_SIGNING_SECRET:c.signingSecret});
  if(originalPractice) {
    const contentPath=process.env.INVERGE_OWNER_ORIGINAL_CONTENT_PATH;
-   if(!contentPath || !path.isAbsolute(contentPath) || createHash("sha256").update(await readFile(contentPath)).digest("hex")!=="0a7039441edafa476973383fdd4f8fb1163ae9bee96da55aacc0eaf33b4d9fc9") fail("exact_original_content_required");
+   if(!contentPath || !path.isAbsolute(contentPath) || createHash("sha256").update(await readFile(contentPath)).digest("hex")!==ownerContentBundle("original").sha256) fail("exact_original_content_required");
    Object.assign(env,{INVERGE_OWNER_PC_THEORY_ENABLED:"false",INVERGE_OWNER_PC_THEORY_DEVELOPMENT_ENABLED:"false",WCV_C2R_C_T_THEORY_ENABLED:"false",INVERGE_OWNER_FIRST_STAGE_KERNEL_ENABLED:"true",INVERGE_OWNER_FIRST_STAGE_EMAILS:email,INVERGE_OWNER_REVIEWED_BANK_ENABLED:"true",INVERGE_OWNER_ORIGINAL_REAL_ESTATE_ENABLED:"true",INVERGE_OWNER_ORIGINAL_TEST_ONLY:"isolated_synthetic",INVERGE_OWNER_ORIGINAL_CONTENT_PATH:contentPath,
-     ...(process.env.INVERGE_OWNER_MARKET_CONTENT_PATH?{INVERGE_OWNER_MARKET_CONTENT_PATH:process.env.INVERGE_OWNER_MARKET_CONTENT_PATH,INVERGE_OWNER_MARKET_ASSIGNMENT_ENABLED:process.env.INVERGE_OWNER_MARKET_ASSIGNMENT_ENABLED==="true"?"true":"false"}:{}),
-     ...(process.env.INVERGE_OWNER_INVESTMENT_CONTENT_PATH?{INVERGE_OWNER_INVESTMENT_CONTENT_PATH:process.env.INVERGE_OWNER_INVESTMENT_CONTENT_PATH,INVERGE_OWNER_INVESTMENT_ASSIGNMENT_ENABLED:process.env.INVERGE_OWNER_INVESTMENT_ASSIGNMENT_ENABLED==="true"?"true":"false"}:{})});
+     ...Object.fromEntries(OWNER_CONTENT_BUNDLES.filter(bundle=>bundle.key!=="original"&&process.env[bundle.pathVariable]).flatMap(bundle=>[
+       [bundle.pathVariable,process.env[bundle.pathVariable]],[bundle.flag,process.env[bundle.flag]==="true"?"true":"false"]]))});
  }
  // Existing isolated account and normal quotas; no provider key, approval or schema mutation.
  if(captureOnly) Object.assign(env,{INVERGE_OWNER_PC_THEORY_ENABLED:"false",INVERGE_OWNER_PC_THEORY_DEVELOPMENT_ENABLED:"false"});
