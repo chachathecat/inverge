@@ -123,7 +123,7 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
     {
       path: "lib/review-os/first-stage/kernel/domain.ts",
       normalization: "utf8_lf",
-      sha256: "97cb59a0354e82cc4e8da14be020f954eadf814ecea76f7d439b37f887942aba",
+      sha256: "9bb5a17c2c6c1e2563455a64ca0d09caf84c67475c263628754d533a83d7fd08",
       covers: [
         "QuestionReference", "Attempt", "AnswerSubmission", "Confidence",
         "ElapsedTime", "WorkTrace", "WorkTraceStep", "ErrorCause", "ConceptBinding",
@@ -335,7 +335,7 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
 // SHA-256 over RFC-8785-equivalent recursively-key-sorted JSON for the exact
 // descriptor above. The focused contract test recomputes and binds this value.
 export const SUBJECT_ADAPTER_V1_INTERFACE_DIGEST =
-  "84504769d72c80567ed54e145a1808ee17d14e2fec13a7255d95b4906cba7d6b" as const;
+  "456594a80204611885e99e67166c5030784600363e4bd8a1befb5ed490e0a4de" as const;
 
 function fail(): never {
   throw new FirstStageKernelError("adapter_mismatch");
