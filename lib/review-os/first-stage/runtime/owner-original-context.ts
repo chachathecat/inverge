@@ -5,12 +5,12 @@ import type { QfI1CandidateV1 } from "../../../question-foundry/runtime/qf-i1-ba
 import { genuineTrialSession } from "./owner-local-trial-boundary";
 import { reviewedBankCandidates } from "./private-reviewed-content";
 import type { QuestionReference } from "../kernel/domain";
-import { isOwnerOriginalAdapter, ownerOriginalEnvironment, OWNER_ORIGINAL_IDS, OWNER_ORIGINAL_VERSION, OWNER_ORIGINAL_PACKET_SHA256 } from "./owner-original-boundary";
+import { isOwnerOriginalAdapter, ownerOriginalEnvironment, OWNER_ORIGINAL_IDS, OWNER_INVESTMENT_IDS, matchesOwnerOriginalReference } from "./owner-original-boundary";
 
 // Request-local capability only. No client flag, stored receipt or adapter ID
 // alone can authorize a calculation-backed, human-unreviewed response.
 const active = new AsyncLocalStorage<{ open: boolean; adapters: WeakSet<object>;
-  catalogs: WeakMap<object, readonly QfI1CandidateV1[]>; candidates: WeakSet<object> }>();
+  catalogs: WeakMap<object, readonly QfI1CandidateV1[]>; history: WeakMap<object, readonly QfI1CandidateV1[]>; candidates: WeakSet<object> }>();
 export function authorizeOwnerOriginalAdapter(adapter: {adapterId:string;adapterVersion:string;subjectId:string}) {
   const scope=active.getStore();
   if(!scope?.open || !isOwnerOriginalAdapter(adapter)) throw new Error("owner_original_unavailable");
@@ -21,20 +21,24 @@ export function activeOwnerOriginalAdapter(adapter: object) {
 }
 /** Shared branches must prove the exact authored reference as well as capability. */
 export function activeOwnerOriginalReference(adapter: object, reference: QuestionReference) {
-  return activeOwnerOriginalAdapter(adapter) && reference.schemaVersion === "first_stage.owner_original_question_reference.v1" &&
-    reference.subjectId === "real_estate_principles" && reference.questionVersion === OWNER_ORIGINAL_VERSION &&
-    (OWNER_ORIGINAL_IDS as readonly string[]).includes(reference.questionId) && reference.examYear === null &&
-    reference.examRound === null && reference.questionNumber === null && reference.sessionId === "owner-original-real-estate-v2" &&
-    reference.rightsState === "owner_authorized_original" && reference.currentnessState === "stated_model_only" &&
-    JSON.stringify(reference.sourceVersionManifestIds) === JSON.stringify([`owner-original-${OWNER_ORIGINAL_PACKET_SHA256}`]);
+  return activeOwnerOriginalAdapter(adapter) && matchesOwnerOriginalReference(reference);
 }
-export function authorizeOwnerOriginalCatalog(catalog: PrivateFirstStageCatalog, candidates: readonly QfI1CandidateV1[]) {
+export function authorizeOwnerOriginalCatalog(catalog: PrivateFirstStageCatalog, candidates: readonly QfI1CandidateV1[], assignableIds?: readonly string[]) {
   const scope=active.getStore();
+  const ids=catalog.initialReferences.map(reference=>reference.questionId);
+  const allowed=[[OWNER_ORIGINAL_IDS[0]],[OWNER_INVESTMENT_IDS[0],OWNER_INVESTMENT_IDS[2]],
+    [OWNER_ORIGINAL_IDS[0],OWNER_INVESTMENT_IDS[0],OWNER_INVESTMENT_IDS[2]]];
   if(!scope?.open || !activeOwnerOriginalAdapter(catalog.registry.require("real_estate_principles")) ||
-    catalog.initialReferences.length!==1 || catalog.initialReferences[0].questionId!==OWNER_ORIGINAL_IDS[0] ||
-    candidates.length!==1 || candidates[0].candidateId!==OWNER_ORIGINAL_IDS[0]) throw new Error("owner_original_unavailable");
-  scope.catalogs.set(catalog,Object.freeze(candidates));
+    !allowed.some(value=>JSON.stringify(value)===JSON.stringify(ids)) ||
+    !catalog.initialReferences.every(matchesOwnerOriginalReference) ||
+    candidates.length!==ids.length || candidates.some((candidate,index)=>candidate.candidateId!==ids[index]) ||
+    (assignableIds && (new Set(assignableIds).size!==assignableIds.length || assignableIds.some(id=>!ids.includes(id))))) throw new Error("owner_original_unavailable");
+  scope.history.set(catalog,Object.freeze([...candidates]));
+  scope.catalogs.set(catalog,Object.freeze(candidates.filter(candidate=>!assignableIds || assignableIds.includes(candidate.candidateId))));
   for(const candidate of candidates)scope.candidates.add(candidate);
+}
+export function ownerOriginalHistoryCandidates(catalog: PrivateFirstStageCatalog) {
+  const scope=active.getStore();return scope?.open ? scope.history.get(catalog)??null : null;
 }
 export function ownerOriginalBankCandidates(catalog: PrivateFirstStageCatalog) {
   const scope=active.getStore();return scope?.open ? scope.catalogs.get(catalog)??null : null;
@@ -57,7 +61,7 @@ export function createOwnerOriginalApplication(dependencies: PrivateSessionAppli
       if(!genuineTrialSession(session)||!await privateFirstStageOwner(env,async()=>session))return deny();
       url.hostname="127.0.0.1";
       const canonical=new Request(url,request);
-      const scope={open:true,adapters:new WeakSet<object>(),candidates:new WeakSet<object>(),catalogs:new WeakMap<object,readonly QfI1CandidateV1[]>()};
+      const scope={open:true,adapters:new WeakSet<object>(),candidates:new WeakSet<object>(),catalogs:new WeakMap<object,readonly QfI1CandidateV1[]>(),history:new WeakMap<object,readonly QfI1CandidateV1[]>()};
       try{return await active.run(scope,()=>createPrivateSessionApplication({...dependencies,environment:()=>env,session:async()=>session})(canonical));}
       finally{scope.open=false;}
     }catch{return Response.json({ok:false,error:"temporarily_unavailable"},{status:503,headers});}
@@ -67,11 +71,11 @@ export function createOwnerOriginalApplication(dependencies: PrivateSessionAppli
 /** Existing reviewed-subject availability alone may validate exact authored
  * peer history. Mutations and addressed-session reads keep their original
  * composition; this does not supply authored stock to another subject. */
-export function createOwnerOriginalPeerReadApplication(dependencies: PrivateSessionApplicationDependencies, loadPeer: () => Promise<PrivateFirstStageCatalog | null>) {
+export function createOwnerOriginalPeerReadApplication(dependencies: PrivateSessionApplicationDependencies, loadPeer: () => Promise<PrivateFirstStageCatalog | readonly PrivateFirstStageCatalog[] | null>) {
   const scoped = createOwnerOriginalApplication({...dependencies, peerCatalogs: async () => {
     const peers = await dependencies.peerCatalogs?.() ?? [];
     const original = await loadPeer();
-    return original ? [...peers, original] : peers;
+    return original ? [...peers, ...(Array.isArray(original) ? original : [original as PrivateFirstStageCatalog])] : peers;
   }});
   return async (request: Request): Promise<Response> => {
     if (request.method === "GET" && !new URL(request.url).search && dependencies.environment().INVERGE_OWNER_ORIGINAL_REAL_ESTATE_ENABLED === "true") return scoped(request);
@@ -85,7 +89,7 @@ export function createOwnerOriginalPeerReadApplication(dependencies: PrivateSess
 export function compatibleOwnerOriginalReviewedCatalog(primary: PrivateFirstStageCatalog, peer: PrivateFirstStageCatalog) {
   return activeOwnerOriginalCatalog(primary) && peer.digest !== primary.digest &&
     peer.initialReferences.length > 0 && peer.initialReferences.every(reference => reference.subjectId === "real_estate_principles") &&
-    reviewedBankCandidates(peer) !== null;
+    (reviewedBankCandidates(peer) !== null || activeOwnerOriginalCatalog(peer));
 }
 export function catalogForOwnerOriginalHistory(primary: PrivateFirstStageCatalog, peers: readonly PrivateFirstStageCatalog[], digest: string) {
   if (primary.digest === digest) return primary;

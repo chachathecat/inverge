@@ -4,6 +4,7 @@ import { runInThisContext } from "node:vm";
 import ts from "typescript";
 import * as originalContext from "../../lib/review-os/first-stage/runtime/owner-original-context.ts";
 import * as originalBoundary from "../../lib/review-os/first-stage/runtime/owner-original-boundary.ts";
+import * as investmentContent from "../../lib/review-os/first-stage/runtime/owner-investment-content.ts";
 import * as originalContent from "../../lib/review-os/first-stage/runtime/owner-original-content.ts";
 import * as application from "../../lib/review-os/first-stage/runtime/session-application.ts";
 import * as trialBoundary from "../../lib/review-os/first-stage/runtime/owner-local-trial-boundary.ts";
@@ -51,6 +52,7 @@ export function privateRoute(harness, options = {}) {
       originalContext.createOwnerOriginalPeerReadApplication({ ...dependencies, now: harness.getClock }, peer) },
     "./owner-original-boundary": originalBoundary,
     "./owner-original-content": originalContent,
+    "./owner-investment-content": investmentContent,
     "@/lib/auth/session": { getServerSessionUser: async () => {
       counts.auth++;
       return options.session ?? { isAuthenticated: true, userId: ownerId, email: "owner@example.test" };

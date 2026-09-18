@@ -1,7 +1,7 @@
 import { FirstStageKernelError, requiredIdentifier, requiredUtcInstant } from "../kernel/domain";
 import { selectQfI1BankFirstAssignmentV1, type QfI1CandidateV1 } from "../../../question-foundry/runtime/qf-i1-bank-first";
 import { reviewedBankCandidates } from "./private-reviewed-content";
-import { ownerOriginalBankCandidates, activeOwnerOriginalCatalog, catalogForOwnerOriginalHistory } from "./owner-original-context";
+import { ownerOriginalBankCandidates, ownerOriginalHistoryCandidates, activeOwnerOriginalCatalog, catalogForOwnerOriginalHistory } from "./owner-original-context";
 import { createPrivateFirstStageSessionService, privateFirstStageSessionId, privateSessionDigest,
   type PrivateFirstStageCatalog, type PrivateFirstStageSession, type PrivateFirstStageSessionStore } from "./session-service";
 
@@ -41,7 +41,7 @@ export function createReviewedBankService(sessions: PrivateFirstStageSessionStor
     if (history.sessionId !== sessionId || history.contentMode !== "first_stage.private_session.v1") fail();
     const assignedAt = requiredUtcInstant(winner.assignment.assignedAt);
     if (Date.parse(assignedAt) > Date.parse(now())) fail();
-    const candidate = (selected === catalog ? stock() : reviewedBankCandidates(selected))?.find(item => item.candidateId === history.questionId);
+    const candidate = (ownerOriginalHistoryCandidates(selected) ?? (selected === catalog ? stock() : reviewedBankCandidates(selected)))?.find(item => item.candidateId === history.questionId);
     if (!candidate) fail();
     const expected = selectQfI1BankFirstAssignmentV1(request(sessionId, assignedAt, [candidate], subject));
     if (expected.status !== "ASSIGNED" || privateSessionDigest(expected) !== privateSessionDigest(winner.assignment)) fail();
@@ -61,7 +61,7 @@ export function createReviewedBankService(sessions: PrivateFirstStageSessionStor
       // processed review as history. A ready reservation is NOT an exposure.
       const selected = await savedCatalog(value);
       const history = (selected === catalog ? service : createPrivateFirstStageSessionService(sessions, selected, now)).projectHistory(value, ownerId);
-      if (selected === catalog) reserved.add(history.questionId);
+      if (selected === catalog || (activeOwnerOriginalCatalog(selected) && activeOwnerOriginalCatalog(catalog))) reserved.add(history.questionId);
     }
     return candidates.filter(item => !reserved.has(item.candidateId));
   }

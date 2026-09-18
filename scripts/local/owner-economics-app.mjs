@@ -82,7 +82,16 @@ export function ownerLocalOriginalEnvironment(env,installation,contentPath,conte
     installation.sqlSha256!==sqlSha256||sqlSha256!=="5346dbf1caa872c880ab621ffd91c508791747e9c80112b1030f86642e307a3a") fail("exact_original_installation_required");
   return {...env,INVERGE_OWNER_ORIGINAL_REAL_ESTATE_ENABLED:"true",INVERGE_OWNER_ORIGINAL_CONTENT_PATH:contentPath,INVERGE_OWNER_REVIEWED_BANK_ENABLED:"true"};
 }
-export async function startOwnerLocalApp({legalEvidence=false,theory=false,originalPractice=false}={}){
+/** Exact content-only extension. Reading history survives assignment-off. */
+export function ownerLocalInvestmentEnvironment(env,installation,contentPath,contentSha256) {
+  if(env.NODE_ENV!=="development"||env.NEXT_PUBLIC_SUPABASE_URL!=="http://127.0.0.1:55421"||env.INVERGE_OWNER_ORIGINAL_REAL_ESTATE_ENABLED!=="true"||
+    env.VERCEL!==undefined||env.VERCEL_ENV!==undefined||env.CI==="true"||!path.isAbsolute(contentPath)||
+    installation?.schemaVersion!=="owner_investment_installation.v1"||typeof installation.assignmentEnabled!=="boolean"||
+    installation.backupVerified!==true||installation.database!=="inverge_owner_economics_db_loopback/postgres"||
+    installation.contentSha256!==contentSha256||contentSha256!=="5a89a838a1c8873176a0bd8e137fbc3338df8ed53107379b9e12fad73e04bd81")fail("exact_investment_installation_required");
+  return {...env,INVERGE_OWNER_INVESTMENT_CONTENT_PATH:contentPath,INVERGE_OWNER_INVESTMENT_ASSIGNMENT_ENABLED:installation.assignmentEnabled?"true":"false"};
+}
+export async function startOwnerLocalApp({legalEvidence=false,theory=false,originalPractice=false,investmentPractice=false}={}){
   const keys=await guardedEnvironment();
   for(const file of [".env",".env.local",".env.development",".env.development.local"]){if(await access(file).then(()=>true,()=>false))fail("existing_env_file_must_be_preserved");}
   await access(path.join(LOCAL_ROOT,"trial-installation.json"));
@@ -103,6 +112,12 @@ export async function startOwnerLocalApp({legalEvidence=false,theory=false,origi
     const installation=JSON.parse(await readFile(path.join(root,"installation.json"),"utf8"));
     const hash=bytes=>createHash("sha256").update(bytes).digest("hex");
     env=ownerLocalOriginalEnvironment(env,installation,contentPath,hash(await readFile(contentPath)),hash(await readFile(new URL("../../supabase/local-designs/first-stage-owner-original-bank.sql",import.meta.url))));
+  }
+  if(investmentPractice) {
+    if(!originalPractice||!theory||legalEvidence)fail("local_modes_must_be_explicit");
+    const root=path.join(LOCAL_ROOT,"original-investment-finance-20260918"),contentPath=path.join(root,"candidate-v1.json");
+    const installation=JSON.parse(await readFile(path.join(root,"installation.json"),"utf8"));
+    env=ownerLocalInvestmentEnvironment(env,installation,contentPath,createHash("sha256").update(await readFile(contentPath)).digest("hex"));
   }
   // No secret argument, env file, remote fetch, smoke account or global TLS change.
   const child=spawn(process.execPath,["node_modules/next/dist/bin/next","dev","--hostname","127.0.0.1","--port","3883"],{env,stdio:"inherit",windowsHide:true});
@@ -136,6 +151,6 @@ export async function prepareOwnerLocalCurriculum(){
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href){
   const command=process.argv[2];
-  (command==="prepare"?prepareOwnerLocalApp().then(result=>console.log(JSON.stringify(result))):command==="prepare-planning"?prepareOwnerLocalPlanning().then(result=>console.log(JSON.stringify(result))):command==="prepare-curriculum"?prepareOwnerLocalCurriculum().then(result=>console.log(JSON.stringify(result))):command==="start"?startOwnerLocalApp():command==="start-theory"?startOwnerLocalApp({theory:true}):command==="start-theory-original"?startOwnerLocalApp({theory:true,originalPractice:true}):command==="start-legal-evidence"?startOwnerLocalApp({legalEvidence:true}):Promise.reject(new Error("invalid_local_command")))
+  (command==="prepare"?prepareOwnerLocalApp().then(result=>console.log(JSON.stringify(result))):command==="prepare-planning"?prepareOwnerLocalPlanning().then(result=>console.log(JSON.stringify(result))):command==="prepare-curriculum"?prepareOwnerLocalCurriculum().then(result=>console.log(JSON.stringify(result))):command==="start"?startOwnerLocalApp():command==="start-theory"?startOwnerLocalApp({theory:true}):command==="start-theory-investment"?startOwnerLocalApp({theory:true,originalPractice:true,investmentPractice:true}):command==="start-theory-original"?startOwnerLocalApp({theory:true,originalPractice:true}):command==="start-legal-evidence"?startOwnerLocalApp({legalEvidence:true}):Promise.reject(new Error("invalid_local_command")))
     .catch(error=>{const message=String(error.message);console.error(/^[a-z_]+$/.test(message)?message:"local_trial_setup_failed");process.exitCode=1;});
 }

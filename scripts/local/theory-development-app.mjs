@@ -103,7 +103,8 @@ async function serve(production=false, controlledPractice=false, paidPractice=fa
  if(originalPractice) {
    const contentPath=process.env.INVERGE_OWNER_ORIGINAL_CONTENT_PATH;
    if(!contentPath || !path.isAbsolute(contentPath) || createHash("sha256").update(await readFile(contentPath)).digest("hex")!=="0a7039441edafa476973383fdd4f8fb1163ae9bee96da55aacc0eaf33b4d9fc9") fail("exact_original_content_required");
-   Object.assign(env,{INVERGE_OWNER_PC_THEORY_ENABLED:"false",INVERGE_OWNER_PC_THEORY_DEVELOPMENT_ENABLED:"false",WCV_C2R_C_T_THEORY_ENABLED:"false",INVERGE_OWNER_FIRST_STAGE_KERNEL_ENABLED:"true",INVERGE_OWNER_FIRST_STAGE_EMAILS:email,INVERGE_OWNER_REVIEWED_BANK_ENABLED:"true",INVERGE_OWNER_ORIGINAL_REAL_ESTATE_ENABLED:"true",INVERGE_OWNER_ORIGINAL_TEST_ONLY:"isolated_synthetic",INVERGE_OWNER_ORIGINAL_CONTENT_PATH:contentPath});
+   Object.assign(env,{INVERGE_OWNER_PC_THEORY_ENABLED:"false",INVERGE_OWNER_PC_THEORY_DEVELOPMENT_ENABLED:"false",WCV_C2R_C_T_THEORY_ENABLED:"false",INVERGE_OWNER_FIRST_STAGE_KERNEL_ENABLED:"true",INVERGE_OWNER_FIRST_STAGE_EMAILS:email,INVERGE_OWNER_REVIEWED_BANK_ENABLED:"true",INVERGE_OWNER_ORIGINAL_REAL_ESTATE_ENABLED:"true",INVERGE_OWNER_ORIGINAL_TEST_ONLY:"isolated_synthetic",INVERGE_OWNER_ORIGINAL_CONTENT_PATH:contentPath,
+     ...(process.env.INVERGE_OWNER_INVESTMENT_CONTENT_PATH?{INVERGE_OWNER_INVESTMENT_CONTENT_PATH:process.env.INVERGE_OWNER_INVESTMENT_CONTENT_PATH,INVERGE_OWNER_INVESTMENT_ASSIGNMENT_ENABLED:process.env.INVERGE_OWNER_INVESTMENT_ASSIGNMENT_ENABLED==="true"?"true":"false"}:{})});
  }
  // Existing isolated account and normal quotas; no provider key, approval or schema mutation.
  if(captureOnly) Object.assign(env,{INVERGE_OWNER_PC_THEORY_ENABLED:"false",INVERGE_OWNER_PC_THEORY_DEVELOPMENT_ENABLED:"false"});
