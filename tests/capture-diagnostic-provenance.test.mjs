@@ -215,6 +215,9 @@ test("provenance replay preserves the exact source and refuses reclassification 
   const before=store.tables.wrong_answer_items.length;
   const first=await save(input),replay=await save(input);
   assert.equal(replay.item.id,first.item.id);assert.equal(replay.deduped,true);assert.equal(replay.sourceInputMatched,true);
+  const conflict = await app.load("app/api/os/items/route").POST(new Request("http://localhost/api/os/items", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...input,sourceType:"pdf"})}));
+  assert.equal(conflict.status,409);
+  assert.equal((await conflict.json()).error,"review-os:capture-source-provenance-conflict");
   await assert.rejects(save({...input,confidence:"높음"}),/capture-source-provenance-conflict/);
   await assert.rejects(save({...input,outlineDraft:"수정된 합성 목차"}),/capture-source-provenance-conflict/);
   await assert.rejects(save({...input,extractionPayload:{user_confirmed_fields:{capture_review_provenance:{...provenance,learningMaterial:"learner_input"}}}}),/capture-source-provenance-conflict/);
