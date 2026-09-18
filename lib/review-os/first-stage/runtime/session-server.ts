@@ -1,7 +1,8 @@
 import "server-only";
 import { createOwnerOriginalApplication, createOwnerOriginalPeerReadApplication } from "./owner-original-context";
-import { OWNER_ORIGINAL_FLAG, OWNER_INVESTMENT_FLAG } from "./owner-original-boundary";
+import { OWNER_ORIGINAL_FLAG, OWNER_INVESTMENT_FLAG, OWNER_MARKET_FLAG } from "./owner-original-boundary";
 import { loadOwnerOriginalContent } from "./owner-original-content";
+import { extendOwnerMarketSupply } from "./owner-market-content";
 import { loadOwnerOriginalSupply } from "./owner-investment-content";
 import { readPrivateEconomicsContent } from "./approved-catalog";
 import { getServerSessionUser } from "@/lib/auth/session";
@@ -26,11 +27,17 @@ const REVIEWED_CATALOG_LOADERS = {
 } as const;
 
 const readOriginal = () => readPrivateEconomicsContent(process.env.INVERGE_OWNER_ORIGINAL_CONTENT_PATH ?? "");
-const loadOriginalSupply = () => loadOwnerOriginalSupply(readOriginal,
+const loadPriorOriginalSupply = () => loadOwnerOriginalSupply(readOriginal,
   process.env.INVERGE_OWNER_INVESTMENT_CONTENT_PATH ? () => readPrivateEconomicsContent(process.env.INVERGE_OWNER_INVESTMENT_CONTENT_PATH!) : undefined,
   process.env[OWNER_INVESTMENT_FLAG] === "true");
+const loadOriginalSupply = async () => extendOwnerMarketSupply(await loadPriorOriginalSupply(),
+  process.env.INVERGE_OWNER_MARKET_CONTENT_PATH ? () => readPrivateEconomicsContent(process.env.INVERGE_OWNER_MARKET_CONTENT_PATH!) : undefined,
+  process.env[OWNER_MARKET_FLAG] === "true");
 async function originalHistoryCatalogs() {
-  const catalogs = await Promise.all([loadOwnerOriginalContent(readOriginal), loadOriginalSupply()]);
+  const legacy = await loadOwnerOriginalContent(readOriginal);
+  const legacyMarket = await extendOwnerMarketSupply(legacy,
+    process.env.INVERGE_OWNER_MARKET_CONTENT_PATH ? () => readPrivateEconomicsContent(process.env.INVERGE_OWNER_MARKET_CONTENT_PATH!) : undefined, false);
+  const catalogs = [legacy, legacyMarket, await loadPriorOriginalSupply(), await loadOriginalSupply()];
   return catalogs.filter((catalog, index): catalog is PrivateFirstStageCatalog => catalog !== null && catalogs.findIndex(other => other?.digest === catalog.digest) === index);
 }
 

@@ -2139,3 +2139,27 @@ Issue #960 implements the exact 2026-09-17 Owner-authorized original two-item bu
 #961/c2a56e7f and its personal installation are complete and reused. Same PC writer continues on codex/owner-original-investment-finance. Owner approved the exact 5a89a838 four-item addition and 8dc7d9ca proposal: reuse existing assignment/session/review/Today and installed DB objects, preserve the old catalog identity, install only after actual isolated two-pair acceptance and protected final-head checks/review/merge. Prior independent arithmetic/29 negative checks are reused; new runtime/boundary/history/coexistence checks are pending. No SQL apply, paid calls or personal first attempt. post909 A/B/C correction exception and existing Goal remain in effect.
 
 Issue #962: both exact new pairs now passed normal-menu authenticated isolated Next.js/API/PostgreSQL assignment, functional response, save, fresh-login reconnect, matching inverse retry, completed review and recent-record/Today checks. Legacy two-item record reopening and existing learning tables were preserved. No paid calls or personal attempts. Focused service regressions 26/26 and typecheck passed; final native checks, exact-head review, protected merge and conditional content-only PC installation remain pending.
+
+
+## 2026-09-18 exact market continuation
+
+#963/44048e2a investment acceptance and personal file-only installation are
+complete and reused; previous two plus investment four remain installed. Same
+PC single writer continues codex/owner-original-market under the existing Goal
+and post909 A/B/C exception. Owner separately approved exact market packet
+ce4b6892 (four IDs in the boundary, two stated-model pairs). Reuse prior four
+calculations, 20-option independent checks and 50 draft boundary cases. Add
+only leaf/reference/launcher connections and changed history/assignment tests.
+Actual isolated normal-menu two-pair acceptance, OFF with stock remaining, old
+six history preservation, final native checks/review/protected merge and exact
+file-only personal installation are pending. No SQL or paid calls; functional
+checks are not personal learning. Personal Chrome display stays unverified.
+
+The market candidate completed both normal-menu isolated Next.js/GoTrue/
+PostgREST/PostgreSQL pairs, including fresh login, saved exact retry linkage,
+review completion and records/Today. Existing three sessions/six responses and
+learning tables remain unchanged. With one original left, assignment OFF gives
+zero stock and a 409 denial while exact stored replays and history remain valid.
+Focused regressions 81/81, typecheck and lint pass. Full native checks, final
+exact-head review, protected merge and conditional personal installation remain
+pending; GitHub posting is separately blocked by automatic approval review.

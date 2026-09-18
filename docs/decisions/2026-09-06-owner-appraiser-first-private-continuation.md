@@ -358,3 +358,28 @@ users and redistribution remain outside this exception.
 Owner approved proposal SHA-256 `8dc7d9cad1374ce9edad2d4700f8a10c621708bc92242a5308ec57de25395889` and exact private content SHA-256 `5a89a838a1c8873176a0bd8e137fbc3338df8ed53107379b9e12fad73e04bd81`: two initial items and their two inverse retries, covering stated two-period NPV/zero-NPV price and interest-only equity cash yield/required NOI. This adds only the four IDs in `exactOwnerInvestmentException`; the earlier two-item exception, references, versions and saved catalog digests remain unchanged. Internal `re_investment_finance` mapping is not official syllabus verification.
 
 Retain AI-authored, calculation-checked, human-unreviewed, private-practice labels and separate assistance/exposure from independent learning. No human reviewer, official key, transfer or mastery is fabricated. Exact private files and per-bundle settings may be installed only after normal authenticated isolated app acceptance for both pairs, old-history coexistence, final required checks/independent review/protected squash, local target/hash and recoverable-file-backup checks. Reuse the existing SQL objects without reapplying SQL or changing schema/permissions. Assignment-off retains content for safe existing-record readback and preserves all records. No paid calls, personal attempts, remote DB, public/Production activation, legal collection or Q96 approval. Any changed hash/target/permission or need for DB mutation returns only that delta to Owner.
+
+
+## 2026-09-18 exact authored market addition
+
+Owner separately approves the exact owner-pc-real-estate-market-20260918-v1
+four-item packet ce4b6892ac36c2e9fc7983f10ba63d2f167760c722315b2da817a1a4791eb35c:
+linear rent equilibrium / demand-intercept inverse and midpoint arc elasticity /
+quantity inverse, two initial/retry pairs. This adds only the four exact IDs in
+the runtime boundary and contract mirrors. Existing six references, versions,
+catalog identities, human-reviewed/official-content conditions and records stay
+unchanged. AI-written, calculation-checked, human-unreviewed, private practice
+only; verification is confined to each stated model, with no market prediction,
+official appraisal, transfer or mastery claim. Response precedes explanation.
+
+Conditional installation is only candidate-v1.json and installation.json under
+the existing Owner-PC original-market-20260918 private directory, plus
+INVERGE_OWNER_MARKET_CONTENT_PATH / INVERGE_OWNER_MARKET_ASSIGNMENT_ENABLED.
+It requires isolated normal-login two-pair save/reconnect/review/records/Today
+acceptance, old-history and assignment-OFF preservation, exact-head native
+checks and independent 0/0/0 review, protected squash, target/hash/backup checks
+and no unsaved personal input or active request at restart. No SQL, schema,
+permissions, paid calls or expanded activation. Disable new assignment on
+failure while retaining files and records. Changed content hash, target or
+permission scope requires delta approval. Production ignore guard must hold
+before push/merge. Q96/OCR/real Law/theory paraphrase gaps remain incomplete.
