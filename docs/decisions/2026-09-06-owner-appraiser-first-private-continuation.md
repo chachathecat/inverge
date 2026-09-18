@@ -383,3 +383,17 @@ permissions, paid calls or expanded activation. Disable new assignment on
 failure while retaining files and records. Changed content hash, target or
 permission scope requires delta approval. Production ignore guard must hold
 before push/merge. Q96/OCR/real Law/theory paraphrase gaps remain incomplete.
+
+
+### 2026-09-18 exact-registration implementation reuse
+
+After #965/07ae22ff, Owner authorized minimizing duplicate bundle connection
+code under the same PC single writer. `config/owner-approved-content-registration.json`
+is the executable consolidation of the existing original, investment and market
+exceptions only: exact hashes/IDs/versions, closed validator selectors and saved
+catalog compositions. It grants no additional content approval. Future compatible
+content requires a separately approved exact file plus a reviewed server registration;
+its file cannot self-register. New validation capabilities or policy exceptions
+still require the applicable decision. Existing Foundation/human-reviewed routes
+and all exact-content clauses above remain in force. Public/Production, schema,
+permissions and paid calls are unchanged.

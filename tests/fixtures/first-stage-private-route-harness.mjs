@@ -1,3 +1,4 @@
+import * as registeredSupply from "../../lib/review-os/first-stage/runtime/owner-registered-supply.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { runInThisContext } from "node:vm";
@@ -55,6 +56,7 @@ export function privateRoute(harness, options = {}) {
     "./owner-original-content": originalContent,
     "./owner-investment-content": investmentContent,
     "./owner-market-content": marketContent,
+    "./owner-registered-supply": registeredSupply,
     "@/lib/auth/session": { getServerSessionUser: async () => {
       counts.auth++;
       return options.session ?? { isAuthenticated: true, userId: ownerId, email: "owner@example.test" };
