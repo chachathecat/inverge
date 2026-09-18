@@ -134,7 +134,7 @@ export type ReviewedFeedbackEvidence = Readonly<{
   reviewerClass: null;
   modelAlone: true;
 }> | Readonly<{
-  schemaVersion: "first_stage.owner_original_calculation_feedback.v1";
+  schemaVersion: "first_stage.owner_original_calculation_feedback.v1" | "first_stage.owner_original_relation_feedback.v1";
   state: "machine_checked_owner_local";
   receiptReference: null; reviewerIdentity: null; reviewerClass: null; modelAlone: true;
 }>;
@@ -152,6 +152,8 @@ export type AttemptEvidenceEnvelope = Readonly<{
   officialKeyReference: ImmutableEvidenceReference | null;
   /** Authored calculation key only; forbidden on official/reviewed references. */
   calculationKeyReference?: ImmutableEvidenceReference;
+  /** Exact registered stated relation only; mutually exclusive with calculation key. */
+  relationKeyReference?: ImmutableEvidenceReference;
   choiceSetReference: ImmutableEvidenceReference | null;
   sourceReference: ImmutableEvidenceReference;
   versionDecisionReference: ImmutableEvidenceReference;

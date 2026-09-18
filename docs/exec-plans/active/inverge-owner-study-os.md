@@ -2182,3 +2182,23 @@ The next private draft is two market qualitative-judgment pairs; current numeric
 validation is not concept verification. Its new bounded relation validator,
 policy/use/install exception require one separate exact-bundle Owner decision.
 Q96, real OCR, real Law source/model and Theory paraphrase remain incomplete.
+
+
+### 2026-09-18 exact market-relation continuation after #967
+
+Owner separately authorized proposal SHA256 `8cc15a5dbc0f43d3753960193bf4cad4985ecd754a884e2d6a6ac92f06d892d1`
+and exact private content SHA256 `59c78f868bf4e83afa99712d63505deb0b2ad4b8885ee19074c51bf993b9b21b`.
+The `market_relations` server registration alone identifies the four items. This
+bounded exception checks four stated linear relations, positive/fixed conditions,
+symbolic sign conclusions and numeric counterexamples. It is not general concept,
+law, real-market or human validation. Private bodies stay outside Git.
+
+Reuse the common loader/start-theory-approved, persistence, assignment and review
+engine. The exact relation evidence is distinct from calculation evidence; all old
+10 references, evaluations, catalog digests and OFF readback stay compatible.
+Acceptance requires isolated normal-auth two-pair browser/API/DB completion,
+old-history/OFF checks, final native CI and exact-head independent 0/0/0 review.
+Only after protected merge and safe-input confirmation may the exact file and
+registered installation marker be added to existing Owner-PC. No SQL, DB rights,
+provider calls, budget change or Production activation. If unavailable, disable
+new assignment only, retain records/files. Q96/OCR/Law/Theory gaps remain open.

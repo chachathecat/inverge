@@ -7,7 +7,7 @@ import { createReviewedBankService, type ReviewedBankStore } from "./reviewed-ba
 import { handleReviewedBank, reviewedBankEnabled } from "./reviewed-bank-http";
 import { reviewedBankCandidates } from "./private-reviewed-content";
 import { activeOwnerOriginalCatalog, catalogForOwnerOriginalHistory } from "./owner-original-context";
-import { OWNER_ORIGINAL_NOTICE, OWNER_ORIGINAL_SCOPE } from "./owner-original-boundary";
+import { ownerOriginalVerification } from "./owner-original-boundary";
 
 type Environment = Readonly<Record<string, string | undefined>>;
 type Session = Readonly<{ isAuthenticated: boolean; userId?: string | null; email?: string | null }>;
@@ -115,7 +115,7 @@ export function createPrivateSessionApplication(dependencies: PrivateSessionAppl
             questionNumber: item.questionNumber,
           })),
           masteryClaim: false, transferEvidence: false,
-          ...(catalog && activeOwnerOriginalCatalog(catalog) ? { contentStatus: "machine_checked_owner_local", notice: OWNER_ORIGINAL_NOTICE, scope: OWNER_ORIGINAL_SCOPE, humanReviewComplete: false, recentRecords: originalHistory } : {}),
+          ...(catalog && activeOwnerOriginalCatalog(catalog) ? { contentStatus: "machine_checked_owner_local", notice: [...new Set(catalog.initialReferences.map(r => ownerOriginalVerification(r).notice))].join(" / "), scope: [...new Set(catalog.initialReferences.map(r => ownerOriginalVerification(r).scope))].join(" "), humanReviewComplete: false, recentRecords: originalHistory } : {}),
           ...(bankStock ? { bankPractice: true, availableOriginals: bankStock.availableOriginals } : {}),
         }, continuation });
       }

@@ -1,3 +1,4 @@
+import { validateRegisteredRelationItems, type RelationItem } from "./owner-market-relation";
 import { loadOwnerDirectCapitalizationContent } from "./owner-original-content";
 import { ownerContentBundle } from "./owner-content-registration.mjs";
 import { investmentCalculation, type InvestmentModel } from "./owner-investment-calculation";
@@ -6,7 +7,7 @@ import { FirstStageKernelError, parseQuestionReference, type ChoiceId, type Ques
 import { createSubjectAdapterRegistry, SUBJECT_ADAPTER_SCHEMA_VERSION, validateAttemptEvaluation, validatePresentation, type SubjectAdapterV1 } from "../subject-adapter/subject-adapter";
 import { privateSessionDigest as digest, type PrivateFirstStageCatalog } from "./session-service";
 import { activeOwnerOriginalAdapter, authorizeOwnerOriginalAdapter, authorizeOwnerOriginalCatalog, ownerOriginalHistoryCandidates, ownerOriginalBankCandidates } from "./owner-original-context";
-import { OWNER_ORIGINAL_ADAPTER, OWNER_ORIGINAL_NOTICE, OWNER_ORIGINAL_SCOPE } from "./owner-original-boundary";
+import { OWNER_ORIGINAL_ADAPTER, ownerOriginalVerification } from "./owner-original-boundary";
 import { marketCalculation, type MarketModel } from "./owner-market-calculation";
 
 type Item={id:string;role:string;model:string;facts:Record<string,string>;prompt:string;choices:{id:ChoiceId;value:string;unit:string;label:string}[];answerChoice:ChoiceId;explanation:string;choiceFeedback:{choice:ChoiceId;text:string}[];calculation:{result:{decimal:string;unit:string}}};
@@ -15,7 +16,7 @@ const fail=():never=>{throw new FirstStageKernelError("adapter_mismatch");};
  * Runtime admission still requires exact approved file bytes below. */
 export function validateRegisteredCalculationItems(key:string,packet:{bundleId:string;items:Item[]}) {
   const registration=ownerContentBundle(key);
-  if(!registration || registration.validator==="legacy_direct_capitalization")return fail();
+  if(!registration || !["investment_calculation","market_calculation"].includes(registration.validator))return fail();
   const {ids:IDS,version:VERSION}=registration;
   if(packet.bundleId!==VERSION||packet.items.length!==IDS.length)fail();
   const calculations=packet.items.map((item,index)=>{
@@ -36,8 +37,12 @@ export async function loadOwnerRegisteredContent(key:string,readBytes:()=>Promis
   if(registration.validator === "legacy_direct_capitalization")return loadOwnerDirectCapitalizationContent(key,readBytes,assignmentEnabled);
   const {ids:IDS,version:VERSION,sha256:HASH}=registration;
   const bytes=await readBytes();if(!bytes.length||bytes.length>65536||crypto.createHash("sha256").update(bytes).digest("hex")!==HASH)return null;
-  const packet=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes)) as {bundleId:string;items:Item[]};
-  const calculations=validateRegisteredCalculationItems(key,packet);
+  const raw=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes));
+  const relation=registration.validator==="stated_market_relation";
+  const validated=relation?validateRegisteredRelationItems(key,raw):null;
+  const packet:{items:RelationItem[]}=validated??raw;
+  const proofs=validated?.proofs??validateRegisteredCalculationItems(key,raw);
+  const disclosure=ownerOriginalVerification({questionId:IDS[0],questionVersion:VERSION});
   const references=packet.items.map(item=>parseQuestionReference({schemaVersion:"first_stage.owner_original_question_reference.v1",questionId:item.id,questionVersion:VERSION,
     subjectId:"real_estate_principles",examYear:null,examRound:null,questionNumber:null,sessionId:registration.sessionId,choiceCount:5,
     sourceVersionManifestIds:[`owner-original-${HASH}`],rightsState:"owner_authorized_original",currentnessState:"stated_model_only"}));
@@ -50,20 +55,20 @@ export async function loadOwnerRegisteredContent(key:string,readBytes:()=>Promis
     evaluateSubmission(input){const index=indexFor(input.questionReference),item=packet.items[index],choice=input.submission.selectedChoice;
       const decision=choice===null?"unanswered":choice===item.answerChoice?"correct":"incorrect";
       return validateAttemptEvaluation(adapter,input,{schemaVersion:"first_stage.attempt_evaluation.v1",decision,errorCause:null,conceptBindings:[concept(index)],
-        biggestGapCode:decision==="correct"?"selected_answer_matches_stated_model":"answer_differs_from_stated_model",nextActionCode:decision==="correct"?"scheduled_practice":"compare_calculation_then_retry",
+        biggestGapCode:decision==="correct"?"selected_answer_matches_stated_model":"answer_differs_from_stated_model",nextActionCode:decision==="correct"?"scheduled_practice":relation?"compare_stated_relation_then_retry":"compare_calculation_then_retry",
         retryDisposition:decision==="correct"?"review_then_retry":"retry_now",reviewAfterMs:decision==="correct"?86400000:0,evaluationPolicyVersion:registration.evaluationPolicy!,
         evidenceEnvelope:{schemaVersion:"first_stage.attempt_evidence_envelope.v1",attemptId:input.attempt.attemptId,submissionSha256:input.submissionSha256,questionId:item.id,questionVersion:VERSION,questionReferenceSha256:digest(input.questionReference),subjectId:adapter.subjectId,adapterId:adapter.adapterId,adapterVersion:adapter.adapterVersion,
-          officialKeyReference:null,calculationKeyReference:evidence(`calculation-${item.id}`,calculations[index]),choiceSetReference:evidence(`choices-${item.id}`,item.choices),sourceReference:evidence("source",HASH),versionDecisionReference:evidence("version",VERSION),rightsDecisionReference:evidence("owner-private-use",{packet:HASH,scope:registration.rightsScope!,humanReviewer:null}),
-          reviewedFeedback:{schemaVersion:"first_stage.owner_original_calculation_feedback.v1",state:"machine_checked_owner_local",receiptReference:null,reviewerIdentity:null,reviewerClass:null,modelAlone:true}}});},
+          officialKeyReference:null,...(relation?{relationKeyReference:evidence(`relation-${item.id}`,proofs[index])}:{calculationKeyReference:evidence(`calculation-${item.id}`,proofs[index])}),choiceSetReference:evidence(`choices-${item.id}`,item.choices),sourceReference:evidence("source",HASH),versionDecisionReference:evidence("version",VERSION),rightsDecisionReference:evidence("owner-private-use",{packet:HASH,scope:registration.rightsScope!,humanReviewer:null}),
+          reviewedFeedback:{schemaVersion:relation?"first_stage.owner_original_relation_feedback.v1":"first_stage.owner_original_calculation_feedback.v1",state:"machine_checked_owner_local",receiptReference:null,reviewerIdentity:null,reviewerClass:null,modelAlone:true}}});},
     buildIndependentRetry(input){const i=indexFor(input.sourceQuestionReference),c=concept(i);if(i%2||input.priorRetries.length||digest(input.reviewTask.conceptBindings)!==digest([c]))fail();const source=references[i],variant=references[i+1];
       return {schemaVersion:"first_stage.independent_retry_candidate.v1",questionReference:variant,lineageReceipt:{schemaVersion:"first_stage.independent_retry_lineage_receipt.v1",receiptId:`${registration.evidencePrefix}-lineage-${digest(input.reviewTask.reviewTaskId).slice(0,40)}`,receiptVersion:VERSION,adapterId:adapter.adapterId,adapterVersion:adapter.adapterVersion,subjectId:adapter.subjectId,
         sourceQuestionId:source.questionId,sourceQuestionVersion:source.questionVersion,sourceQuestionReferenceSha256:digest(source),variantQuestionId:variant.questionId,variantQuestionVersion:variant.questionVersion,variantQuestionReferenceSha256:digest(variant),targetConceptBindingKeys:[`${c.subjectId}:${c.conceptId}@${c.conceptVersion}:${c.role}`],priorRetryCount:0,decision:"unreviewed_owner_local_practice_retry"}};}
   };
   authorizeOwnerOriginalAdapter(adapter);for(const reference of references)adapter.presentQuestion(reference);
   const catalog:PrivateFirstStageCatalog=Object.freeze({digest:digest({packet:HASH,adapter:adapter.adapterVersion,policy:registration.evaluationPolicy!}),registry:createSubjectAdapterRegistry([adapter]),initialReferences:Object.freeze(references.filter((_,index)=>index%2===0)),
-    questionAttributions(reference:QuestionReference){indexFor(reference);return [OWNER_ORIGINAL_NOTICE,OWNER_ORIGINAL_SCOPE];},
+    questionAttributions(reference:QuestionReference){indexFor(reference);return [disclosure.notice,disclosure.scope];},
     retryAvailability(reference:QuestionReference,used:readonly string[]){const i=indexFor(reference);return i%2===0&&!used.includes(IDS[i+1])?"available" as const:"exhausted" as const;},
-    explanation(reference:QuestionReference){const item=packet.items[indexFor(reference)];return {text:[`계산 정답: ${item.answerChoice}`,item.explanation,...item.choiceFeedback.map(c=>`${c.choice}. ${c.text}`)].join("\n\n"),sourceStatus:OWNER_ORIGINAL_NOTICE,learningReferenceDisclaimer:true as const,attributions:[OWNER_ORIGINAL_SCOPE]};},
+    explanation(reference:QuestionReference){const item=packet.items[indexFor(reference)];return {text:[`${relation?"명시 관계식 정답":"계산 정답"}: ${item.answerChoice}`,item.explanation,...item.choiceFeedback.map(c=>`${c.choice}. ${c.text}`)].join("\n\n"),sourceStatus:disclosure.notice,learningReferenceDisclaimer:true as const,attributions:[disclosure.scope]};},
     curriculumBinding(reference:QuestionReference){const i=indexFor(reference);return {unitId:registration.unitId!,topicId:concept(i).conceptId,title:registration.titles![Math.floor(i/2)],mappingVersion:VERSION};}});
   authorizeOwnerOriginalCatalog(catalog,references.map((_,index)=>index).filter(index=>index%2===0).map((index,priority)=>({candidateId:references[index].questionId,candidateDigest:`sha256:${digest(references[index])}`,familyId:registration.families![Math.floor(index/2)],surfaceId:references[index].questionId,bankClass:"LEARNING_PRACTICE",origin:"BANK_STOCK",contentAuthority:"LEARNING_ONLY",rightsStatus:"OWNER_AUTHORIZED_ORIGINAL",sourceStatus:"STATED_MODEL_ONLY",releaseChainComplete:false,unseenEligibilitySnapshotSealed:false,nonSameSurfaceAsSource:false,familyIsolated:false,calibrationState:"UNASSESSED",timedProtocolBound:false,chronology:null,chronologyAuthority:null,availableAt:registration.availableAt!,priority})),assignmentEnabled?references.filter((_,index)=>index%2===0).map(r=>r.questionId):[]);
   return catalog;

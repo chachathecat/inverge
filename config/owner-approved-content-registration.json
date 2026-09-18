@@ -135,6 +135,121 @@
         "start-theory-approved"
       ],
       "installationKind": "content_only"
+    },
+    {
+      "key": "market_relations",
+      "version": "owner-pc-real-estate-market-concepts-20260918-v1",
+      "sha256": "59c78f868bf4e83afa99712d63505deb0b2ad4b8885ee19074c51bf993b9b21b",
+      "ids": [
+        "owner-re-market-movement-initial-v1",
+        "owner-re-market-movement-retry-v1",
+        "owner-re-market-joint-initial-v1",
+        "owner-re-market-joint-retry-v1"
+      ],
+      "sessionId": "owner-original-market-relations-v1",
+      "validator": "stated_market_relation",
+      "models": [
+        "fixed_demand_price_change",
+        "positive_demand_intercept_shift",
+        "both_intercepts_increase",
+        "demand_increases_supply_decreases"
+      ],
+      "concepts": [
+        "stated-market-movement",
+        "stated-market-joint-change"
+      ],
+      "titles": [
+        "명시 모형: 곡선 위 이동과 관계 이동",
+        "명시 모형: 동시 변화와 불확정"
+      ],
+      "families": [
+        "owner-market-movement-v1",
+        "owner-market-joint-v1"
+      ],
+      "unitId": "re_market",
+      "availableAt": "2026-09-18T04:16:05.000Z",
+      "evidencePrefix": "owner-market-relations",
+      "evaluationPolicy": "owner-market-relations-stated-model-v1",
+      "rightsScope": "exact-four-private-only",
+      "compositionKey": "marketRelations",
+      "compositionPolicy": "owner-original-relations-exact-union-v1",
+      "flag": "INVERGE_OWNER_MARKET_CONCEPTS_ASSIGNMENT_ENABLED",
+      "pathVariable": "INVERGE_OWNER_MARKET_CONCEPTS_CONTENT_PATH",
+      "installationSchema": "owner_market_relations_installation.v1",
+      "directory": "original-market-concepts-20260918",
+      "file": "candidate-v1.json",
+      "activationModes": [
+        "start-theory-approved"
+      ],
+      "installationKind": "content_only",
+      "relationBindings": [
+        {
+          "conditions": [
+            "fixed_a_b",
+            "b_positive",
+            "price_increases",
+            "positive_demand"
+          ],
+          "conclusions": [
+            "demand_shifts_left",
+            "same_demand_curve_quantity_decreases",
+            "a_decreased",
+            "demand_shifts_right",
+            "supply_must_shift_left"
+          ]
+        },
+        {
+          "conditions": [
+            "positive_slopes",
+            "positive_clearing_equilibria",
+            "fixed_other_coefficients",
+            "parallel_intercept_changes",
+            "delta_a_positive",
+            "delta_c_zero"
+          ],
+          "conclusions": [
+            "a_unchanged",
+            "supply_shifts_right_only",
+            "demand_right_fixed_supply_price_quantity_increase",
+            "price_increases_quantity_decreases",
+            "quantity_unchanged"
+          ]
+        },
+        {
+          "conditions": [
+            "positive_slopes",
+            "positive_clearing_equilibria",
+            "fixed_other_coefficients",
+            "parallel_intercept_changes",
+            "delta_a_positive",
+            "delta_c_positive"
+          ],
+          "conclusions": [
+            "price_quantity_increase",
+            "price_decreases_quantity_increases",
+            "price_unchanged_quantity_increases",
+            "price_indeterminate_quantity_increases",
+            "both_indeterminate"
+          ]
+        },
+        {
+          "conditions": [
+            "positive_slopes",
+            "positive_clearing_equilibria",
+            "fixed_other_coefficients",
+            "parallel_intercept_changes",
+            "delta_a_positive",
+            "delta_c_negative"
+          ],
+          "conclusions": [
+            "price_increases_quantity_indeterminate",
+            "price_quantity_increase",
+            "price_increases_quantity_decreases",
+            "price_unchanged_quantity_decreases",
+            "both_indeterminate"
+          ]
+        }
+      ]
     }
   ],
   "catalogs": [
@@ -153,6 +268,26 @@
       "original",
       "investment",
       "market"
+    ],
+    [
+      "original",
+      "market_relations"
+    ],
+    [
+      "original",
+      "investment",
+      "market_relations"
+    ],
+    [
+      "original",
+      "market",
+      "market_relations"
+    ],
+    [
+      "original",
+      "investment",
+      "market",
+      "market_relations"
     ]
   ]
 }

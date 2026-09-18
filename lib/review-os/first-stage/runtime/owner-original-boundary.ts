@@ -43,3 +43,10 @@ export function matchesOwnerOriginalReference(value: unknown) {
     row.sessionId === bundle.sessionId && row.rightsState === "owner_authorized_original" && row.currentnessState === "stated_model_only" &&
     JSON.stringify(row.sourceVersionManifestIds) === JSON.stringify([`owner-original-${bundle.sha256}`]);
 }
+
+/** Disclosure follows the exact registered verification type, never content claims. */
+export function ownerOriginalVerification(reference: { questionId: string; questionVersion: string }) {
+  return ownerContentReferenceRegistration(reference)?.validator === "stated_market_relation"
+    ? { verificationKind: "stated_relation" as const, notice: "AI 작성 · 명시 모형 관계식·반례 검증 · 사람 미검토 · 개인 연습용", scope: "관계식·반례 검증은 문제의 명시된 선형 모형에 한정됩니다. 일반 개념·법령 정확성·현실 시장 예측·공식 감정평가·전이·숙달 검증이 아닙니다." }
+    : { verificationKind: "calculation" as const, notice: OWNER_ORIGINAL_NOTICE, scope: OWNER_ORIGINAL_SCOPE };
+}

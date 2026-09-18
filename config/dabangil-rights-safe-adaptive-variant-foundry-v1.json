@@ -758,5 +758,31 @@
     "previousExceptionUnchanged": true,
     "schemaApplyAuthorized": false,
     "paidCalls": 0
+  },
+  "exactOwnerMarketRelationException": {
+    "ownerDecisionDate": "2026-09-18",
+    "registration": "config/owner-approved-content-registration.json#bundles/market_relations",
+    "packetSha256": "59c78f868bf4e83afa99712d63505deb0b2ad4b8885ee19074c51bf993b9b21b",
+    "approvalProposalSha256": "8cc15a5dbc0f43d3753960193bf4cad4985ecd754a884e2d6a6ac92f06d892d1",
+    "scope": "exact_four_stated_linear_relations_owner_pc_only",
+    "feedbackSchema": "first_stage.owner_original_relation_feedback.v1",
+    "keyField": "relationKeyReference",
+    "verification": "closed_conditions_symbolic_signs_and_counterexamples_not_general_concept_or_law",
+    "humanReviewComplete": false,
+    "existingHumanReviewRequirementsUnchanged": true,
+    "automaticAddition": false,
+    "measurementEvidence": false,
+    "masteryClaim": false,
+    "schemaApplyAuthorized": false,
+    "paidCalls": 0,
+    "failClosed": [
+      "unregistered_or_changed_bytes",
+      "unknown_pattern_or_condition",
+      "wrong_or_nonunique_conclusion",
+      "retry_binding_drift",
+      "wrong_owner_or_environment",
+      "forged_capability",
+      "lost_exposure_lineage"
+    ]
   }
 }
