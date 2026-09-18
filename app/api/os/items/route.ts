@@ -58,6 +58,9 @@ export async function POST(request: Request) {
       ...(app1C3rHandoff ? { app1C3rHandoff } : {}),
     }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
+    if (error instanceof Error && error.message === "review-os:capture-source-provenance-conflict") {
+      return NextResponse.json({ ok: false, error: error.message }, { status: 409 });
+    }
     if (isApp1ServerAuthorityError(error)) {
       const status =
         error.code === "APP1_AUTHORITY_REQUIRED"

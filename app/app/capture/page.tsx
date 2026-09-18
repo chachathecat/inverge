@@ -1,3 +1,4 @@
+import { canUseOwnerLocalOcr } from "@/lib/owner-study/local-ocr";
 import { isOwnerPcTheoryEnabled, ownerPcSecondInitialSubject } from "@/lib/owner-study/owner-pc-theory";
 import { WrongAnswerCaptureForm } from "@/components/review-os/capture-form";
 import { V3RouteFrame } from "@/components/learner";
@@ -69,6 +70,7 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
       </header>
       <WrongAnswerCaptureForm
         textOnly={mode === "second" && isOwnerPcTheoryEnabled()}
+        localOcrEnabled={canUseOwnerLocalOcr(session.email)}
         userId={session.userId}
         mode={mode}
         initialPreferredSubjects={profile?.preferredSubjects}

@@ -26,6 +26,7 @@ import {
   isApp1SubjectAuthorized,
   type App1TrustedRepairSubject,
 } from "@/lib/owner-study/app1-capture-repair-view-model";
+import { LOCAL_OCR_CLIENT_MS } from "@/lib/owner-study/local-ocr-limits";
 import { moveCaptureSelectionToAnswer } from "@/lib/review-os/capture-input-separation";
 import { buildCaptureToNoteDraft } from "@/lib/capture/capture-to-note";
 import {
@@ -285,6 +286,7 @@ type SavedCaptureConfirmation = {
 
 type CaptureFormProps = {
   textOnly?: boolean;
+  localOcrEnabled?: boolean;
   userId: string;
   mode: AppraisalMode;
   ownerCaptureRepairEnabled?: boolean;
@@ -343,6 +345,7 @@ type DraftState = {
   extractionNeedsReview?: boolean;
   capturePages?: PersistedCapturePage[];
   pageCount?: number;
+  ocrPageCountKnown?: boolean;
   lowConfidenceFlag?: boolean;
   captureQualityIssue?: string;
   hasManualCorrection?: boolean;
@@ -571,6 +574,7 @@ function stripPreviewUrls(pages: UploadedPage[]): PersistedCapturePage[] {
 
 export function WrongAnswerCaptureForm({
   textOnly = false,
+  localOcrEnabled = false,
   userId,
   mode,
   ownerCaptureRepairEnabled = false,
@@ -1043,9 +1047,10 @@ export function WrongAnswerCaptureForm({
     try {
       const body = new FormData();
       body.append("mode", mode);
+      if (localOcrEnabled) body.append("ocr_engine", "windows_builtin_ko");
       body.append("text", text);
       body.append("source_label", form.sourceLabel);
-      const response = await fetch("/api/inverge/ocr", { method: "POST", body });
+      const response = await fetch("/api/inverge/ocr", { method: "POST", body, ...(localOcrEnabled ? {headers:{"x-inverge-ocr-engine":"windows_builtin_ko"},signal:AbortSignal.timeout(LOCAL_OCR_CLIENT_MS)} : {}) });
       const extraction = (await response.json()) as ({ ok?: boolean; error?: string } & ExtractionPipelineResult);
       if (!requestIsCurrent(requestRevision)) return;
       if (!response.ok || !extraction.ok) {
@@ -1121,7 +1126,7 @@ export function WrongAnswerCaptureForm({
     setStage("preview");
   }
 
-  async function handleImageImport(fileList: FileList) {
+  async function handleImageImport(fileList: FileList | File[], importKind: "image" | "pdf" = "image") {
     const files = Array.from(fileList);
     if (files.length === 0) return;
     extractionEditRevisionRef.current += 1;
@@ -1133,8 +1138,8 @@ export function WrongAnswerCaptureForm({
         id: `${Date.now()}-${index}-${file.name}`,
         name: file.name || `${index + 1}페이지`,
         label: `${index + 1}페이지 · ${file.name || "촬영 이미지"}`,
-        sourceType: "image" as const,
-        previewUrl: URL.createObjectURL(file),
+        sourceType: importKind,
+        previewUrl: importKind === "image" ? URL.createObjectURL(file) : undefined,
         ocrText: "OCR 초안을 만드는 중입니다.",
       })),
     );
@@ -1148,7 +1153,7 @@ export function WrongAnswerCaptureForm({
           requestSemanticSnapshot,
           mode,
         ),
-        sourceType: inferSourceTypeFromAction("gallery"),
+        sourceType: inferSourceTypeFromAction(importKind === "pdf" ? "pdf" : "gallery"),
         sourceLabel: initialPages.map((page) => page.label).join(" / "),
         rawQuestionText: "",
         rawOcrText: "",
@@ -1157,6 +1162,7 @@ export function WrongAnswerCaptureForm({
         extractionNeedsReview: true,
         capturePages: stripPreviewUrls(initialPages),
         pageCount: initialPages.length,
+        ocrPageCountKnown: false,
         lowConfidenceFlag: false,
         captureQualityIssue: "",
         hasManualCorrection: false,
@@ -1166,9 +1172,10 @@ export function WrongAnswerCaptureForm({
     try {
       const body = new FormData();
       body.append("mode", mode);
+      if (localOcrEnabled) body.append("ocr_engine", "windows_builtin_ko");
       for (const file of files) body.append("images", file);
       setExtractionState("extracting");
-      const response = await fetch("/api/inverge/ocr", { method: "POST", body });
+      const response = await fetch("/api/inverge/ocr", { method: "POST", body, ...(localOcrEnabled ? {headers:{"x-inverge-ocr-engine":"windows_builtin_ko"},signal:AbortSignal.timeout(LOCAL_OCR_CLIENT_MS)} : {}) });
       const result = (await response.json()) as ({
         ok?: boolean;
         text?: string;
@@ -1197,7 +1204,7 @@ export function WrongAnswerCaptureForm({
           persist(
             {
               ...prev,
-              sourceType: inferSourceTypeFromAction("gallery"),
+              sourceType: inferSourceTypeFromAction(importKind === "pdf" ? "pdf" : "gallery"),
               sourceLabel,
               rawQuestionText: mergedFallback,
               rawOcrText: mergedFallback,
@@ -1224,7 +1231,8 @@ export function WrongAnswerCaptureForm({
             const boundary = new RegExp(`\\[Page\\s+${index + 1}\\]\\s*([\\s\\S]*?)(?=\\n\\n\\[Page\\s+${index + 2}\\]|$)`, "i");
             return (result.text ?? result.extractedText ?? "").match(boundary)?.[1]?.trim() ?? (files.length === 1 ? result.text ?? result.extractedText ?? "" : "");
           });
-      const pagesWithText = initialPages.map((page, index) => {
+      const recognizedPages = importKind === "pdf" && result.pages?.length ? relabelPages(result.pages.map((page,index)=>({...initialPages[0],id:`${initialPages[0].id}-${index}`,name:page.name || `${index+1}페이지`}))) : initialPages;
+      const pagesWithText = recognizedPages.map((page, index) => {
         const text = pageTexts[index]?.trim() || "직접 내용을 입력해 주세요.";
         const lowConfidenceFlag = hasLowConfidenceText(text);
         return {
@@ -1236,6 +1244,7 @@ export function WrongAnswerCaptureForm({
         };
       });
       const extractedText = mergePageText(pagesWithText);
+      const extractedSourceLabel = pagesWithText.map(page=>page.label).join(" / ");
       const lowConfidenceFlag = pagesWithText.some((page) => page.lowConfidenceFlag);
       setUploadedPages(relabelPages(pagesWithText));
       setForm((prev) => {
@@ -1244,12 +1253,13 @@ export function WrongAnswerCaptureForm({
           : extractedText;
         const base: DraftState = {
           ...prev,
-          sourceType: inferSourceTypeFromAction("gallery"),
-          sourceLabel,
+          sourceType: inferSourceTypeFromAction(importKind === "pdf" ? "pdf" : "gallery"),
+          sourceLabel: extractedSourceLabel,
           rawQuestionText: learnerText,
           rawOcrText: prev.hasManualCorrection && prev.rawOcrText?.trim() ? prev.rawOcrText : extractedText,
           capturePages: stripPreviewUrls(pagesWithText),
           pageCount: pagesWithText.length,
+          ocrPageCountKnown: localOcrEnabled,
           lowConfidenceFlag,
           captureQualityIssue: lowConfidenceFlag ? "low_confidence_ocr" : "",
           ocrConfirmedByLearner: prev.hasManualCorrection ? prev.ocrConfirmedByLearner : false,
@@ -1265,6 +1275,7 @@ export function WrongAnswerCaptureForm({
           ocrConfirmedByLearner: base.ocrConfirmedByLearner,
           capturePages: stripPreviewUrls(relabelPages(pagesWithText)),
           pageCount: pagesWithText.length,
+          ocrPageCountKnown: localOcrEnabled,
           lowConfidenceFlag,
           captureQualityIssue: lowConfidenceFlag ? "low_confidence_ocr" : "",
         });
@@ -1295,7 +1306,7 @@ export function WrongAnswerCaptureForm({
         persist(
           {
             ...prev,
-            sourceType: inferSourceTypeFromAction("gallery"),
+            sourceType: inferSourceTypeFromAction(importKind === "pdf" ? "pdf" : "gallery"),
             sourceLabel: fallbackPages.map((page) => page.label).join(" / "),
             rawQuestionText: mergedFallback,
             rawOcrText: mergedFallback,
@@ -1320,6 +1331,7 @@ export function WrongAnswerCaptureForm({
   }
 
   function handlePdfImport(file: File) {
+    if (localOcrEnabled) { void handleImageImport([file], "pdf"); return; }
     const requestSemanticSnapshot = snapshotCaptureExtractionSemantics(form, mode);
     invalidatePendingExtraction("pdf_import");
     const pdfPage = relabelPages([{
@@ -1349,6 +1361,7 @@ export function WrongAnswerCaptureForm({
         extractionNeedsReview: true,
         capturePages: stripPreviewUrls(pdfPage),
         pageCount: 1,
+        ocrPageCountKnown: false,
         lowConfidenceFlag: true,
         captureQualityIssue: "pdf_manual_text_fallback",
         hasManualCorrection: false,
@@ -1700,7 +1713,7 @@ export function WrongAnswerCaptureForm({
           captureIntent: "save", createdFromCapture: true,
           extractionPayload: { raw_ocr_text: form.rawOcrText || "", user_confirmed_fields: {
             subject: form.subjectLabel, subjectLabel: form.subjectLabel, examMode: mode,
-            sourceType: form.sourceType, pageCount: form.sourceType === "pdf" ? 0 : form.pageCount ?? 0,
+            sourceType: form.sourceType, pageCount: form.sourceType === "pdf" && !form.ocrPageCountKnown ? 0 : form.pageCount ?? 0,
             ocrConfirmedByLearner: form.sourceType === "text" || Boolean(form.ocrConfirmedByLearner),
             lowConfidenceFlag: Boolean(form.lowConfidenceFlag), hasManualCorrection: Boolean(form.hasManualCorrection),
             captureQualityIssue: form.captureQualityIssue || null,
@@ -2275,7 +2288,8 @@ export function WrongAnswerCaptureForm({
           <>
           {mode === "first" || stage === "intake" ? (
           <IntakePanel
-            textOnly={textOnly}
+            textOnly={textOnly && !localOcrEnabled}
+            localOcrEnabled={localOcrEnabled}
             form={form}
             mode={mode}
             config={config}
@@ -2769,6 +2783,7 @@ function SubjectSelect({
 
 function IntakePanel({
   textOnly = false,
+  localOcrEnabled = false,
   form,
   mode,
   config,
@@ -2796,6 +2811,7 @@ function IntakePanel({
   textAreaRef,
 }: FieldProps & {
   textOnly?: boolean;
+  localOcrEnabled?: boolean;
   config: ReturnType<typeof getModeConfig>;
   extracting: boolean;
   extractError: string;
@@ -2865,6 +2881,7 @@ function IntakePanel({
         <p className={mode === "second" ? "v3-type-body ko-keep text-[var(--color-text-secondary)]" : "ko-keep text-body text-[color:var(--muted)]"}>{textOnly ? `직접 선택한 ${form.subjectLabel} 문제·내 답안을 텍스트로 입력하세요.` : "사진, PDF, 텍스트 중 하나로 시작하세요."}</p>
       </div>
 
+      {localOcrEnabled ? <p className="mt-4 rounded-lg border p-4" data-local-ocr-disclosure>Windows 로컬 OCR · 외부 전송 없음. 한국어 인쇄체 초안이며 직접 확인·교정해야 합니다. 손글씨·표·수식 인식은 미검증입니다. PNG/JPEG 최대 4장 또는 PDF 1개(최대 4쪽), 합계 8MB까지 지원합니다.</p> : null}
       {textOnly ? <p className="mt-4 rounded-lg border p-4" data-owner-theory-text-only>{form.subjectLabel} 문제와 내 답안을 아래에 텍스트로 입력하세요. 사진·PDF 분석은 이 모드에서 미지원입니다. 이 단계는 로컬 저장만 하며 Gemini로 전송하지 않습니다.</p> : <>
       {mode === "second" ? (
         <div className="mt-4 space-y-3" data-capture-input-options data-s224v-secondary-input-options="quiet">
@@ -3946,7 +3963,7 @@ function OwnerAnalysisPreparationPanel({ form, update, referenceStatus, ready, o
     {importedSource ? <div className="space-y-3" data-capture-source-confirmation>
       <details><summary className="cursor-pointer py-2">보존된 가져오기 원문 · 자동 판독 품질 미검증</summary>
         <p className="whitespace-pre-wrap">{form.rawOcrText || "보존된 추출 원문이 없습니다. 원본 파일과 직접 대조해 주세요."}</p>
-        <p>기록된 페이지 수: {form.sourceType === "pdf" ? "PDF 쪽수 자동 확인 미지원" : form.pageCount || "미확인"} · 원본 파일은 자동으로 재전송하지 않습니다.</p>
+        <p>기록된 페이지 수: {form.sourceType === "pdf" && !form.ocrPageCountKnown ? "PDF 쪽수 자동 확인 미지원" : form.pageCount || "미확인"} · 원본 파일은 자동으로 재전송하지 않습니다.</p>
       </details>
       <label className="flex gap-3"><input type="checkbox" checked={Boolean(form.ocrConfirmedByLearner)}
         disabled={Boolean(form.lowConfidenceFlag && !form.hasManualCorrection)}

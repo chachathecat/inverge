@@ -1,3 +1,4 @@
+import { canUseOwnerLocalOcr } from "@/lib/owner-study/local-ocr";
 import { isOwnerPcTheoryEnabled, ownerPcSecondInitialSubject } from "@/lib/owner-study/owner-pc-theory";
 import { isTrustedRepairEnabled, trustedRepairAuthorizedSubjects } from "@/lib/review-os/trusted-repair-access";
 import { redirect } from "next/navigation";
@@ -63,6 +64,7 @@ export default async function ReviewOsWritePage({ searchParams }: PageProps) {
         <div>
           <WrongAnswerCaptureForm
             textOnly={mode === "second" && isOwnerPcTheoryEnabled()}
+            localOcrEnabled={canUseOwnerLocalOcr(session.email)}
             ownerCaptureRepairEnabled={ownerCaptureRepairSubjects.length > 0}
             ownerCaptureRepairSubjects={ownerCaptureRepairSubjects}
             userId={session.userId}

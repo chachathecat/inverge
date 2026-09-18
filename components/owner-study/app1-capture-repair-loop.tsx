@@ -807,6 +807,13 @@ export function App1CaptureRepairLoop({
               </dd>
             </div>
           </dl>
+          <details className="quiet-disclosure" open data-app1-preserved-source>
+            <summary className="cursor-pointer py-3">저장된 문제·답안 확인</summary>
+            <dl className="space-y-3">
+              <div><dt className="v3-type-label-strong">문제</dt><dd className="whitespace-pre-wrap break-words">{detail.item.rawQuestionText || "문제 미입력"}</dd></div>
+              <div><dt className="v3-type-label-strong">답안</dt><dd className="whitespace-pre-wrap break-words">{getApp1LearnerAnswer(detail) || "답안 미입력"}</dd></div>
+            </dl>
+          </details>
           {summary.uncertainty ? (
             <p className="v3-type-compact rounded-[var(--v3-radius-control)] border border-[var(--color-border-attention)] bg-[var(--color-background-attention)] p-4 text-[var(--color-text-primary)]" role="alert">
               {summary.uncertainty}

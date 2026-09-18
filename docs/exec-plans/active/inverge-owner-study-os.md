@@ -2202,3 +2202,47 @@ Only after protected merge and safe-input confirmation may the exact file and
 registered installation marker be added to existing Owner-PC. No SQL, DB rights,
 provider calls, budget change or Production activation. If unavailable, disable
 new assignment only, retain records/files. Q96/OCR/Law/Theory gaps remain open.
+
+
+## 2026-09-18 continuous Goal and local OCR continuation
+
+#967/90049a3a and #969/01ed90f0 are merged. The exact relation four are installed
+in Owner-PC with the prior ten, unchanged learning rows/private files and the
+normal auth refresh distinguished. Personal Chrome remains unobserved.
+The one separately approved #969 Preview was READY on exact 178d96c3; Production
+was canceled. Its USD 4.725 reservation is separate from the unchanged Gemini
+ledger; estimated build use is USD 0.007847, not a billed amount.
+
+The Owner's latest decision keeps this same full V13/Study OS Goal and sole PC
+writer active, adds planned private native source and free isolated validation,
+and removes routine next-PR prompts. A fresh platform query found no Goal record;
+the existing full objective is now registered active in this same task, without
+an explicit token cap. This is not a new program or release authorization.
+
+Current first gap: actual photo/PDF transcription into the existing corrected,
+confirmed source-only capture and authenticated persistence. Local Windows OCR
+is explicit, Owner-only, loopback-only, development-only and default OFF;
+Preview/Production cannot enable it. A local-intent request fails closed after
+flag/environment changes, never falls back to a provider. Existing auth/quotas,
+manual input, source provenance, diagnosis and budget gates remain intact.
+Reuse the installed Windows runtime and optionally hash-bound existing Poppler;
+no packages, keys, driver policy, SQL or personal activation changed. Native
+Windows PDF rendering crashed in the AMD graphics module on this PC, so PDF
+rasterization uses the existing CPU tool before image-only Windows OCR.
+
+Actual Korean synthetic OCR contains transcription errors: this is an unconfirmed
+editable draft, not handwriting/table/formula accuracy or subject evidence. The
+image-only two-page PDF completed normal Next.js login/menu, OCR, correction,
+separation, confirmation, real API/PostgreSQL save, reload and authenticated
+readback; generated learning rows stayed unchanged. Photo source storage, fresh login, both loaded source screens and API/SQL readback
+also pass. The resume screen now exposes the persisted problem/answer before any
+analysis. Final native checks and exact-head review remain required.
+A same-content/different-source replay preserves the old record and draft and now
+returns 409 instead of a server error. No model calls or personal work submitted.
+
+Next unresolved outcomes remain actual-law source/model acceptance, Theory
+paraphrase re-test, wider content rights/quality supply and native learner login /
+Today / Review continuity. Q96 is still held. This limited OCR connection does
+not complete general OCR quality, any subject, S241A/S238B, mobile parity,
+release readiness or the Goal. Source implementation continues; paid, remote,
+personal activation, store, public and real-payment gates stay separate.
