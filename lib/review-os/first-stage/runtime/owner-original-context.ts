@@ -5,7 +5,7 @@ import type { QfI1CandidateV1 } from "../../../question-foundry/runtime/qf-i1-ba
 import { genuineTrialSession } from "./owner-local-trial-boundary";
 import { reviewedBankCandidates } from "./private-reviewed-content";
 import type { QuestionReference } from "../kernel/domain";
-import { isOwnerOriginalAdapter, ownerOriginalEnvironment, OWNER_ORIGINAL_IDS, OWNER_INVESTMENT_IDS, matchesOwnerOriginalReference } from "./owner-original-boundary";
+import { isOwnerOriginalAdapter, ownerOriginalEnvironment, OWNER_ORIGINAL_IDS, OWNER_INVESTMENT_IDS, OWNER_MARKET_IDS, matchesOwnerOriginalReference } from "./owner-original-boundary";
 
 // Request-local capability only. No client flag, stored receipt or adapter ID
 // alone can authorize a calculation-backed, human-unreviewed response.
@@ -27,7 +27,9 @@ export function authorizeOwnerOriginalCatalog(catalog: PrivateFirstStageCatalog,
   const scope=active.getStore();
   const ids=catalog.initialReferences.map(reference=>reference.questionId);
   const allowed=[[OWNER_ORIGINAL_IDS[0]],[OWNER_INVESTMENT_IDS[0],OWNER_INVESTMENT_IDS[2]],
-    [OWNER_ORIGINAL_IDS[0],OWNER_INVESTMENT_IDS[0],OWNER_INVESTMENT_IDS[2]]];
+    [OWNER_ORIGINAL_IDS[0],OWNER_INVESTMENT_IDS[0],OWNER_INVESTMENT_IDS[2]],
+    [OWNER_MARKET_IDS[0],OWNER_MARKET_IDS[2]], [OWNER_ORIGINAL_IDS[0],OWNER_MARKET_IDS[0],OWNER_MARKET_IDS[2]],
+    [OWNER_ORIGINAL_IDS[0],OWNER_INVESTMENT_IDS[0],OWNER_INVESTMENT_IDS[2],OWNER_MARKET_IDS[0],OWNER_MARKET_IDS[2]]];
   if(!scope?.open || !activeOwnerOriginalAdapter(catalog.registry.require("real_estate_principles")) ||
     !allowed.some(value=>JSON.stringify(value)===JSON.stringify(ids)) ||
     !catalog.initialReferences.every(matchesOwnerOriginalReference) ||

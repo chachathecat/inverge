@@ -40231,5 +40231,41 @@
     "previousExceptionUnchanged": true,
     "schemaApplyAuthorized": false,
     "paidCalls": 0
+  },
+  "exactOwnerMarketException": {
+    "decision": "docs/decisions/2026-09-06-owner-appraiser-first-private-continuation.md",
+    "ownerDecisionDate": "2026-09-18",
+    "packetSha256": "ce4b6892ac36c2e9fc7983f10ba63d2f167760c722315b2da817a1a4791eb35c",
+    "questionIds": [
+      "owner-re-market-equilibrium-initial-v1",
+      "owner-re-market-shift-retry-v1",
+      "owner-re-market-elasticity-initial-v1",
+      "owner-re-market-quantity-retry-v1"
+    ],
+    "subject": "real_estate_principles",
+    "use": "exact_owner_pc_private_practice_only",
+    "humanReviewComplete": false,
+    "officialExamMetadata": null,
+    "feedbackState": "machine_checked_owner_local",
+    "rightsState": "owner_authorized_original",
+    "currentnessState": "stated_model_only",
+    "calculationScope": "stated_model_only",
+    "automaticAddition": false,
+    "transferEvidence": false,
+    "measurementEvidence": false,
+    "masteryClaim": false,
+    "existingHumanReviewRequirementsUnchanged": true,
+    "failClosed": [
+      "wrong_packet_hash",
+      "wrong_owner_or_environment",
+      "unapproved_item",
+      "calculation_or_unit_mismatch",
+      "absent_or_forged_request_capability",
+      "human_review_claim",
+      "unknown_use_or_lost_functional_lineage"
+    ],
+    "previousExceptionUnchanged": true,
+    "schemaApplyAuthorized": false,
+    "paidCalls": 0
   }
 }

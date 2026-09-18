@@ -24,15 +24,22 @@ export const OWNER_INVESTMENT_VERSION = "owner-pc-real-estate-investment-finance
 export const OWNER_INVESTMENT_SESSION = "owner-original-investment-finance-v1";
 export const OWNER_INVESTMENT_IDS = ["owner-re-npv-initial-v1", "owner-re-npv-retry-v1", "owner-re-equity-initial-v1", "owner-re-equity-retry-v1"] as const;
 export const OWNER_INVESTMENT_FLAG = "INVERGE_OWNER_INVESTMENT_ASSIGNMENT_ENABLED";
+/** Exact separately authorized market unit; no automatic additional content. */
+export const OWNER_MARKET_PACKET_SHA256 = "ce4b6892ac36c2e9fc7983f10ba63d2f167760c722315b2da817a1a4791eb35c";
+export const OWNER_MARKET_VERSION = "owner-pc-real-estate-market-20260918-v1";
+export const OWNER_MARKET_SESSION = "owner-original-market-v1";
+export const OWNER_MARKET_IDS = ["owner-re-market-equilibrium-initial-v1", "owner-re-market-shift-retry-v1", "owner-re-market-elasticity-initial-v1", "owner-re-market-quantity-retry-v1"] as const;
+export const OWNER_MARKET_FLAG = "INVERGE_OWNER_MARKET_ASSIGNMENT_ENABLED";
 export function matchesOwnerOriginalReference(value: unknown) {
   if (!value || typeof value !== "object") return false;
   const row = value as Record<string, unknown>;
   const legacy = (OWNER_ORIGINAL_IDS as readonly unknown[]).includes(row.questionId);
   const addition = (OWNER_INVESTMENT_IDS as readonly unknown[]).includes(row.questionId);
-  return (legacy || addition) && row.schemaVersion === "first_stage.owner_original_question_reference.v1" &&
+  const market = (OWNER_MARKET_IDS as readonly unknown[]).includes(row.questionId);
+  return (legacy || addition || market) && row.schemaVersion === "first_stage.owner_original_question_reference.v1" &&
     row.subjectId === "real_estate_principles" && row.examYear === null && row.examRound === null && row.questionNumber === null && row.choiceCount === 5 &&
-    row.questionVersion === (legacy ? OWNER_ORIGINAL_VERSION : OWNER_INVESTMENT_VERSION) &&
-    row.sessionId === (legacy ? "owner-original-real-estate-v2" : OWNER_INVESTMENT_SESSION) &&
+    row.questionVersion === (legacy ? OWNER_ORIGINAL_VERSION : market ? OWNER_MARKET_VERSION : OWNER_INVESTMENT_VERSION) &&
+    row.sessionId === (legacy ? "owner-original-real-estate-v2" : market ? OWNER_MARKET_SESSION : OWNER_INVESTMENT_SESSION) &&
     row.rightsState === "owner_authorized_original" && row.currentnessState === "stated_model_only" &&
-    JSON.stringify(row.sourceVersionManifestIds) === JSON.stringify([`owner-original-${legacy ? OWNER_ORIGINAL_PACKET_SHA256 : OWNER_INVESTMENT_PACKET_SHA256}`]);
+    JSON.stringify(row.sourceVersionManifestIds) === JSON.stringify([`owner-original-${legacy ? OWNER_ORIGINAL_PACKET_SHA256 : market ? OWNER_MARKET_PACKET_SHA256 : OWNER_INVESTMENT_PACKET_SHA256}`]);
 }
