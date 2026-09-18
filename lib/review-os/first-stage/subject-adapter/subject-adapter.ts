@@ -1,3 +1,4 @@
+import { ownerContentReferenceRegistration } from "../runtime/owner-content-registration.mjs";
 import crypto from "node:crypto";
 import { activeOwnerOriginalAdapter, activeOwnerOriginalReference, authorizeOwnerOriginalAdapter } from "../runtime/owner-original-context";
 import { isOwnerOriginalAdapter } from "../runtime/owner-original-boundary";
@@ -123,7 +124,7 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
     {
       path: "lib/review-os/first-stage/kernel/domain.ts",
       normalization: "utf8_lf",
-      sha256: "9bb5a17c2c6c1e2563455a64ca0d09caf84c67475c263628754d533a83d7fd08",
+      sha256: "51c440cf42b86bf620a81432ef130224abd0a65db645a1ea8d02a9fdf0207c53",
       covers: [
         "QuestionReference", "Attempt", "AnswerSubmission", "Confidence",
         "ElapsedTime", "WorkTrace", "WorkTraceStep", "ErrorCause", "ConceptBinding",
@@ -246,7 +247,7 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
     AttemptEvidenceEnvelope: exactTypeKeys<AttemptEvidenceEnvelope>()([
       "schemaVersion", "attemptId", "submissionSha256", "questionId", "questionVersion",
       "questionReferenceSha256", "subjectId", "adapterId", "adapterVersion", "officialKeyReference",
-      "calculationKeyReference", "choiceSetReference", "sourceReference", "versionDecisionReference",
+      "calculationKeyReference", "relationKeyReference", "choiceSetReference", "sourceReference", "versionDecisionReference",
       "rightsDecisionReference", "reviewedFeedback",
     ]),
     ImmutableEvidenceReference: exactTypeKeys<ImmutableEvidenceReference>()([
@@ -335,7 +336,7 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
 // SHA-256 over RFC-8785-equivalent recursively-key-sorted JSON for the exact
 // descriptor above. The focused contract test recomputes and binds this value.
 export const SUBJECT_ADAPTER_V1_INTERFACE_DIGEST =
-  "456594a80204611885e99e67166c5030784600363e4bd8a1befb5ed490e0a4de" as const;
+  "f40dfaa7e2cedce443ed863c80aeb058fbc216ad3a4965eeaf01eb37c01c72e8" as const;
 
 function fail(): never {
   throw new FirstStageKernelError("adapter_mismatch");
@@ -474,8 +475,11 @@ function parseEvidenceEnvelope(
   decision: AttemptEvaluation["decision"],
 ) {
   const authored = activeOwnerOriginalReference(adapter, input.questionReference);
+  const relation = authored && ownerContentReferenceRegistration(input.questionReference)?.validator === "stated_market_relation";
+  const keyField = relation ? "relationKeyReference" : "calculationKeyReference";
+  const feedbackSchema = relation ? "first_stage.owner_original_relation_feedback.v1" : "first_stage.owner_original_calculation_feedback.v1";
   const row = exactObject(value, [
-    ...(authored ? ["calculationKeyReference"] : []),
+    ...(authored ? [keyField] : []),
     "schemaVersion", "attemptId", "submissionSha256", "questionId", "questionVersion",
     "questionReferenceSha256", "subjectId", "adapterId", "adapterVersion", "officialKeyReference",
     "choiceSetReference", "sourceReference", "versionDecisionReference",
@@ -499,7 +503,7 @@ function parseEvidenceEnvelope(
     "reviewerClass", "modelAlone",
   ]);
   const localTrial = isOwnerLocalR3TrialAdapter(adapter);
-  if (authored && (feedback.schemaVersion !== "first_stage.owner_original_calculation_feedback.v1" ||
+  if (authored && (feedback.schemaVersion !== feedbackSchema ||
     feedback.state !== "machine_checked_owner_local" || feedback.modelAlone !== true ||
     feedback.receiptReference !== null || feedback.reviewerIdentity !== null || feedback.reviewerClass !== null)) fail();
   if (localTrial && (!activeOwnerLocalR3TrialAdapter(adapter) ||
@@ -533,7 +537,7 @@ function parseEvidenceEnvelope(
     ].includes(String(feedback.reviewerClass))
   ) fail();
   const reviewedFeedback: ReviewedFeedbackEvidence = authored ? Object.freeze({
-    schemaVersion: "first_stage.owner_original_calculation_feedback.v1", state: "machine_checked_owner_local",
+    schemaVersion: feedbackSchema, state: "machine_checked_owner_local",
     receiptReference: null, reviewerIdentity: null, reviewerClass: null, modelAlone: true,
   }) : localTrial ? Object.freeze({
     schemaVersion: "first_stage.owner_local_unreviewed_feedback.v1", state: "human_unreviewed_owner_local",
@@ -548,7 +552,7 @@ function parseEvidenceEnvelope(
       : null,
     modelAlone: false as const,
   });
-  const calculationKeyReference = authored ? parseEvidenceReference(row.calculationKeyReference) : undefined;
+  const authoredKeyReference = authored ? parseEvidenceReference(row[keyField]) : undefined;
   const officialKeyReference = row.officialKeyReference === null
     ? null : parseEvidenceReference(row.officialKeyReference);
   const choiceSetReference = row.choiceSetReference === null
@@ -556,7 +560,7 @@ function parseEvidenceEnvelope(
   if (
     (unreviewed && (reviewedAvailable || officialKeyReference !== null || choiceSetReference !== null)) ||
     (!unreviewed && (!(reviewedAvailable || localTrial || authored) || (!authored && !officialKeyReference) || !choiceSetReference)) ||
-    (authored && (officialKeyReference !== null || !calculationKeyReference))
+    (authored && (officialKeyReference !== null || !authoredKeyReference))
   ) fail();
   return Object.freeze({
     schemaVersion: "first_stage.attempt_evidence_envelope.v1" as const,
@@ -569,7 +573,7 @@ function parseEvidenceEnvelope(
     adapterId: adapter.adapterId,
     adapterVersion: adapter.adapterVersion,
     officialKeyReference,
-    ...(authored ? { calculationKeyReference: calculationKeyReference! } : {}),
+    ...(authored ? relation ? { relationKeyReference: authoredKeyReference! } : { calculationKeyReference: authoredKeyReference! } : {}),
     choiceSetReference,
     sourceReference: parseEvidenceReference(row.sourceReference),
     versionDecisionReference: parseEvidenceReference(row.versionDecisionReference),

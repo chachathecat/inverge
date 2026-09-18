@@ -14,12 +14,12 @@ function synthetic(){return {bundleId:bundle.version,items:bundle.ids.map((id,i)
  const result=marketCalculation(bundle.models[i],facts[i]).result;
  return {id,role:i%2?"practice_retry":"initial",model:bundle.models[i],facts:facts[i],prompt:"Synthetic validation fixture; not admitted content",choices:[1,2,3,4,5].map(id=>({id,value:id===1?result.decimal:String(10000000+id),unit:result.unit,label:`synthetic ${id}`})),answerChoice:1,explanation:"Synthetic",choiceFeedback:[1,2,3,4,5].map(choice=>({choice,text:"Synthetic"})),calculation:{result}};
  })};}
-test("registration remains the exact ten approved identities; cannot be mutated at runtime",()=>{
- const pins=OWNER_CONTENT_BUNDLES.map(b=>Object.fromEntries(["key","version","sha256","ids","sessionId"].map(k=>[k,b[k]])));
+test("registration preserves the exact old ten identities and four separately approved relation items",()=>{
+ const pins=OWNER_CONTENT_BUNDLES.slice(0,3).map(b=>Object.fromEntries(["key","version","sha256","ids","sessionId"].map(k=>[k,b[k]])));
  assert.equal(createHash("sha256").update(JSON.stringify(pins)).digest("hex"),"dc02617a0b12fceefc7defb5116f70fbf2817925343de92b346ad10f1e8b531c");
- assert.equal(R.schemaVersion,"owner_approved_content_registration.v1");assert.equal(OWNER_CONTENT_BUNDLES.length,3);
- assert.equal(new Set(OWNER_CONTENT_BUNDLES.flatMap(b=>b.ids)).size,10);
- assert.equal(new Set(OWNER_CONTENT_BUNDLES.map(b=>b.sha256)).size,3);
+ assert.equal(R.schemaVersion,"owner_approved_content_registration.v1");assert.equal(OWNER_CONTENT_BUNDLES.length,4);
+ assert.equal(new Set(OWNER_CONTENT_BUNDLES.flatMap(b=>b.ids)).size,14);
+ assert.equal(new Set(OWNER_CONTENT_BUNDLES.map(b=>b.sha256)).size,4);
  assert.ok(OWNER_CONTENT_BUNDLES.every(b=>Object.isFrozen(b)&&Object.isFrozen(b.ids)));
  assert.throws(()=>bundle.ids.push("self-approved"));assert.throws(()=>bundle.sha256="0".repeat(64));
  assert.equal(ownerContentBundle("unknown"),null);

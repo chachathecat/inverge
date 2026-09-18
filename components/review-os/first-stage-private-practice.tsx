@@ -290,11 +290,11 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
           <p className="text-sm">제출 시각: <time dateTime={view.submittedResponse.submittedAt}>{view.submittedResponse.submittedAt}</time></p>
           <p className="text-sm">{view.submittedResponse.assistanceLevel === "none" ? "도움 기록 없음 — 이 사실만으로 독립 수행·숙달을 판정하지 않습니다." : "도움 포함 응답 — 독립 수행·숙달 증거가 아닙니다."}</p>
           {view.submittedResponse.ownerOriginalUse && <p>저장된 사용 상태: {{practice:"개인 연습",answer_seen:"이미 정답·해설을 본 연습",functional_test:"기능시험"}[view.submittedResponse.ownerOriginalUse]} · 독립 학습성과 아님</p>}
-          <p className="text-xs">{original ? "계산 검증 · 사람 미검토 연습 기록" : view.submittedResponse.contentMode === "first_stage.owner_local_trial_session.v1" ? "사람 미검토 시험 기록" : "검토된 콘텐츠의 개인 응답 기록"} · 현재 브라우저 선택이 아니라 실제 저장된 마지막 응답입니다. 정답이나 학습효과를 보증하지 않습니다.</p>
+          <p className="text-xs">{original ? (view.verificationKind === "stated_relation" ? "명시 관계식·반례 검증 · 사람 미검토 연습 기록" : "계산 검증 · 사람 미검토 연습 기록") : view.submittedResponse.contentMode === "first_stage.owner_local_trial_session.v1" ? "사람 미검토 시험 기록" : "검토된 콘텐츠의 개인 응답 기록"} · 현재 브라우저 선택이 아니라 실제 저장된 마지막 응답입니다. 정답이나 학습효과를 보증하지 않습니다.</p>
         </section>}
         {view?.explanation && <section aria-label="저장된 응답 해설" className="space-y-3 rounded-xl bg-slate-50 p-5">
           <h2 className="font-semibold">저장된 응답의 학습 참고 해설</h2>
-          <p>{original ? (view.attempt?.decision === "correct" ? "선택이 제시 모형의 계산 정답과 일치" : "선택이 제시 모형의 계산 정답과 불일치") : ownerLocalTrial ? (view.attempt?.decision === "correct" ? "제시된 검토 전 답과 일치" : "제시된 검토 전 답과 불일치")
+          <p>{original ? `선택이 제시 모형의 ${view.verificationKind === "stated_relation" ? "관계식 정답" : "계산 정답"}과 ${view.attempt?.decision === "correct" ? "일치" : "불일치"}` : ownerLocalTrial ? (view.attempt?.decision === "correct" ? "제시된 검토 전 답과 일치" : "제시된 검토 전 답과 불일치")
             : view.attempt?.decision === "correct" ? "이번 응답: 정답" : view.attempt?.decision === "incorrect" ? "이번 응답: 오답" : "응답 상태 확인 필요"}</p>
           <p className="whitespace-pre-wrap">{view.explanation.text}</p>
           {view.explanation.attributions?.map((text, index) => <p key={index} className="whitespace-pre-wrap text-xs" data-content-attribution="feedback">{text}</p>)}

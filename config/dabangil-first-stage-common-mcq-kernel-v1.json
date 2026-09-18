@@ -319,7 +319,7 @@
   "subjectAdapterFreeze": {
     "schemaVersion": "dabangil.first_stage.subject_adapter.v1",
     "interfaceDigestAlgorithm": "sha256_over_recursively_key_sorted_utf8_json",
-    "interfaceDigest": "456594a80204611885e99e67166c5030784600363e4bd8a1befb5ed490e0a4de",
+    "interfaceDigest": "f40dfaa7e2cedce443ed863c80aeb058fbc216ad3a4965eeaf01eb37c01c72e8",
     "interfaceDescriptor": {
       "schemaVersion": "dabangil.first_stage.subject_adapter.v1",
       "interfaceName": "SubjectAdapterV1",
@@ -334,7 +334,7 @@
         {
           "path": "lib/review-os/first-stage/kernel/domain.ts",
           "normalization": "utf8_lf",
-          "sha256": "9bb5a17c2c6c1e2563455a64ca0d09caf84c67475c263628754d533a83d7fd08",
+          "sha256": "51c440cf42b86bf620a81432ef130224abd0a65db645a1ea8d02a9fdf0207c53",
           "covers": [
             "QuestionReference",
             "Attempt",
@@ -585,6 +585,7 @@
           "adapterVersion",
           "officialKeyReference",
           "calculationKeyReference",
+          "relationKeyReference",
           "choiceSetReference",
           "sourceReference",
           "versionDecisionReference",
@@ -905,5 +906,31 @@
     "previousExceptionUnchanged": true,
     "schemaApplyAuthorized": false,
     "paidCalls": 0
+  },
+  "exactOwnerMarketRelationException": {
+    "ownerDecisionDate": "2026-09-18",
+    "registration": "config/owner-approved-content-registration.json#bundles/market_relations",
+    "packetSha256": "59c78f868bf4e83afa99712d63505deb0b2ad4b8885ee19074c51bf993b9b21b",
+    "approvalProposalSha256": "8cc15a5dbc0f43d3753960193bf4cad4985ecd754a884e2d6a6ac92f06d892d1",
+    "scope": "exact_four_stated_linear_relations_owner_pc_only",
+    "feedbackSchema": "first_stage.owner_original_relation_feedback.v1",
+    "keyField": "relationKeyReference",
+    "verification": "closed_conditions_symbolic_signs_and_counterexamples_not_general_concept_or_law",
+    "humanReviewComplete": false,
+    "existingHumanReviewRequirementsUnchanged": true,
+    "automaticAddition": false,
+    "measurementEvidence": false,
+    "masteryClaim": false,
+    "schemaApplyAuthorized": false,
+    "paidCalls": 0,
+    "failClosed": [
+      "unregistered_or_changed_bytes",
+      "unknown_pattern_or_condition",
+      "wrong_or_nonunique_conclusion",
+      "retry_binding_drift",
+      "wrong_owner_or_environment",
+      "forged_capability",
+      "lost_exposure_lineage"
+    ]
   }
 }

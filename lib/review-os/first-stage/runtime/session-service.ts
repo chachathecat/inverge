@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { activeOwnerOriginalCatalog, activeOwnerOriginalReference, ownerOriginalBankCandidates, compatibleOwnerOriginalReviewedCatalog } from "./owner-original-context";
-import { OWNER_ORIGINAL_NOTICE, OWNER_ORIGINAL_SCOPE } from "./owner-original-boundary";
+import { ownerOriginalVerification } from "./owner-original-boundary";
 import { activeOwnerLocalR3TrialCatalog, acceptsOwnerLocalR3PreviousCatalog } from "./owner-local-trial-context";
 import { OWNER_LOCAL_R3_TRIAL_NOTICE } from "./owner-local-trial-boundary";
 
@@ -280,6 +280,7 @@ export function createPrivateFirstStageSessionService(
     const latest = saved.state.attempts.at(-1);
     const currentTime = Date.parse(requiredUtcInstant(now()));
     const trial = isTrial();
+    const originalDisclosure = ownerOriginalVerification((active ?? latest)?.questionReference ?? saved.state.examCycle.questionReferences[0]);
     // Construct reference assistance only from a durably evaluated attempt.
     const explanation = !active && latest?.state === "evaluated" &&
       (latest.evaluation?.evidenceEnvelope.reviewedFeedback.state === "reviewed_available" ||
@@ -310,7 +311,7 @@ export function createPrivateFirstStageSessionService(
         ...(latest.ownerOriginalUse ? { ownerOriginalUse: latest.ownerOriginalUse } : {}),
       } : null,
       explanation,
-      ...(activeOwnerOriginalCatalog(catalog) ? { contentStatus: "machine_checked_owner_local" as const, notice: OWNER_ORIGINAL_NOTICE, scope: OWNER_ORIGINAL_SCOPE, humanReviewComplete: false as const, measurementEvidence: false as const } : {}),
+      ...(activeOwnerOriginalCatalog(catalog) ? { contentStatus: "machine_checked_owner_local" as const, notice: originalDisclosure.notice, scope: originalDisclosure.scope, verificationKind: originalDisclosure.verificationKind, humanReviewComplete: false as const, measurementEvidence: false as const } : {}),
       ...(trial && saved.state.examCycle.questionReferences[0].questionVersion==="issue883-economics-curriculum-v1" ? {assistanceLevel:active?.assistanceLevel??latest?.assistanceLevel??"none",
         availableConceptAids:active?.kind==="initial" ? (["concept","prerequisite"] as const).filter(kind=>
           !active.ownerLocalAssistance?.some(exposure=>exposure.kind===kind)&&Boolean(catalog.conceptAidDescriptor?.(active.questionReference,kind))) : [],
