@@ -24,7 +24,20 @@
         "start-theory-investment",
         "start-theory-market",
         "start-theory-approved"
-      ]
+      ],
+      "concepts": [
+        "stated-direct-capitalization"
+      ],
+      "families": [
+        "owner-original-direct-capitalization-v2"
+      ],
+      "evidencePrefix": "owner-original",
+      "evaluationPolicy": "owner-original-stated-model-v1",
+      "rightsScope": "exact-two-private-only",
+      "availableAt": "2026-09-17T00:00:00.000Z",
+      "installationKind": "original_schema",
+      "compositionKey": "",
+      "compositionPolicy": ""
     },
     {
       "key": "investment",
@@ -72,7 +85,8 @@
         "start-theory-investment",
         "start-theory-market",
         "start-theory-approved"
-      ]
+      ],
+      "installationKind": "content_only"
     },
     {
       "key": "market",
@@ -119,7 +133,8 @@
       "activationModes": [
         "start-theory-market",
         "start-theory-approved"
-      ]
+      ],
+      "installationKind": "content_only"
     }
   ],
   "catalogs": [

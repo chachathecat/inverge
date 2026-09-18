@@ -86,7 +86,7 @@ export function ownerLocalOriginalEnvironment(env,installation,contentPath,conte
 /** Installation data cannot select its hash, target, environment or approval. */
 export function ownerLocalRegisteredEnvironment(key,env,installation,contentPath,contentSha256) {
   const bundle=ownerContentBundle(key);
-  if(!bundle || bundle.validator==="legacy_direct_capitalization" || env.NODE_ENV!=="development"||env.NEXT_PUBLIC_SUPABASE_URL!=="http://127.0.0.1:55421"||env.INVERGE_OWNER_ORIGINAL_REAL_ESTATE_ENABLED!=="true"||
+  if(!bundle || bundle.installationKind==="original_schema" || env.NODE_ENV!=="development"||env.NEXT_PUBLIC_SUPABASE_URL!=="http://127.0.0.1:55421"||env.INVERGE_OWNER_ORIGINAL_REAL_ESTATE_ENABLED!=="true"||
     env.VERCEL!==undefined||env.VERCEL_ENV!==undefined||env.CI==="true"||!path.isAbsolute(contentPath)||
     installation?.schemaVersion!==bundle.installationSchema||typeof installation.assignmentEnabled!=="boolean"||
     installation.backupVerified!==true||installation.database!==OWNER_CONTENT_REGISTRATION.database||
@@ -117,7 +117,7 @@ export async function startOwnerLocalApp({legalEvidence=false,theory=false,origi
       const root=path.join(LOCAL_ROOT,bundle.directory),contentPath=path.join(root,bundle.file);
       const installation=JSON.parse(await readFile(path.join(root,"installation.json"),"utf8"));
       const hash=bytes=>createHash("sha256").update(bytes).digest("hex");
-      env=bundle.validator==="legacy_direct_capitalization"?
+      env=bundle.installationKind==="original_schema"?
         ownerLocalOriginalEnvironment(env,installation,contentPath,hash(await readFile(contentPath)),hash(await readFile(new URL("../../supabase/local-designs/first-stage-owner-original-bank.sql",import.meta.url)))):
         ownerLocalRegisteredEnvironment(bundle.key,env,installation,contentPath,hash(await readFile(contentPath)));
     }

@@ -1,10 +1,11 @@
+import { ownerContentBundle } from "./owner-content-registration.mjs";
 import crypto from "node:crypto";
 import { FirstStageKernelError, parseQuestionReference, type ChoiceId, type ImmutableEvidenceReference, type QuestionReference } from "../kernel/domain";
 import { createSubjectAdapterRegistry, SUBJECT_ADAPTER_SCHEMA_VERSION, validateAttemptEvaluation, validatePresentation, type SubjectAdapterV1 } from "../subject-adapter/subject-adapter";
 import { privateSessionDigest as digest, type PrivateFirstStageCatalog } from "./session-service";
 import { evaluateReviewedArithmetic } from "./foundation-real-estate-facts";
 import { activeOwnerOriginalAdapter, authorizeOwnerOriginalAdapter, authorizeOwnerOriginalCatalog } from "./owner-original-context";
-import { OWNER_ORIGINAL_ADAPTER, OWNER_ORIGINAL_IDS, OWNER_ORIGINAL_NOTICE, OWNER_ORIGINAL_PACKET_SHA256, OWNER_ORIGINAL_SCOPE, OWNER_ORIGINAL_VERSION } from "./owner-original-boundary";
+import { OWNER_ORIGINAL_ADAPTER, OWNER_ORIGINAL_NOTICE, OWNER_ORIGINAL_SCOPE } from "./owner-original-boundary";
 
 type Item = { id:string; role:string; prompt:string; choices:{id:ChoiceId;value:number;label:string}[]; answerChoice:ChoiceId;
   facts:{potentialAnnualIncome:number;annualOperatingExpense:number;capitalizationBasisPoints:number;vacancyBasisPoints?:number;targetValue?:number;currencyUnit:string;rateDenominator:number;rounding:string};
@@ -25,8 +26,11 @@ function calculation(item:Item, vacancy?:number) {
 }
 /** Immutable draft bytes were subsequently authorized by the dated Owner
  * decision. Draft self-claims cannot grant use; only this exact server pin can. */
-export async function loadOwnerOriginalContent(readBytes:()=>Promise<Uint8Array>):Promise<PrivateFirstStageCatalog|null> {
+export async function loadOwnerDirectCapitalizationContent(key:string,readBytes:()=>Promise<Uint8Array>,assignmentEnabled=true):Promise<PrivateFirstStageCatalog|null> {
   try {
+    const registration=ownerContentBundle(key);
+    if(!registration||registration.validator!=="legacy_direct_capitalization"||registration.ids.length!==2)return null;
+    const {ids:OWNER_ORIGINAL_IDS,version:OWNER_ORIGINAL_VERSION,sha256:OWNER_ORIGINAL_PACKET_SHA256}=registration;
     const bytes=await readBytes();
     if(bytes.length===0||bytes.length>65536||crypto.createHash("sha256").update(bytes).digest("hex")!==OWNER_ORIGINAL_PACKET_SHA256)return null;
     const packet=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes)) as {items:Item[];proposalId:string};
@@ -40,12 +44,12 @@ export async function loadOwnerOriginalContent(readBytes:()=>Promise<Uint8Array>
       if(index===1&&item.choices.filter(choice=>calculation(item,choice.value).result.decimal===String(item.facts.targetValue!*10000)).length!==1)fail();
       return parseQuestionReference({schemaVersion:"first_stage.owner_original_question_reference.v1",questionId:item.id,
         questionVersion:OWNER_ORIGINAL_VERSION,subjectId:"real_estate_principles",examYear:null,examRound:null,questionNumber:null,
-        sessionId:"owner-original-real-estate-v2",choiceCount:5,sourceVersionManifestIds:[`owner-original-${OWNER_ORIGINAL_PACKET_SHA256}`],
+        sessionId:registration.sessionId,choiceCount:5,sourceVersionManifestIds:[`owner-original-${OWNER_ORIGINAL_PACKET_SHA256}`],
         rightsState:"owner_authorized_original",currentnessState:"stated_model_only"});
     });
-    const concept={schemaVersion:"first_stage.concept_binding.v1" as const,conceptId:"stated-direct-capitalization",conceptVersion:"1",subjectId:"real_estate_principles" as const,role:"primary" as const};
+    const concept={schemaVersion:"first_stage.concept_binding.v1" as const,conceptId:registration.concepts![0],conceptVersion:"1",subjectId:"real_estate_principles" as const,role:"primary" as const};
     const evidence=(kind:string,value:unknown):ImmutableEvidenceReference=>({schemaVersion:"first_stage.immutable_evidence_reference.v1",
-      evidenceId:`owner-original-${kind}`,evidenceVersion:OWNER_ORIGINAL_VERSION,evidenceSha256:digest(value)});
+      evidenceId:`${registration.evidencePrefix}-${kind}`,evidenceVersion:OWNER_ORIGINAL_VERSION,evidenceSha256:digest(value)});
     const requireItem=(reference:QuestionReference)=>{
       if(!activeOwnerOriginalAdapter(adapter))fail();
       const index=references.findIndex(row=>digest(row)===digest(reference));if(index<0)fail();return packet.items[index];
@@ -59,32 +63,35 @@ export async function loadOwnerOriginalContent(readBytes:()=>Promise<Uint8Array>
         return validateAttemptEvaluation(adapter,input,{schemaVersion:"first_stage.attempt_evaluation.v1",decision,errorCause:null,
           conceptBindings:[concept],biggestGapCode:decision==="correct"?"selected_answer_matches_stated_model":"answer_differs_from_stated_model",
           nextActionCode:decision==="correct"?"scheduled_practice":"compare_calculation_then_retry",
-          retryDisposition:decision==="correct"?"review_then_retry":"retry_now",reviewAfterMs:decision==="correct"?86400000:0,evaluationPolicyVersion:"owner-original-stated-model-v1",
+          retryDisposition:decision==="correct"?"review_then_retry":"retry_now",reviewAfterMs:decision==="correct"?86400000:0,evaluationPolicyVersion:registration.evaluationPolicy!,
           evidenceEnvelope:{schemaVersion:"first_stage.attempt_evidence_envelope.v1",attemptId:input.attempt.attemptId,submissionSha256:input.submissionSha256,
             questionId:item.id,questionVersion:OWNER_ORIGINAL_VERSION,questionReferenceSha256:digest(input.questionReference),subjectId:adapter.subjectId,adapterId:adapter.adapterId,adapterVersion:adapter.adapterVersion,
             officialKeyReference:null,calculationKeyReference:evidence(`calculation-${item.id}`,calculation(item)),choiceSetReference:evidence(`choices-${item.id}`,item.choices),
             sourceReference:evidence("source",OWNER_ORIGINAL_PACKET_SHA256),versionDecisionReference:evidence("version",OWNER_ORIGINAL_VERSION),
-            rightsDecisionReference:evidence("owner-private-use",{packet:OWNER_ORIGINAL_PACKET_SHA256,scope:"exact-two-private-only",humanReviewer:null}),
+            rightsDecisionReference:evidence("owner-private-use",{packet:OWNER_ORIGINAL_PACKET_SHA256,scope:registration.rightsScope!,humanReviewer:null}),
             reviewedFeedback:{schemaVersion:"first_stage.owner_original_calculation_feedback.v1",state:"machine_checked_owner_local",receiptReference:null,reviewerIdentity:null,reviewerClass:null,modelAlone:true}}});},
       buildIndependentRetry(input){requireItem(input.sourceQuestionReference);
         if(input.sourceQuestionReference.questionId!==OWNER_ORIGINAL_IDS[0]||input.priorRetries.length!==0||digest(input.reviewTask.conceptBindings)!==digest([concept]))throw new FirstStageKernelError("adapter_unavailable");
         return {schemaVersion:"first_stage.independent_retry_candidate.v1",questionReference:references[1],lineageReceipt:{schemaVersion:"first_stage.independent_retry_lineage_receipt.v1",
-          receiptId:`owner-original-lineage-${digest(input.reviewTask.reviewTaskId).slice(0,40)}`,receiptVersion:OWNER_ORIGINAL_VERSION,adapterId:adapter.adapterId,adapterVersion:adapter.adapterVersion,subjectId:adapter.subjectId,
+          receiptId:`${registration.evidencePrefix}-lineage-${digest(input.reviewTask.reviewTaskId).slice(0,40)}`,receiptVersion:OWNER_ORIGINAL_VERSION,adapterId:adapter.adapterId,adapterVersion:adapter.adapterVersion,subjectId:adapter.subjectId,
           sourceQuestionId:references[0].questionId,sourceQuestionVersion:references[0].questionVersion,sourceQuestionReferenceSha256:digest(references[0]),
           variantQuestionId:references[1].questionId,variantQuestionVersion:references[1].questionVersion,variantQuestionReferenceSha256:digest(references[1]),
           targetConceptBindingKeys:[`${concept.subjectId}:${concept.conceptId}@${concept.conceptVersion}:${concept.role}`],priorRetryCount:0,decision:"unreviewed_owner_local_practice_retry"}};}
     };
     authorizeOwnerOriginalAdapter(adapter);for(const reference of references)adapter.presentQuestion(reference);
-    const catalog:PrivateFirstStageCatalog=Object.freeze({digest:digest({packet:OWNER_ORIGINAL_PACKET_SHA256,adapter:adapter.adapterVersion,policy:"owner-original-stated-model-v1"}),
+    const catalog:PrivateFirstStageCatalog=Object.freeze({digest:digest({packet:OWNER_ORIGINAL_PACKET_SHA256,adapter:adapter.adapterVersion,policy:registration.evaluationPolicy!}),
       registry:createSubjectAdapterRegistry([adapter]),initialReferences:Object.freeze([references[0]]),
       questionAttributions(reference:QuestionReference){requireItem(reference);return [OWNER_ORIGINAL_NOTICE,OWNER_ORIGINAL_SCOPE];},
       retryAvailability(reference:QuestionReference,used:readonly string[]){requireItem(reference);return reference.questionId===OWNER_ORIGINAL_IDS[0]&&!used.includes(OWNER_ORIGINAL_IDS[1])?"available" as const:"exhausted" as const;},
       explanation(reference:QuestionReference){const item=requireItem(reference);return {text:[`계산 정답: ${item.answerChoice}`,item.explanation,...item.choiceFeedback.map(x=>`${x.choice}. ${x.text}`)].join("\n\n"),
         sourceStatus:OWNER_ORIGINAL_NOTICE,learningReferenceDisclaimer:true as const,attributions:[OWNER_ORIGINAL_SCOPE]};}});
     authorizeOwnerOriginalCatalog(catalog,[Object.freeze({candidateId:references[0].questionId,candidateDigest:`sha256:${digest(references[0])}`,
-      familyId:"owner-original-direct-capitalization-v2",surfaceId:references[0].questionId,bankClass:"LEARNING_PRACTICE",origin:"BANK_STOCK",contentAuthority:"LEARNING_ONLY",
+      familyId:registration.families![0],surfaceId:references[0].questionId,bankClass:"LEARNING_PRACTICE",origin:"BANK_STOCK",contentAuthority:"LEARNING_ONLY",
       rightsStatus:"OWNER_AUTHORIZED_ORIGINAL",sourceStatus:"STATED_MODEL_ONLY",releaseChainComplete:false,unseenEligibilitySnapshotSealed:false,nonSameSurfaceAsSource:false,
-      familyIsolated:false,calibrationState:"UNASSESSED",timedProtocolBound:false,chronology:null,chronologyAuthority:null,availableAt:"2026-09-17T00:00:00.000Z",priority:0})]);
+      familyIsolated:false,calibrationState:"UNASSESSED",timedProtocolBound:false,chronology:null,chronologyAuthority:null,availableAt:registration.availableAt!,priority:0})],assignmentEnabled?[references[0].questionId]:[]);
     return catalog;
   }catch{return null;}
 }
+
+/** Byte-stable legacy entry point; additional exact approvals use the same parser. */
+export const loadOwnerOriginalContent=(readBytes:()=>Promise<Uint8Array>)=>loadOwnerDirectCapitalizationContent("original",readBytes,true);

@@ -1,5 +1,4 @@
 import { OWNER_CONTENT_BUNDLES, OWNER_CONTENT_REGISTRATION } from "./owner-content-registration.mjs";
-import { loadOwnerOriginalContent } from "./owner-original-content";
 import { loadOwnerRegisteredContent, composeOwnerRegisteredCatalog } from "./owner-registered-content";
 import type { PrivateFirstStageCatalog } from "./session-service";
 
@@ -9,8 +8,7 @@ export async function loadOwnerRegisteredSupply(env:Readonly<Record<string,strin
   const leaves=new Map<string,PrivateFirstStageCatalog>();
   for(const bundle of OWNER_CONTENT_BUNDLES){
     const path=env[bundle.pathVariable];if(!path)continue;
-    const leaf=bundle.validator==="legacy_direct_capitalization"?await loadOwnerOriginalContent(()=>read(path)):
-      await loadOwnerRegisteredContent(bundle.key,()=>read(path),env[bundle.flag]==="true");
+    const leaf=await loadOwnerRegisteredContent(bundle.key,()=>read(path),env[bundle.flag]==="true");
     if(leaf)leaves.set(bundle.key,leaf);
   }
   if(!leaves.has("original"))return {catalog:null,history:[]};

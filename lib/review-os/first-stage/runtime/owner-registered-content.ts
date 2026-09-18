@@ -1,3 +1,4 @@
+import { loadOwnerDirectCapitalizationContent } from "./owner-original-content";
 import { ownerContentBundle } from "./owner-content-registration.mjs";
 import { investmentCalculation, type InvestmentModel } from "./owner-investment-calculation";
 import crypto from "node:crypto";
@@ -31,7 +32,8 @@ export function validateRegisteredCalculationItems(key:string,packet:{bundleId:s
 export async function loadOwnerRegisteredContent(key:string,readBytes:()=>Promise<Uint8Array>,assignmentEnabled=false):Promise<PrivateFirstStageCatalog|null>{
  try{
   const registration=ownerContentBundle(key);
-  if(!registration || registration.validator === "legacy_direct_capitalization")return null;
+  if(!registration)return null;
+  if(registration.validator === "legacy_direct_capitalization")return loadOwnerDirectCapitalizationContent(key,readBytes,assignmentEnabled);
   const {ids:IDS,version:VERSION,sha256:HASH}=registration;
   const bytes=await readBytes();if(!bytes.length||bytes.length>65536||crypto.createHash("sha256").update(bytes).digest("hex")!==HASH)return null;
   const packet=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes)) as {bundleId:string;items:Item[]};
